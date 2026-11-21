@@ -1,9 +1,9 @@
 # AGENTS.md — VPN Manager
 
 A per-user WireGuard client for Debian GNOME: it lists profiles, imports and
-exports them, and connects and disconnects through NetworkManager. The product
-never elevates and never prints a private key. This repository ships one product,
-not a library and not a tool.
+exports them, and connects and disconnects through NetworkManager. The GUI never
+elevates; one fixed helper action is explicit. No private key is printed. This
+repository ships one product, not a library and not a tool.
 
 ## Build and test
 

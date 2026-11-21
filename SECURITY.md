@@ -32,8 +32,9 @@ Core, which have their own security policies.
 
 ## Security model
 
-- The application runs as the operator. It never invokes `sudo`, `pkexec` or a
-  privileged helper, and never reads or writes `/etc/wireguard`.
+- The GUI runs as the operator. It never invokes `sudo` or an arbitrary root
+  command, and never reads or writes `/etc/wireguard`. The one privileged path is
+  `--fix-sysctl`, which launches the fixed helper through `pkexec`/polkit.
 - A private key is never displayed, logged or passed as a command-line argument.
 - `nmcli`, `wg` and `notify-send` receive an argument vector; no shell is
   involved and a bare tool name never resolves through `PATH`.

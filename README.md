@@ -2,7 +2,8 @@
 
 A per-user WireGuard client for Debian GNOME. It imports a profile, connects and
 disconnects through NetworkManager, shows the live state of the tunnel, and never
-asks for a password, never elevates and never prints a private key.
+prints a private key. The GUI never elevates; the one explicit `--fix-sysctl`
+action goes through the fixed polkit helper.
 
 - **Website**: <https://github.com/benmoussa-younes/vpn-manager>
 - **Licence**: `GPL-3.0-or-later` (see [`LICENSES/GPL-3.0-or-later.txt`](LICENSES/GPL-3.0-or-later.txt))
@@ -84,8 +85,8 @@ The package installs `/usr/lib/vpn-manager`, the `/usr/bin/vpn-manager` entry, t
 desktop file and the icons. It also ships
 `/usr/lib/sysctl.d/60-vpn-manager.conf`
 (`net.ipv4.conf.all.src_valid_mark=1`), which a full tunnel through
-NetworkManager needs on a stock Debian; the package applies only that file, and
-the application itself never elevates.
+NetworkManager needs on a stock Debian; the package applies only that file. The
+GUI never elevates; `--fix-sysctl` is the one explicit helper action.
 
 ## Where the data lives
 
