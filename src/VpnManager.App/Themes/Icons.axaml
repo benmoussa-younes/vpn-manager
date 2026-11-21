@@ -10,6 +10,7 @@
     <StreamGeometry x:Key="WgmConnect">M8 1.5 V7 M4.3 3.9 A5.2 5.2 0 1 0 11.7 3.9</StreamGeometry>
     <StreamGeometry x:Key="WgmDisconnect">M8 1.5 V7 M4.3 3.9 A5.2 5.2 0 1 0 11.7 3.9 M2.5 2.5 L13.5 13.5</StreamGeometry>
     <StreamGeometry x:Key="WgmRefresh">M12.5 8 A4.5 4.5 0 1 1 10.6 4.3 M10.6 1.6 V4.4 H13.4</StreamGeometry>
+    <StreamGeometry x:Key="WgmNew">M8 2.6 V13.4 M2.6 8 H13.4</StreamGeometry>
     <StreamGeometry x:Key="WgmEdit">M3 13 L3.6 10.2 L10.6 3.2 L12.8 5.4 L5.8 12.4 Z M9.6 4.2 L11.8 6.4</StreamGeometry>
     <StreamGeometry x:Key="WgmRename">M3 11.5 L3.6 8.7 L10.6 1.7 L12.8 3.9 L5.8 10.9 Z M9.6 2.7 L11.8 4.9 M3 14 H13</StreamGeometry>
     <StreamGeometry x:Key="WgmDelete">M3 4 H13 M6 4 V2.6 H10 V4 M4.5 4 L5.4 13.4 H10.6 L11.5 4 M6.6 6.4 V11.4 M9.4 6.4 V11.4</StreamGeometry>
