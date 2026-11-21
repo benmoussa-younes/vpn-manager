@@ -371,6 +371,19 @@ public sealed class NmcliNetworkManagerConnectionsTests
     }
 
     [Fact]
+    public async Task An_option_shaped_import_path_is_refused_before_nmcli()
+    {
+        var runner = new FakeProcessRunner(_ => ProcessResult.Completed(0, string.Empty, string.Empty));
+        var connections = new NmcliNetworkManagerConnections(runner);
+
+        var result = await connections.EnsureAsync("wg0", "wg0", "-oProxyCommand=evil", "alice");
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(WireGuardErrorCodes.NetworkManagerInvalidPath, result.Error.Code);
+        Assert.Empty(runner.Requests);
+    }
+
+    [Fact]
     public async Task A_reapply_uses_the_device_verb_and_refuses_an_option_shaped_name()
     {
         var runner = new FakeProcessRunner(_ => ProcessResult.Completed(0, string.Empty, string.Empty));

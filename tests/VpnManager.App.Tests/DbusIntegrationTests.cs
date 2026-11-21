@@ -35,7 +35,7 @@ public sealed class DbusIntegrationTests
 
         await using var dbus = new VpnManagerDbusService(service, store.ConfigDirectory);
         using var lifetime = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-        await dbus.StartAsync(lifetime.Token);
+        Assert.True(await dbus.TryStartAsync(lifetime.Token));
 
         var version = await CallAsync("Version");
         Assert.Contains("0.1.0", version, StringComparison.Ordinal);
@@ -60,7 +60,7 @@ public sealed class DbusIntegrationTests
             "alice");
         await using var dbus = new VpnManagerDbusService(service, "/tmp/vpn-manager-dbus-tests");
         using var lifetime = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-        await dbus.StartAsync(lifetime.Token);
+        Assert.True(await dbus.TryStartAsync(lifetime.Token));
 
         var output = await CallAsync("SetPolicy", "wg0", "true", "nonsense", "");
 
@@ -83,7 +83,7 @@ public sealed class DbusIntegrationTests
             "alice");
         await using var dbus = new VpnManagerDbusService(service, "/tmp/vpn-manager-dbus-tests");
         using var lifetime = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-        await dbus.StartAsync(lifetime.Token);
+        Assert.True(await dbus.TryStartAsync(lifetime.Token));
 
         // Connect takes a string; an int32 body must be an error reply, not an
         // exception that takes the session service down.
@@ -91,6 +91,41 @@ public sealed class DbusIntegrationTests
 
         Assert.NotEqual(0, malformed.ExitCode);
         Assert.Contains(VpnManagerDbusService.ErrorName, malformed.Error, StringComparison.Ordinal);
+
+        var version = await CallAsync("Version");
+        Assert.Contains("0.1.0", version, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_second_service_does_not_take_the_name()
+    {
+        Assert.SkipUnless(
+            Environment.GetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS") is { Length: > 0 },
+            "No session D-Bus address; run under dbus-run-session.");
+
+        await using var first = new VpnManagerDbusService(
+            new TunnelService(
+                new FakeConfigStore(),
+                new FakeRuntimeInspector(),
+                TunnelScope.User,
+                new FakeStateStore(),
+                new FakeNetworkManager(),
+                "alice"),
+            "/tmp/vpn-manager-dbus-tests");
+        using var lifetime = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        Assert.True(await first.TryStartAsync(lifetime.Token));
+
+        await using var second = new VpnManagerDbusService(
+            new TunnelService(
+                new FakeConfigStore(),
+                new FakeRuntimeInspector(),
+                TunnelScope.User,
+                new FakeStateStore(),
+                new FakeNetworkManager(),
+                "alice"),
+            "/tmp/vpn-manager-dbus-tests");
+
+        Assert.False(await second.TryStartAsync(lifetime.Token));
 
         var version = await CallAsync("Version");
         Assert.Contains("0.1.0", version, StringComparison.Ordinal);

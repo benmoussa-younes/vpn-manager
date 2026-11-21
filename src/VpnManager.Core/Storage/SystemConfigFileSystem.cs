@@ -78,7 +78,8 @@ public sealed class SystemConfigFileSystem : IConfigFileSystem
             // bounded descriptor read is for ordinary profile files only.
             if (IsPseudoFile(path))
             {
-                return Result<string>.Success(File.ReadAllText(path));
+                using var stream = File.OpenRead(path);
+                return ReadCapped(stream, path);
             }
 
             if (!_fileSystem.TryStat(path, out var status))
@@ -205,6 +206,30 @@ public sealed class SystemConfigFileSystem : IConfigFileSystem
         {
             return Result<string>.Failure(Map(path, WireGuardErrorCodes.ConfigDeleteFailed, exception));
         }
+    }
+
+    internal static Result<string> ReadCapped(Stream stream, string path)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+
+        var buffer = new byte[MaximumConfigurationBytes + 1];
+        var total = 0;
+        while (total < buffer.Length)
+        {
+            var read = stream.Read(buffer, total, buffer.Length - total);
+            if (read <= 0)
+            {
+                break;
+            }
+
+            total += read;
+        }
+
+        return total > MaximumConfigurationBytes
+            ? Result<string>.Failure(WireGuardErrors.Configuration(
+                WireGuardErrorCodes.ConfigReadFailed,
+                $"The file '{path}' is larger than {MaximumConfigurationBytes} bytes; refusing to read it."))
+            : Result<string>.Success(StrictUtf8.GetString(buffer, 0, total));
     }
 
     private static bool IsPseudoFile(string path) =>

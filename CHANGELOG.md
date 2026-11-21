@@ -60,6 +60,15 @@ written as `VpnManager.*` on Core v0.2.2.
 - A D-Bus call whose body does not match the method signature now receives a
   typed `com.bit_crafts.VpnManager1.Failed` reply; it used to raise inside the
   handler and disconnect the session service.
+- A second `--dbus` instance no longer runs without owning the well-known name:
+  it checks the request result and exits with a message instead of idling.
+- A pseudo-file read under `/proc` or `/sys` is capped like a profile read, so
+  a stream that never ends cannot exhaust memory.
+- An import path that starts with `-` is refused before it reaches `nmcli`,
+  where it would be read as an option.
+- A launch without `XDG_RUNTIME_DIR` uses an owner-only directory under the
+  state home instead of the sticky `/tmp` fallback, where another local account
+  could pre-create the single-instance socket name.
 
 ### Security
 

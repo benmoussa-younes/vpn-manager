@@ -1,3 +1,5 @@
+using System.Text;
+using VpnManager.Core.Storage;
 using VpnManager.Core.Tests.Fakes;
 
 namespace VpnManager.Core.Tests;
@@ -53,6 +55,38 @@ public sealed class SystemConfigFileSystemPermissionsTests
         var result = fileSystem.ReadAllText(link);
 
         Assert.False(result.IsSuccess);
+    }
+
+    [Fact]
+    public void A_pseudo_file_read_is_capped()
+    {
+        using var oversized = new MemoryStream(new byte[SystemConfigFileSystem.MaximumConfigurationBytes + 1]);
+
+        var result = SystemConfigFileSystem.ReadCapped(oversized, "/proc/self/status");
+
+        Assert.False(result.IsSuccess);
+    }
+
+    [Fact]
+    public void A_pseudo_file_within_the_cap_is_read()
+    {
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes("Name:\tvpn-manager\n"));
+
+        var result = SystemConfigFileSystem.ReadCapped(stream, "/proc/self/status");
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("Name:", result.Value, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_real_pseudo_file_is_still_readable()
+    {
+        var fileSystem = TestFileSystems.SystemConfig();
+
+        var result = fileSystem.ReadAllText("/proc/self/status");
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("Name:", result.Value, StringComparison.Ordinal);
     }
 
     private sealed class TemporaryDirectory : IDisposable

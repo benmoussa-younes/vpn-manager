@@ -118,6 +118,13 @@ public static class WireGuardErrors
         WireGuardErrorCodes.NetworkManagerInvalidConnection,
         $"NetworkManager connection '{name}' is not a safe command argument.");
 
+    /// <summary>Creates the failure returned when a path would be read as a command option.</summary>
+    /// <param name="path">The refused path.</param>
+    /// <returns>The error.</returns>
+    public static CoreError NetworkManagerInvalidPath(string path) => new(
+        WireGuardErrorCodes.NetworkManagerInvalidPath,
+        $"The path '{path}' cannot be handed to NetworkManager: it starts with '-', which would be read as an option.");
+
     /// <summary>Creates the failure returned when an autoconnect priority is invalid.</summary>
     /// <param name="priority">The rejected priority.</param>
     /// <returns>The error.</returns>

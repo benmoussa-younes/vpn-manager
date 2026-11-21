@@ -147,6 +147,9 @@ public static class WireGuardErrorCodes
     /// <summary>A NetworkManager connection name is not a safe command argument.</summary>
     public const string NetworkManagerInvalidConnection = "network_manager.invalid_connection";
 
+    /// <summary>A file path handed to NetworkManager is not a safe command argument.</summary>
+    public const string NetworkManagerInvalidPath = "network_manager.invalid_path";
+
     /// <summary>A NetworkManager autoconnect priority is outside its accepted range.</summary>
     public const string NetworkManagerInvalidPriority = "network_manager.invalid_priority";
 

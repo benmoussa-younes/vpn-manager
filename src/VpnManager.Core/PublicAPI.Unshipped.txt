@@ -740,6 +740,7 @@ const VpnManager.Core.Model.WireGuardErrorCodes.ListenPortInvalid = "validation.
 const VpnManager.Core.Model.WireGuardErrorCodes.MtuInvalid = "validation.mtu.invalid" -> string!
 const VpnManager.Core.Model.WireGuardErrorCodes.NetworkManagerFailed = "network_manager.failed" -> string!
 const VpnManager.Core.Model.WireGuardErrorCodes.NetworkManagerInvalidConnection = "network_manager.invalid_connection" -> string!
+const VpnManager.Core.Model.WireGuardErrorCodes.NetworkManagerInvalidPath = "network_manager.invalid_path" -> string!
 const VpnManager.Core.Model.WireGuardErrorCodes.NetworkManagerInvalidPriority = "network_manager.invalid_priority" -> string!
 const VpnManager.Core.Model.WireGuardErrorCodes.NetworkManagerManaged = "network_manager.managed" -> string!
 const VpnManager.Core.Model.WireGuardErrorCodes.NetworkManagerUnavailable = "network_manager.unavailable" -> string!
@@ -906,6 +907,7 @@ static VpnManager.Core.Model.WireGuardErrors.InterfaceNotFound(string! name) -> 
 static VpnManager.Core.Model.WireGuardErrors.KeyGenerationFailed(string! message) -> Core.Results.CoreError!
 static VpnManager.Core.Model.WireGuardErrors.NetworkManagerFailed(string! command, int exitCode, string! standardError) -> Core.Results.CoreError!
 static VpnManager.Core.Model.WireGuardErrors.NetworkManagerInvalidConnection(string! name) -> Core.Results.CoreError!
+static VpnManager.Core.Model.WireGuardErrors.NetworkManagerInvalidPath(string! path) -> Core.Results.CoreError!
 static VpnManager.Core.Model.WireGuardErrors.NetworkManagerInvalidPriority(int priority) -> Core.Results.CoreError!
 static VpnManager.Core.Model.WireGuardErrors.NetworkManagerManaged(string! name) -> Core.Results.CoreError!
 static VpnManager.Core.Model.WireGuardErrors.NetworkManagerUnavailable() -> Core.Results.CoreError!

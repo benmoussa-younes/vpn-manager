@@ -72,6 +72,53 @@ public sealed class ApplicationTests
     }
 
     [Fact]
+    public void AMissingRuntimeDirectoryIsCreatedOwnerOnlyUnderTheStateHome()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "vpn-runtime-" + Guid.NewGuid().ToString("N"));
+        var savedRuntime = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR");
+        var savedState = Environment.GetEnvironmentVariable("XDG_STATE_HOME");
+        try
+        {
+            Environment.SetEnvironmentVariable("XDG_RUNTIME_DIR", null);
+            Environment.SetEnvironmentVariable("XDG_STATE_HOME", root);
+
+            var directory = Program.EnsureRuntimeDirectory();
+
+            Assert.NotNull(directory);
+            Assert.StartsWith(root, directory, StringComparison.Ordinal);
+            Assert.Equal(directory, Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR"));
+            Assert.Equal(
+                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute,
+                File.GetUnixFileMode(directory));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("XDG_RUNTIME_DIR", savedRuntime);
+            Environment.SetEnvironmentVariable("XDG_STATE_HOME", savedState);
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void AnExistingRuntimeDirectoryIsKept()
+    {
+        var saved = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR");
+        try
+        {
+            Environment.SetEnvironmentVariable("XDG_RUNTIME_DIR", "/run/user/4242");
+
+            Assert.Equal("/run/user/4242", Program.EnsureRuntimeDirectory());
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("XDG_RUNTIME_DIR", saved);
+        }
+    }
+
+    [Fact]
     public void CliParsesTheFixedPrivilegedAction()
     {
         var options = CliOptions.Parse(["--fix-sysctl"]);

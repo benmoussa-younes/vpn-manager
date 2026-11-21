@@ -62,6 +62,11 @@ internal static class Program
             return 0;
         }
 
+        // Linux sets XDG_RUNTIME_DIR in a PAM session, not in every launch context.
+        // Without it the single-instance socket would fall back to the sticky /tmp,
+        // where another local account could pre-create the name.
+        EnsureRuntimeDirectory();
+
         if (DiagnosticsCommand.IsRequested(args))
         {
             return RunDiagnostics(args);
@@ -104,6 +109,40 @@ internal static class Program
         }
 
         return 0;
+    }
+
+    /// <summary>
+    /// Returns the runtime directory the host should use, creating an owner-only
+    /// one under the state home when the environment has none. Linux sets
+    /// <c>XDG_RUNTIME_DIR</c> in a PAM session, not in every launch context.
+    /// </summary>
+    /// <returns>The runtime directory, or <see langword="null"/> when neither source is usable.</returns>
+    internal static string? EnsureRuntimeDirectory()
+    {
+        if (Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR") is { Length: > 0 } existing)
+        {
+            return existing;
+        }
+
+        var stateHome = Environment.GetEnvironmentVariable("XDG_STATE_HOME");
+        if (string.IsNullOrEmpty(stateHome))
+        {
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (string.IsNullOrEmpty(home))
+            {
+                return null;
+            }
+
+            stateHome = Path.Combine(home, ".local", "state");
+        }
+
+        var directory = Path.Combine(stateHome, "vpn-manager", "run");
+        Directory.CreateDirectory(directory);
+        File.SetUnixFileMode(
+            directory,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        Environment.SetEnvironmentVariable("XDG_RUNTIME_DIR", directory);
+        return directory;
     }
 
     /// <summary>Resolves the profile directory from the launch options.</summary>
@@ -176,7 +215,12 @@ internal static class Program
                 root.Service,
                 root.Store.ConfigDirectory,
                 new PkexecRootActionService(root.ProcessRunner));
-            service.StartAsync(stopping.Token).GetAwaiter().GetResult();
+            if (!service.TryStartAsync(stopping.Token).GetAwaiter().GetResult())
+            {
+                Console.Error.WriteLine($"vpn-manager: {VpnManagerDbusService.ServiceName} is already owned by another process.");
+                return 1;
+            }
+
             Console.WriteLine($"{VpnManagerDbusService.ServiceName} on {VpnManagerDbusService.ObjectPath}");
             VpnManagerDbusService.RunAsync(stopping.Token).GetAwaiter().GetResult();
             service.DisposeAsync().AsTask().GetAwaiter().GetResult();

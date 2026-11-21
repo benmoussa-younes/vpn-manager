@@ -56,16 +56,24 @@ internal sealed class VpnManagerDbusService : IPathMethodHandler, IAsyncDisposab
     /// <inheritdoc />
     public bool HandlesChildPaths => false;
 
-    /// <summary>Connects to the session bus and requests the well-known name.</summary>
+    /// <summary>Connects to the session bus and tries to own the well-known name.</summary>
     /// <param name="cancellationToken">Cancels the connection.</param>
-    public async Task StartAsync(CancellationToken cancellationToken)
+    /// <returns><see langword="true"/> when this process owns the name; a second
+    /// instance must exit instead of serving requests nobody will route to it.</returns>
+    public async Task<bool> TryStartAsync(CancellationToken cancellationToken)
     {
         var address = DBusAddress.Session ?? throw new InvalidOperationException("No session D-Bus address is configured.");
         var connection = new DBusConnection(address);
         await connection.ConnectAsync().ConfigureAwait(false);
-        await connection.RequestNameAsync(ServiceName, RequestNameOptions.None).ConfigureAwait(false);
+        if (!await connection.TryRequestNameAsync(ServiceName, RequestNameOptions.None).ConfigureAwait(false))
+        {
+            connection.Dispose();
+            return false;
+        }
+
         connection.AddMethodHandler(this);
         _connection = connection;
+        return true;
     }
 
     /// <summary>Waits until the cancellation token is cancelled.</summary>

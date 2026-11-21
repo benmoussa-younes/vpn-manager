@@ -132,6 +132,12 @@ public sealed class NmcliNetworkManagerConnections : INetworkManagerConnections
             return Result<string>.Failure(WireGuardErrors.NetworkManagerInvalidConnection(connectionName));
         }
 
+        // nmcli reads a positional path that starts with '-' as an option.
+        if (configPath.StartsWith('-') || configPath.Contains('\0', StringComparison.Ordinal))
+        {
+            return Result<string>.Failure(WireGuardErrors.NetworkManagerInvalidPath(configPath));
+        }
+
         Invalidate(connectionName);
 
         // Replace only a connection this account owns: import cannot overwrite, and
