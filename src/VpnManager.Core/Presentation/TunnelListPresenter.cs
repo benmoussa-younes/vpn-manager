@@ -386,6 +386,10 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
             Mtu = Format(configuration.Interface.Mtu),
             Table = configuration.Interface.Table ?? string.Empty,
             RoutingMode = RoutingModeConvergence.Detect(configuration),
+            PreUp = configuration.Interface.PreUp,
+            PostUp = configuration.Interface.PostUp,
+            PreDown = configuration.Interface.PreDown,
+            PostDown = configuration.Interface.PostDown,
         };
 
         foreach (var peer in configuration.Peers)
@@ -439,6 +443,10 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
             Mtu = Format(configuration.Interface.Mtu),
             Table = configuration.Interface.Table ?? string.Empty,
             RoutingMode = RoutingModeConvergence.Detect(configuration),
+            PreUp = configuration.Interface.PreUp,
+            PostUp = configuration.Interface.PostUp,
+            PreDown = configuration.Interface.PreDown,
+            PostDown = configuration.Interface.PostDown,
         };
 
         foreach (var peer in configuration.Peers)
@@ -497,6 +505,19 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
             View.SetEditorError(EditorField.FromErrorCode(mapped.Error.Code), mapped.Error.Message);
             return;
         }
+
+        // The editor does not show the wg-quick hooks; preserve the stored ones so a
+        // save never drops a line the operator did not edit.
+        configuration = configuration with
+        {
+            Interface = configuration.Interface with
+            {
+                PreUp = session.PreUp,
+                PostUp = session.PostUp,
+                PreDown = session.PreDown,
+                PostDown = session.PostDown,
+            },
+        };
 
         // The mode is the authority over the routing directives: full pins the
         // default route, the table and the fwmark; split clears the two directives
@@ -931,6 +952,14 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
         internal string Table { get; set; } = string.Empty;
 
         internal TunnelRoutingMode RoutingMode { get; set; } = TunnelRoutingMode.Split;
+
+        internal IReadOnlyList<string> PreUp { get; init; } = [];
+
+        internal IReadOnlyList<string> PostUp { get; init; } = [];
+
+        internal IReadOnlyList<string> PreDown { get; init; } = [];
+
+        internal IReadOnlyList<string> PostDown { get; init; } = [];
 
         internal List<SessionPeer> Peers { get; } = [];
     }

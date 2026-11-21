@@ -46,14 +46,14 @@ public sealed class ArchitectureGuardTests
     }
 
     [Fact]
-    public void The_only_process_start_in_the_core_library_is_the_system_runner()
+    public void The_core_library_has_no_direct_process_start()
     {
         var offenders = RepositoryLayout.SourceFiles("src/VpnManager.Core")
             .Where(path => File.ReadAllText(path).Contains("ProcessStartInfo", StringComparison.Ordinal))
             .Select(RepositoryLayout.RelativePath)
             .ToArray();
 
-        Assert.Equal(["src/VpnManager.Core/Process/SystemProcessRunner.cs"], offenders);
+        Assert.Empty(offenders);
     }
 
     [Fact]

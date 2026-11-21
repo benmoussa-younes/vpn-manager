@@ -13,7 +13,19 @@ public sealed record ProcessRequest(
     string FileName,
     IReadOnlyList<string> Arguments,
     string? StandardInput = null,
-    IReadOnlyDictionary<string, string>? Environment = null);
+    IReadOnlyDictionary<string, string>? Environment = null)
+{
+    /// <summary>
+    /// Describes the request without its arguments, standard input or environment
+    /// values: those may carry a credential, and a record's default textual form is
+    /// the one a log line would print.
+    /// </summary>
+    /// <returns>A redacted description.</returns>
+    public override string ToString() =>
+        $"ProcessRequest {{ FileName = {FileName}, ArgumentCount = {Arguments.Count}, " +
+        $"StandardInput = {(StandardInput is null ? "null" : "[redacted]")}, " +
+        $"EnvironmentCount = {Environment?.Count ?? 0} }}";
+}
 
 /// <summary>
 /// The result of starting and waiting for a process, including the case where

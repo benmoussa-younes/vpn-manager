@@ -917,14 +917,14 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
 
     private async Task<string?> PickOpenAsync(string title, string extension)
     {
-        var filters = new[] { new FileTypeFilter(extension, [extension]) };
+        var filters = new[] { new FileTypeFilter(extension, [string.Concat("*", extension)]) };
         var files = await Picker.OpenFilesAsync(new FilePickerOptions(title, false, filters)).ConfigureAwait(true);
         return files.Count > 0 ? files[0] : null;
     }
 
     private async Task<string?> PickSaveAsync(string title, string suggestedFileName, string extension)
     {
-        var filters = new[] { new FileTypeFilter(extension, [extension]) };
+        var filters = new[] { new FileTypeFilter(extension, [string.Concat("*", extension)]) };
         return await Picker.SaveFileAsync(new SaveFilePickerOptions(title, suggestedFileName, filters)).ConfigureAwait(true);
     }
 

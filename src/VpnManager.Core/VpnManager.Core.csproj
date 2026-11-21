@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="../../../core/src/Core/Core.csproj" />
     <ProjectReference Include="../../../core/src/Core.Platform/Core.Platform.csproj" />
+    <ProjectReference Include="../../../core/src/Core.Platform.Linux/Core.Platform.Linux.csproj" />
     <ProjectReference Include="../../../core/src/Core.IO/Core.IO.csproj" />
     <ProjectReference Include="../../../core/src/Core.Mvp/Core.Mvp.csproj" />
   </ItemGroup>

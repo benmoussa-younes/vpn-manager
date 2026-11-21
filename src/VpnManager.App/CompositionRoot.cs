@@ -43,7 +43,7 @@ public sealed class CompositionRoot
         var atomicFiles = new LinuxAtomicFileWriterFactory();
         var platformFileSystem = new LinuxFileSystemAdapter();
 
-        ProcessRunner = processRunner ?? new CoreProcessRunnerAdapter(host.Processes);
+        ProcessRunner = processRunner ?? new VpnManager.Core.Process.SystemProcessRunner();
         FileSystem = fileSystem ?? new SystemConfigFileSystem(atomicFiles, platformFileSystem);
         StateStore = stateStore ?? new JsonApplicationStateStore(
             host.Paths.StateFile("state.json"),
