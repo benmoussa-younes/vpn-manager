@@ -73,6 +73,21 @@ public sealed class DisplayNameNetworkManagerTests
     }
 
     [Fact]
+    public async Task A_renamed_connection_is_listed_once()
+    {
+        var (service, _, state) = Build("Home", "wg0", ["user:alice"], active: true);
+        state.State.DisplayNames["wg0"] = "Home";
+
+        var listed = await service.ListTunnelsAsync();
+
+        Assert.True(listed.IsSuccess);
+        var row = Assert.Single(listed.Value);
+        Assert.Equal("wg0", row.Name);
+        Assert.Equal("Home", row.DisplayName);
+        Assert.Equal(TunnelSource.Configuration, row.Source);
+    }
+
+    [Fact]
     public async Task Starting_after_a_rename_activates_the_connection_id()
     {
         var (service, networkManager, _) = Build("Home", "wg0", ["user:alice"]);

@@ -43,4 +43,16 @@ Core, which have their own security policies.
   not execute them.
 - The profile and state directories are owner-only; the state directory refuses
   group- or world-write access.
+- The display name is also the NetworkManager connection id. It is at most 64
+  characters, may not contain control characters or start with `-`, and may not
+  collide with another tunnel or another NetworkManager connection; the id is
+  passed to `nmcli` as one argument. Renaming a foreign connection is refused.
+- The policy page writes through the same validated service as the CLI: the DNS
+  mode is one of the four known values, and a routing domain is validated before
+  it reaches `nmcli`. The `Full tunnel` mode sets the root routing domain `~.`
+  explicitly.
+- There is no tray icon and no GNOME extension. Closing the window quits, asking
+  before disconnecting a connected profile. A session end (the GNOME session
+  manager's `QueryEndSession`/`EndSession` signals, or `SIGTERM`/`SIGINT`) takes
+  the same shutdown path without the dialog.
 - DNS containment is reported, never promised.

@@ -217,6 +217,12 @@ public sealed class TunnelService
 
             rows.Add(new TunnelSummary(name, state, hasConfiguration, peerCount, listenPort, note, DisplayName: displayNames.GetValueOrDefault(name)));
             represented.Add(name);
+            if (connection is not null)
+            {
+                // The connection id follows the display name, so the foreign-row
+                // pass must not list the same connection a second time under it.
+                represented.Add(connection.Name);
+            }
         }
 
         foreach (var connection in networkManagerConnections)
