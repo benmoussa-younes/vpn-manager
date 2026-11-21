@@ -24,6 +24,15 @@ internal sealed class FakeNetworkManagerConnections : INetworkManagerConnections
     /// <summary>The connection ids deleted, in order.</summary>
     internal List<string> Deleted { get; } = [];
 
+    /// <summary>The autoconnect changes, in order.</summary>
+    internal List<(string Name, bool AutoConnect, int Priority)> AutoConnectChanges { get; } = [];
+
+    /// <summary>The DNS changes, in order.</summary>
+    internal List<(string Name, IReadOnlyList<string> Dns, IReadOnlyList<string> Search, NetworkManagerDnsMode Mode)> DnsChanges { get; } = [];
+
+    /// <summary>When set, the policy calls fail with this error.</summary>
+    internal CoreError? PolicyError { get; set; }
+
     /// <summary>When set, the listing fails with this error.</summary>
     internal CoreError? ListError { get; set; }
 
@@ -49,6 +58,31 @@ internal sealed class FakeNetworkManagerConnections : INetworkManagerConnections
         return Task.FromResult(EnsureError is null
             ? Result<string>.Success(connectionName)
             : Result<string>.Failure(EnsureError));
+    }
+
+    public Task<Result<string>> SetAutoConnectAsync(
+        string connectionName,
+        bool autoConnect,
+        int priority,
+        CancellationToken cancellationToken = default)
+    {
+        AutoConnectChanges.Add((connectionName, autoConnect, priority));
+        return Task.FromResult(PolicyError is null
+            ? Result<string>.Success(connectionName)
+            : Result<string>.Failure(PolicyError));
+    }
+
+    public Task<Result<string>> ApplyDnsAsync(
+        string connectionName,
+        IReadOnlyList<string> dnsEntries,
+        IReadOnlyList<string> searchDomains,
+        NetworkManagerDnsMode mode,
+        CancellationToken cancellationToken = default)
+    {
+        DnsChanges.Add((connectionName, dnsEntries, searchDomains, mode));
+        return Task.FromResult(PolicyError is null
+            ? Result<string>.Success(connectionName)
+            : Result<string>.Failure(PolicyError));
     }
 
     public Task<Result<string>> ActivateAsync(string connectionName, CancellationToken cancellationToken = default)

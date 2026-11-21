@@ -1,6 +1,8 @@
 using Core.Platform.Linux;
 using Core.UI.Hosting;
+using VpnManager.App.Cli;
 using VpnManager.App.State;
+using VpnManager.Core.NetworkManager;
 using VpnManager.Core.State;
 
 namespace VpnManager.App.Tests;
@@ -16,6 +18,47 @@ public sealed class ApplicationTests
 
         Assert.Equal(0, code);
         Assert.Contains("SELF-TEST PASS", output.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CliParsesStatusJsonAndConnect()
+    {
+        var status = CliOptions.Parse(["--status", "--json"]);
+        Assert.Equal(CliCommand.Status, status.Command);
+        Assert.True(status.Json);
+
+        var connect = CliOptions.Parse(["--connect", "wg0"]);
+        Assert.Equal(CliCommand.Connect, connect.Command);
+        Assert.Equal("wg0", connect.Name);
+    }
+
+    [Fact]
+    public void CliParsesThePolicyAndRejectsAnUnknownMode()
+    {
+        var policy = CliOptions.Parse(
+        [
+            "--policy", "wg0",
+            "--auto-reconnect", "off",
+            "--dns-mode", "split",
+            "--dns-search", "corp.example,lab.example",
+        ]);
+
+        Assert.Equal(CliCommand.Policy, policy.Command);
+        Assert.False(policy.AutoReconnect);
+        Assert.Equal(NetworkManagerDnsMode.Split, policy.DnsMode);
+        Assert.Equal(["corp.example", "lab.example"], policy.DnsSearchDomains);
+
+        var bad = CliOptions.Parse(["--policy", "wg0", "--dns-mode", "nonsense"]);
+        Assert.NotNull(bad.Error);
+    }
+
+    [Fact]
+    public void CliRejectsACommandWithoutAProfileName()
+    {
+        var options = CliOptions.Parse(["--connect"]);
+
+        Assert.Equal(CliCommand.Connect, options.Command);
+        Assert.NotNull(options.Error);
     }
 
     [Fact]

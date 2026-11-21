@@ -23,6 +23,10 @@ written as `VpnManager.*` on Core v0.2.2.
   that runs without a display.
 - A `tools/scripts/binaries/gate.scs` gate, a `.slnx` solution and Xunit v3 test
   projects.
+- Per-profile NetworkManager policy: automatic reconnection, and the `Profile`,
+  `System`, `Split` and `FullTunnel` DNS modes applied through `nmcli`.
+- A headless CLI: `--status [--json]`, `--connect`, `--disconnect` and
+  `--policy --auto-reconnect/--dns-mode/--dns-search`.
 
 ### Changed
 
@@ -51,6 +55,9 @@ written as `VpnManager.*` on Core v0.2.2.
 - Profile reads are bounded and no-follow; a symbolic link or an oversized file
   is refused. The import temporary directory is owner-only and lives under the
   application state directory.
+- A manual disconnect marks the NetworkManager profile as `autoconnect no`
+  until the next manual connect, so NM does not override the operator's intent.
+- DNS is applied through NetworkManager; `/etc/resolv.conf` is never edited.
 - The Debian post-install applies only the package's own sysctl drop-in, not
   every drop-in on the machine.
 - `network-manager` and `wireguard-tools` are dependencies of the package, not

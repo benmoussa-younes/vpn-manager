@@ -1,6 +1,9 @@
+using System.Globalization;
+using System.Net;
 using Core.Results;
 using VpnManager.Core.Model;
 using VpnManager.Core.Process;
+using VpnManager.Core.Validation;
 
 namespace VpnManager.Core.NetworkManager;
 
@@ -181,6 +184,131 @@ public sealed class NmcliNetworkManagerConnections : INetworkManagerConnections
         return modified.TryGetValue(out _)
             ? Result<string>.Success(connectionName)
             : Result<string>.Failure(modified.Error);
+    }
+
+    /// <inheritdoc />
+    public async Task<Result<string>> SetAutoConnectAsync(
+        string connectionName,
+        bool autoConnect,
+        int priority,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionName);
+
+        if (!IsSafeConnectionName(connectionName))
+        {
+            return Result<string>.Failure(WireGuardErrors.NetworkManagerInvalidConnection(connectionName));
+        }
+
+        if (priority is < -999 or > 999)
+        {
+            return Result<string>.Failure(WireGuardErrors.NetworkManagerInvalidPriority(priority));
+        }
+
+        Invalidate(connectionName);
+
+        var arguments = new[]
+        {
+            "connection", "modify", connectionName,
+            "connection.autoconnect", autoConnect ? "yes" : "no",
+            "connection.autoconnect-priority", priority.ToString(CultureInfo.InvariantCulture),
+        };
+
+        var result = await RunAsync(arguments, cancellationToken).ConfigureAwait(false);
+        return result.TryGetValue(out _)
+            ? Result<string>.Success(connectionName)
+            : Result<string>.Failure(result.Error);
+    }
+
+    /// <inheritdoc />
+    public async Task<Result<string>> ApplyDnsAsync(
+        string connectionName,
+        IReadOnlyList<string> dnsEntries,
+        IReadOnlyList<string> searchDomains,
+        NetworkManagerDnsMode mode,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionName);
+        ArgumentNullException.ThrowIfNull(dnsEntries);
+        ArgumentNullException.ThrowIfNull(searchDomains);
+
+        if (!IsSafeConnectionName(connectionName))
+        {
+            return Result<string>.Failure(WireGuardErrors.NetworkManagerInvalidConnection(connectionName));
+        }
+
+        var ipv4 = new List<string>();
+        var ipv6 = new List<string>();
+        var search = new List<string>();
+
+        foreach (var entry in dnsEntries)
+        {
+            if (!NetworkText.IsValidDnsEntry(entry))
+            {
+                return Result<string>.Failure(WireGuardErrors.Validation(
+                    WireGuardErrorCodes.DnsInvalid,
+                    $"DNS entry '{entry}' is not a usable address, host name or routing domain."));
+            }
+
+            if (IPAddress.TryParse(entry, out var address))
+            {
+                (address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork ? ipv4 : ipv6).Add(entry);
+            }
+            else
+            {
+                search.Add(entry);
+            }
+        }
+
+        foreach (var domain in searchDomains)
+        {
+            if (!NetworkText.IsValidDnsEntry(domain))
+            {
+                return Result<string>.Failure(WireGuardErrors.Validation(
+                    WireGuardErrorCodes.DnsInvalid,
+                    $"Search domain '{domain}' is not a usable host name or routing domain."));
+            }
+
+            search.Add(domain);
+        }
+
+        Invalidate(connectionName);
+
+        var arguments = new List<string> { "connection", "modify", connectionName };
+
+        if (mode == NetworkManagerDnsMode.System)
+        {
+            arguments.AddRange(
+            [
+                "ipv4.dns", string.Empty,
+                "ipv6.dns", string.Empty,
+                "ipv4.dns-search", string.Empty,
+                "ipv6.dns-search", string.Empty,
+                "ipv4.ignore-auto-dns", "no",
+                "ipv6.ignore-auto-dns", "no",
+                "ipv4.dns-priority", "0",
+                "ipv6.dns-priority", "0",
+            ]);
+        }
+        else
+        {
+            arguments.AddRange(
+            [
+                "ipv4.dns", string.Join(',', ipv4),
+                "ipv6.dns", string.Join(',', ipv6),
+                "ipv4.dns-search", string.Join(',', search.Distinct(StringComparer.OrdinalIgnoreCase)),
+                "ipv6.dns-search", string.Join(',', search.Distinct(StringComparer.OrdinalIgnoreCase)),
+                "ipv4.ignore-auto-dns", "yes",
+                "ipv6.ignore-auto-dns", "yes",
+                "ipv4.dns-priority", "-50",
+                "ipv6.dns-priority", "-50",
+            ]);
+        }
+
+        var result = await RunAsync(arguments, cancellationToken).ConfigureAwait(false);
+        return result.TryGetValue(out _)
+            ? Result<string>.Success(connectionName)
+            : Result<string>.Failure(result.Error);
     }
 
     /// <inheritdoc />

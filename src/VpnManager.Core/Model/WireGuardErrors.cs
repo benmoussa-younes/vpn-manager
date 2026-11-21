@@ -118,6 +118,13 @@ public static class WireGuardErrors
         WireGuardErrorCodes.NetworkManagerInvalidConnection,
         $"NetworkManager connection '{name}' is not a safe command argument.");
 
+    /// <summary>Creates the failure returned when an autoconnect priority is invalid.</summary>
+    /// <param name="priority">The rejected priority.</param>
+    /// <returns>The error.</returns>
+    public static CoreError NetworkManagerInvalidPriority(int priority) => new(
+        WireGuardErrorCodes.NetworkManagerInvalidPriority,
+        $"NetworkManager autoconnect priority {priority} is outside -999 to 999.");
+
     /// <summary>Creates the failure returned when a tunnel is a NetworkManager connection, not a file.</summary>
     /// <param name="name">The connection id.</param>
     /// <returns>The error.</returns>

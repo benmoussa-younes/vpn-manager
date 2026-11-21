@@ -6,6 +6,7 @@ using VpnManager.Core.Presentation;
 using VpnManager.Core.Process;
 using VpnManager.Core.Runtime;
 using VpnManager.Core.Services;
+using VpnManager.Core.State;
 using VpnManager.Core.Tests.Fakes;
 
 namespace VpnManager.Core.Tests;
@@ -52,6 +53,7 @@ public sealed class ConnectAndNotifyTests
         var store = new FakeWireGuardConfigStore();
         store.Files["wg0"] = TestData.SampleConfigText;
         var networkManager = new FakeNetworkManagerConnections();
+        networkManager.Connections.Add(new NetworkManagerConnection("wg0", "wg0", true, ["user:alice"]));
         var service = Build(store, networkManager, owner: "alice");
 
         var result = await service.StopAsync("wg0");
@@ -75,6 +77,64 @@ public sealed class ConnectAndNotifyTests
 
         Assert.True(result.IsFailure);
         Assert.Empty(networkManager.Activated);
+    }
+
+    [Fact]
+    public async Task Starting_applies_the_default_autoconnect_and_dns_policy()
+    {
+        var store = new FakeWireGuardConfigStore();
+        store.Files["wg0"] = TestData.SampleConfigText;
+        var networkManager = new FakeNetworkManagerConnections();
+        var service = Build(store, networkManager, owner: "alice");
+
+        var result = await service.StartAsync("wg0");
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(("wg0", true, 0), Assert.Single(networkManager.AutoConnectChanges));
+        var dns = Assert.Single(networkManager.DnsChanges);
+        Assert.Equal(NetworkManagerDnsMode.Profile, dns.Mode);
+        Assert.Contains("10.10.0.1", dns.Dns);
+    }
+
+    [Fact]
+    public async Task Stopping_marks_the_profile_as_manually_disconnected()
+    {
+        var store = new FakeWireGuardConfigStore();
+        store.Files["wg0"] = TestData.SampleConfigText;
+        var networkManager = new FakeNetworkManagerConnections();
+        networkManager.Connections.Add(new NetworkManagerConnection("wg0", "wg0", true, ["user:alice"]));
+        var service = Build(store, networkManager, owner: "alice");
+
+        var result = await service.StopAsync("wg0");
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(("wg0", false, 0), Assert.Single(networkManager.AutoConnectChanges));
+    }
+
+    [Fact]
+    public async Task Setting_a_split_dns_policy_persists_and_applies_it()
+    {
+        var store = new FakeWireGuardConfigStore();
+        store.Files["wg0"] = TestData.SampleConfigText;
+        var networkManager = new FakeNetworkManagerConnections();
+        networkManager.Connections.Add(new NetworkManagerConnection("wg0", "wg0", false, ["user:alice"]));
+        var service = Build(store, networkManager, owner: "alice");
+        var policy = new TunnelPolicy(
+            AutoReconnect: false,
+            DnsMode: NetworkManagerDnsMode.Split,
+            DnsSearchDomains: ["corp.example"]);
+
+        var saved = await service.SetPolicyAsync("wg0", policy);
+
+        Assert.True(saved.IsSuccess);
+        var stored = service.GetPolicy("wg0");
+        Assert.False(stored.AutoReconnect);
+        Assert.Equal(NetworkManagerDnsMode.Split, stored.DnsMode);
+        Assert.Equal(["corp.example"], stored.SearchDomains);
+        Assert.Equal(("wg0", false, 0), Assert.Single(networkManager.AutoConnectChanges));
+        var dns = Assert.Single(networkManager.DnsChanges);
+        Assert.Equal(NetworkManagerDnsMode.Split, dns.Mode);
+        Assert.Contains("corp.example", dns.Search);
     }
 
     [Fact]

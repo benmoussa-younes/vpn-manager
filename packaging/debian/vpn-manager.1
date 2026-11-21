@@ -32,6 +32,22 @@ Browse and export without changing anything.
 .B \-\-diagnostics
 Print what is readable without a display and exit.
 .TP
+.BR \-\-status " [" \-\-json ]
+Print the profiles and their policy, optionally as JSON.
+.TP
+.BI \-\-connect " " profile
+Bring a profile up through NetworkManager.
+.TP
+.BI \-\-disconnect " " profile
+Take a profile down and mark it manually disconnected.
+.TP
+.BI \-\-policy " " profile
+Set the per-profile policy with
+.BR \-\-auto-reconnect " on|off,"
+.BR \-\-dns-mode " profile|system|split|full"
+and
+.BR \-\-dns-search " a,b."
+.TP
 .B \-\-self\-test
 Run the display-free self-test and exit.
 .TP

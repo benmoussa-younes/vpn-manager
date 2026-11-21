@@ -386,6 +386,9 @@ public sealed class TunnelService
             ListenPort = configuration.Interface.ListenPort,
             UpdatedAt = DateTimeOffset.UtcNow,
             Verified = true,
+            AutoReconnect = existing?.AutoReconnect ?? true,
+            DnsMode = existing?.DnsMode ?? NetworkManagerDnsMode.Profile,
+            DnsSearchDomains = existing?.DnsSearchDomains ?? [],
         };
 
         var tunnels = state.Tunnels
@@ -674,7 +677,170 @@ public sealed class TunnelService
             return Result<string>.Failure(WireGuardErrors.NetworkManagerUnavailable());
         }
 
-        return await _networkManager.DeactivateAsync(name, cancellationToken).ConfigureAwait(false);
+        var down = await _networkManager.DeactivateAsync(name, cancellationToken).ConfigureAwait(false);
+        if (down.IsSuccess &&
+            _store.Exists(name).TryGetValue(out var hasFile) &&
+            hasFile &&
+            await FindNetworkManagerConnectionAsync(name, cancellationToken).ConfigureAwait(false) is not null)
+        {
+            // A manual disconnect is authoritative: NetworkManager must not bring
+            // the profile back until the operator connects again.
+            _ = await _networkManager
+                .SetAutoConnectAsync(name, autoConnect: false, priority: 0, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return down;
+    }
+
+    /// <summary>Gets the stored policy for a tunnel, or the default when none is saved.</summary>
+    /// <param name="name">The tunnel name.</param>
+    /// <returns>The policy.</returns>
+    public TunnelPolicy GetPolicy(string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+        var entry = KnownTunnels().GetValueOrDefault(name);
+        return entry is null
+            ? TunnelPolicy.Default
+            : new TunnelPolicy(entry.AutoReconnect, entry.DnsMode, entry.DnsSearchDomains);
+    }
+
+    /// <summary>
+    /// Stores the auto-reconnect and DNS policy and applies it to an owned
+    /// NetworkManager connection when one exists.
+    /// </summary>
+    /// <param name="name">The tunnel name.</param>
+    /// <param name="policy">The policy to store.</param>
+    /// <param name="cancellationToken">Cancels the wait.</param>
+    /// <returns>The stored policy, or a failure.</returns>
+    public async Task<Result<TunnelPolicy>> SetPolicyAsync(
+        string name,
+        TunnelPolicy policy,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentNullException.ThrowIfNull(policy);
+
+        if (_readOnly)
+        {
+            return Result<TunnelPolicy>.Failure(WireGuardErrors.ReadOnly(nameof(SetPolicyAsync)));
+        }
+
+        if (!TunnelNameRules.IsValid(name))
+        {
+            return Result<TunnelPolicy>.Failure(WireGuardErrors.Validation(
+                WireGuardErrorCodes.TunnelNameInvalid,
+                $"'{name}' is not a usable tunnel name."));
+        }
+
+        if (!Enum.IsDefined(policy.DnsMode))
+        {
+            return Result<TunnelPolicy>.Failure(WireGuardErrors.Validation(
+                WireGuardErrorCodes.DnsInvalid,
+                $"'{policy.DnsMode}' is not a supported DNS mode."));
+        }
+
+        foreach (var domain in policy.SearchDomains)
+        {
+            if (!NetworkText.IsValidDnsEntry(domain))
+            {
+                return Result<TunnelPolicy>.Failure(WireGuardErrors.Validation(
+                    WireGuardErrorCodes.DnsInvalid,
+                    $"Search domain '{domain}' is not a usable host name or routing domain."));
+            }
+        }
+
+        var hasFile = _store.Exists(name);
+        var connection = await FindNetworkManagerConnectionAsync(name, cancellationToken).ConfigureAwait(false);
+        if ((!hasFile.IsSuccess || !hasFile.Value) && connection is null)
+        {
+            return Result<TunnelPolicy>.Failure(WireGuardErrors.ConfigNotFound(name));
+        }
+
+        if (_stateStore is null)
+        {
+            return Result<TunnelPolicy>.Failure(WireGuardErrors.Configuration(
+                WireGuardErrorCodes.StateUnavailable,
+                "The application has no state store, so the policy cannot be remembered."));
+        }
+
+        var loaded = _stateStore.Load();
+        if (!loaded.TryGetValue(out var state))
+        {
+            return Result<TunnelPolicy>.Failure(loaded.Error);
+        }
+
+        var existing = state.Tunnels.FirstOrDefault(entry =>
+            entry.Scope == _scope &&
+            string.Equals(entry.Name, name, StringComparison.Ordinal));
+
+        var updated = (existing ?? new TunnelStateEntry
+        {
+            Name = name,
+            Scope = _scope,
+            Source = "unknown",
+        }) with
+        {
+            AutoReconnect = policy.AutoReconnect,
+            DnsMode = policy.DnsMode,
+            DnsSearchDomains = policy.SearchDomains.ToArray(),
+            UpdatedAt = DateTimeOffset.UtcNow,
+            Verified = false,
+        };
+
+        var tunnels = state.Tunnels
+            .Where(other => !(other.Scope == _scope && string.Equals(other.Name, name, StringComparison.Ordinal)))
+            .Append(updated)
+            .OrderBy(other => other.Name, StringComparer.Ordinal)
+            .ToArray();
+
+        var saved = _stateStore.Save(state with { Tunnels = tunnels });
+        if (!saved.IsSuccess)
+        {
+            return Result<TunnelPolicy>.Failure(saved.Error);
+        }
+
+        var read = _store.Read(name);
+        if (read.TryGetValue(out var text) &&
+            await FindNetworkManagerConnectionAsync(name, cancellationToken).ConfigureAwait(false) is not null)
+        {
+            var parsed = WireGuardConfigParser.Parse(name, text);
+            if (parsed.TryGetValue(out var configuration))
+            {
+                var applied = await ApplyPolicyAsync(name, configuration, cancellationToken).ConfigureAwait(false);
+                if (!applied.IsSuccess)
+                {
+                    return Result<TunnelPolicy>.Failure(applied.Error);
+                }
+            }
+        }
+
+        return Result<TunnelPolicy>.Success(policy);
+    }
+
+    private async Task<Result<string>> ApplyPolicyAsync(
+        string name,
+        TunnelConfiguration configuration,
+        CancellationToken cancellationToken)
+    {
+        if (_networkManager is null)
+        {
+            return Result<string>.Success(name);
+        }
+
+        var policy = GetPolicy(name);
+        var auto = await _networkManager
+            .SetAutoConnectAsync(name, policy.AutoReconnect, priority: 0, cancellationToken)
+            .ConfigureAwait(false);
+        if (!auto.IsSuccess)
+        {
+            return auto;
+        }
+
+        return await _networkManager
+            .ApplyDnsAsync(name, configuration.Interface.Dns, policy.SearchDomains, policy.DnsMode, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     /// <summary>
@@ -794,7 +960,10 @@ public sealed class TunnelService
 
         try
         {
-            return await _networkManager!.EnsureAsync(name, name, temp, _networkManagerOwner, cancellationToken).ConfigureAwait(false);
+            var ensured = await _networkManager!.EnsureAsync(name, name, temp, _networkManagerOwner, cancellationToken).ConfigureAwait(false);
+            return ensured.IsSuccess
+                ? await ApplyPolicyAsync(name, validConfiguration, cancellationToken).ConfigureAwait(false)
+                : Result<string>.Failure(ensured.Error);
         }
         finally
         {

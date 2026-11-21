@@ -21,6 +21,10 @@ asks for a password, never elevates and never prints a private key.
 - Keeps one instance per user and surfaces the running window on a second launch.
 - Supports a `--read-only` session that browses and exports without changing
   anything.
+- Applies a per-profile NetworkManager policy: automatic reconnection, and the
+  `Profile`, `System`, `Split` or `FullTunnel` DNS mode.
+- Offers a headless CLI: `--status [--json]`, `--connect`, `--disconnect` and
+  `--policy`.
 
 ## What it is not
 
@@ -30,6 +34,27 @@ asks for a password, never elevates and never prints a private key.
   impossible.
 - Not a privilege tool: it never invokes `sudo`, `pkexec` or a root helper, and it
   never reads or writes `/etc/wireguard`.
+
+## Command line
+
+```
+vpn-manager                      start the GUI
+vpn-manager --config-dir <path>  manage a specific directory
+vpn-manager --read-only          browse and export, change nothing
+vpn-manager --diagnostics        report what is readable without a display
+vpn-manager --status [--json]    print the profiles and their policy
+vpn-manager --connect <profile>  bring a profile up through NetworkManager
+vpn-manager --disconnect <profile>  take a profile down
+vpn-manager --policy <profile> [--auto-reconnect on|off] \
+  [--dns-mode profile|system|split|full] [--dns-search a,b]
+vpn-manager --self-test          run the display-free self-test
+vpn-manager --version            print the version
+vpn-manager --help               print the usage text
+```
+
+A manual `--disconnect` is authoritative: the profile is marked
+`autoconnect no` until the next `--connect`, so NetworkManager does not bring it
+back behind the operator's back.
 
 ## Requirements
 
@@ -147,7 +172,9 @@ and the sysctl drop-in, then builds `artifacts/vpn-manager_<version>-1_amd64.deb
   the imported copy because NetworkManager does not execute it, while the stored
   profile keeps the original lines.
 - DNS containment is reported as `Contained`/`Split`/`Uncontained`/`Unknown`;
-  no leak is claimed impossible.
+  no leak is claimed impossible. The DNS mode is applied through NetworkManager
+  (`ipv4.dns`, `ipv6.dns`, `dns-search`, `dns-priority`,
+  `ignore-auto-dns`), never by editing `/etc/resolv.conf`.
 - A user-scope session configures a profile but cannot bring it up without the
   NetworkManager policy that every GNOME session already has; the interface says
   so instead of failing silently.

@@ -33,6 +33,36 @@ public interface INetworkManagerConnections
         string owner,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Sets whether NetworkManager may reconnect the connection and its priority.
+    /// </summary>
+    /// <param name="connectionName">The connection id.</param>
+    /// <param name="autoConnect">Whether the connection may reconnect automatically.</param>
+    /// <param name="priority">The autoconnect priority; a higher value wins.</param>
+    /// <param name="cancellationToken">Cancels the wait.</param>
+    /// <returns>The connection id, or a failure.</returns>
+    Task<Result<string>> SetAutoConnectAsync(
+        string connectionName,
+        bool autoConnect,
+        int priority,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Applies the profile DNS entries and the policy to the connection.
+    /// </summary>
+    /// <param name="connectionName">The connection id.</param>
+    /// <param name="dnsEntries">The profile DNS entries (addresses, host names or routing domains).</param>
+    /// <param name="searchDomains">The search domains for split DNS.</param>
+    /// <param name="mode">The DNS mode.</param>
+    /// <param name="cancellationToken">Cancels the wait.</param>
+    /// <returns>The connection id, or a failure.</returns>
+    Task<Result<string>> ApplyDnsAsync(
+        string connectionName,
+        IReadOnlyList<string> dnsEntries,
+        IReadOnlyList<string> searchDomains,
+        NetworkManagerDnsMode mode,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Brings a connection up through NetworkManager.</summary>
     /// <param name="connectionName">The connection id.</param>
     /// <param name="cancellationToken">Cancels the wait.</param>

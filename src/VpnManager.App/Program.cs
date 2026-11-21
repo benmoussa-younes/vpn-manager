@@ -1,6 +1,7 @@
 using Avalonia;
 using Core.Platform.Linux;
 using Core.UI.Hosting;
+using VpnManager.App.Cli;
 using VpnManager.App.Diagnostics;
 
 namespace VpnManager.App;
@@ -64,6 +65,11 @@ internal static class Program
             return RunDiagnostics(args);
         }
 
+        if (CliOptions.IsRequested(args))
+        {
+            return RunCli(args);
+        }
+
         var created = CoreHost.Create(HostOptions(singleInstance: true));
         if (created.TryGetError(out var hostError))
         {
@@ -124,9 +130,39 @@ internal static class Program
         Console.WriteLine("  vpn-manager --config-dir <path>  manage a specific directory");
         Console.WriteLine("  vpn-manager --read-only          browse and export, change nothing");
         Console.WriteLine("  vpn-manager --diagnostics        report what is readable without a display");
+        Console.WriteLine("  vpn-manager --status [--json]    print the profiles and their policy");
+        Console.WriteLine("  vpn-manager --connect <profile>  bring a profile up through NetworkManager");
+        Console.WriteLine("  vpn-manager --disconnect <profile>  take a profile down");
+        Console.WriteLine("  vpn-manager --policy <profile> [--auto-reconnect on|off] [--dns-mode profile|system|split|full] [--dns-search a,b]");
         Console.WriteLine("  vpn-manager --self-test          run the display-free self-test");
         Console.WriteLine("  vpn-manager --version            print the version");
         Console.WriteLine("  vpn-manager --help               print this text");
+    }
+
+    private static int RunCli(string[] arguments)
+    {
+        var options = CliOptions.Parse(arguments);
+        var created = CoreHost.Create(HostOptions(singleInstance: false));
+        if (created.TryGetError(out var hostError))
+        {
+            Console.Error.WriteLine($"vpn-manager: {hostError.Message}");
+            return 1;
+        }
+
+        var host = created.Value;
+        try
+        {
+            var root = new CompositionRoot(
+                host,
+                ResolveConfigDirectory(host, arguments),
+                LaunchOptions.IsReadOnly(arguments));
+            var runner = new CliRunner(root.Service, root.Store.ConfigDirectory);
+            return runner.RunAsync(options, Console.Out, Console.Error).GetAwaiter().GetResult();
+        }
+        finally
+        {
+            host.ShutdownAsync().AsTask().GetAwaiter().GetResult();
+        }
     }
 
     private static int RunDiagnostics(string[] arguments)

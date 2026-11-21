@@ -147,6 +147,9 @@ public static class WireGuardErrorCodes
     /// <summary>A NetworkManager connection name is not a safe command argument.</summary>
     public const string NetworkManagerInvalidConnection = "network_manager.invalid_connection";
 
+    /// <summary>A NetworkManager autoconnect priority is outside its accepted range.</summary>
+    public const string NetworkManagerInvalidPriority = "network_manager.invalid_priority";
+
     /// <summary>The tunnel is owned by NetworkManager and is not a wg-quick file.</summary>
     public const string NetworkManagerManaged = "network_manager.managed";
 

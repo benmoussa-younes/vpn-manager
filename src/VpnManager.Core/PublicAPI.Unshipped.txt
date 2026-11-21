@@ -31,6 +31,7 @@ const VpnManager.Core.Model.WireGuardErrorCodes.ListenPortInvalid = "validation.
 const VpnManager.Core.Model.WireGuardErrorCodes.MtuInvalid = "validation.mtu.invalid" -> string!
 const VpnManager.Core.Model.WireGuardErrorCodes.NetworkManagerFailed = "network_manager.failed" -> string!
 const VpnManager.Core.Model.WireGuardErrorCodes.NetworkManagerInvalidConnection = "network_manager.invalid_connection" -> string!
+const VpnManager.Core.Model.WireGuardErrorCodes.NetworkManagerInvalidPriority = "network_manager.invalid_priority" -> string!
 const VpnManager.Core.Model.WireGuardErrorCodes.NetworkManagerManaged = "network_manager.managed" -> string!
 const VpnManager.Core.Model.WireGuardErrorCodes.NetworkManagerUnavailable = "network_manager.unavailable" -> string!
 const VpnManager.Core.Model.WireGuardErrorCodes.ParseError = "runtime.parse_error" -> string!
@@ -68,7 +69,7 @@ const VpnManager.Core.Presentation.EditorField.RoutingMode = "editor.routingMode
 const VpnManager.Core.Presentation.EditorField.Table = "editor.table" -> string!
 const VpnManager.Core.Presentation.TrayMenuBuilder.MaximumTunnels = 3 -> int
 const VpnManager.Core.Runtime.WireGuardCommand.WireGuardExecutable = "wg" -> string!
-const VpnManager.Core.State.ApplicationState.CurrentVersion = 1 -> int
+const VpnManager.Core.State.ApplicationState.CurrentVersion = 2 -> int
 const VpnManager.Core.Storage.SystemConfigFileSystem.MaximumConfigurationBytes = 1048576 -> long
 const VpnManager.Core.Validation.TunnelNameRules.MaximumLength = 15 -> int
 const VpnManager.Core.Validation.TunnelValidator.MaximumMtu = 65535 -> int
@@ -157,6 +158,9 @@ override VpnManager.Core.Runtime.WireGuardCommand.ToString() -> string!
 override VpnManager.Core.State.ApplicationState.Equals(object? obj) -> bool
 override VpnManager.Core.State.ApplicationState.GetHashCode() -> int
 override VpnManager.Core.State.ApplicationState.ToString() -> string!
+override VpnManager.Core.State.TunnelPolicy.Equals(object? obj) -> bool
+override VpnManager.Core.State.TunnelPolicy.GetHashCode() -> int
+override VpnManager.Core.State.TunnelPolicy.ToString() -> string!
 override VpnManager.Core.State.TunnelStateEntry.Equals(object? obj) -> bool
 override VpnManager.Core.State.TunnelStateEntry.GetHashCode() -> int
 override VpnManager.Core.State.TunnelStateEntry.ToString() -> string!
@@ -194,6 +198,7 @@ static VpnManager.Core.Model.WireGuardErrors.InterfaceNotFound(string! name) -> 
 static VpnManager.Core.Model.WireGuardErrors.KeyGenerationFailed(string! message) -> Core.Results.CoreError!
 static VpnManager.Core.Model.WireGuardErrors.NetworkManagerFailed(string! command, int exitCode, string! standardError) -> Core.Results.CoreError!
 static VpnManager.Core.Model.WireGuardErrors.NetworkManagerInvalidConnection(string! name) -> Core.Results.CoreError!
+static VpnManager.Core.Model.WireGuardErrors.NetworkManagerInvalidPriority(int priority) -> Core.Results.CoreError!
 static VpnManager.Core.Model.WireGuardErrors.NetworkManagerManaged(string! name) -> Core.Results.CoreError!
 static VpnManager.Core.Model.WireGuardErrors.NetworkManagerUnavailable() -> Core.Results.CoreError!
 static VpnManager.Core.Model.WireGuardErrors.PermissionDenied(string! path, string! message) -> Core.Results.CoreError!
@@ -274,6 +279,9 @@ static VpnManager.Core.Services.TunnelService.Render(VpnManager.Core.Model.Tunne
 static VpnManager.Core.Services.TunnelService.Validate(VpnManager.Core.Model.TunnelConfiguration! configuration) -> Core.Results.Result<VpnManager.Core.Model.TunnelConfiguration!>
 static VpnManager.Core.State.ApplicationState.operator !=(VpnManager.Core.State.ApplicationState? left, VpnManager.Core.State.ApplicationState? right) -> bool
 static VpnManager.Core.State.ApplicationState.operator ==(VpnManager.Core.State.ApplicationState? left, VpnManager.Core.State.ApplicationState? right) -> bool
+static VpnManager.Core.State.TunnelPolicy.Default.get -> VpnManager.Core.State.TunnelPolicy!
+static VpnManager.Core.State.TunnelPolicy.operator !=(VpnManager.Core.State.TunnelPolicy? left, VpnManager.Core.State.TunnelPolicy? right) -> bool
+static VpnManager.Core.State.TunnelPolicy.operator ==(VpnManager.Core.State.TunnelPolicy? left, VpnManager.Core.State.TunnelPolicy? right) -> bool
 static VpnManager.Core.State.TunnelStateEntry.operator !=(VpnManager.Core.State.TunnelStateEntry? left, VpnManager.Core.State.TunnelStateEntry? right) -> bool
 static VpnManager.Core.State.TunnelStateEntry.operator ==(VpnManager.Core.State.TunnelStateEntry? left, VpnManager.Core.State.TunnelStateEntry? right) -> bool
 static VpnManager.Core.State.UserPreferences.Default.get -> VpnManager.Core.State.UserPreferences!
@@ -452,10 +460,12 @@ VpnManager.Core.Model.WireGuardPeer.Sent.init -> void
 VpnManager.Core.Model.WireGuardPeer.WireGuardPeer() -> void
 VpnManager.Core.NetworkManager.INetworkManagerConnections
 VpnManager.Core.NetworkManager.INetworkManagerConnections.ActivateAsync(string! connectionName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
+VpnManager.Core.NetworkManager.INetworkManagerConnections.ApplyDnsAsync(string! connectionName, System.Collections.Generic.IReadOnlyList<string!>! dnsEntries, System.Collections.Generic.IReadOnlyList<string!>! searchDomains, VpnManager.Core.NetworkManager.NetworkManagerDnsMode mode, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
 VpnManager.Core.NetworkManager.INetworkManagerConnections.DeactivateAsync(string! connectionName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
 VpnManager.Core.NetworkManager.INetworkManagerConnections.DeleteAsync(string! connectionName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
 VpnManager.Core.NetworkManager.INetworkManagerConnections.EnsureAsync(string! connectionName, string! interfaceName, string! configPath, string! owner, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
 VpnManager.Core.NetworkManager.INetworkManagerConnections.ListWireGuardConnectionsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<System.Collections.Generic.IReadOnlyList<VpnManager.Core.NetworkManager.NetworkManagerConnection!>!>>!
+VpnManager.Core.NetworkManager.INetworkManagerConnections.SetAutoConnectAsync(string! connectionName, bool autoConnect, int priority, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
 VpnManager.Core.NetworkManager.NetworkManagerConnection
 VpnManager.Core.NetworkManager.NetworkManagerConnection.<Clone>$() -> VpnManager.Core.NetworkManager.NetworkManagerConnection!
 VpnManager.Core.NetworkManager.NetworkManagerConnection.Deconstruct(out string! Name, out string! InterfaceName, out bool IsActive, out System.Collections.Generic.IReadOnlyList<string!>! Permissions) -> void
@@ -482,13 +492,20 @@ VpnManager.Core.NetworkManager.NetworkManagerConnection.NetworkManagerConnection
 VpnManager.Core.NetworkManager.NetworkManagerConnectionParser
 VpnManager.Core.NetworkManager.NetworkManagerConnection.Permissions.get -> System.Collections.Generic.IReadOnlyList<string!>!
 VpnManager.Core.NetworkManager.NetworkManagerConnection.Permissions.init -> void
+VpnManager.Core.NetworkManager.NetworkManagerDnsMode
+VpnManager.Core.NetworkManager.NetworkManagerDnsMode.FullTunnel = 3 -> VpnManager.Core.NetworkManager.NetworkManagerDnsMode
+VpnManager.Core.NetworkManager.NetworkManagerDnsMode.Profile = 0 -> VpnManager.Core.NetworkManager.NetworkManagerDnsMode
+VpnManager.Core.NetworkManager.NetworkManagerDnsMode.Split = 2 -> VpnManager.Core.NetworkManager.NetworkManagerDnsMode
+VpnManager.Core.NetworkManager.NetworkManagerDnsMode.System = 1 -> VpnManager.Core.NetworkManager.NetworkManagerDnsMode
 VpnManager.Core.NetworkManager.NmcliNetworkManagerConnections
 VpnManager.Core.NetworkManager.NmcliNetworkManagerConnections.ActivateAsync(string! connectionName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
+VpnManager.Core.NetworkManager.NmcliNetworkManagerConnections.ApplyDnsAsync(string! connectionName, System.Collections.Generic.IReadOnlyList<string!>! dnsEntries, System.Collections.Generic.IReadOnlyList<string!>! searchDomains, VpnManager.Core.NetworkManager.NetworkManagerDnsMode mode, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
 VpnManager.Core.NetworkManager.NmcliNetworkManagerConnections.DeactivateAsync(string! connectionName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
 VpnManager.Core.NetworkManager.NmcliNetworkManagerConnections.DeleteAsync(string! connectionName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
 VpnManager.Core.NetworkManager.NmcliNetworkManagerConnections.EnsureAsync(string! connectionName, string! interfaceName, string! configPath, string! owner, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
 VpnManager.Core.NetworkManager.NmcliNetworkManagerConnections.ListWireGuardConnectionsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<System.Collections.Generic.IReadOnlyList<VpnManager.Core.NetworkManager.NetworkManagerConnection!>!>>!
 VpnManager.Core.NetworkManager.NmcliNetworkManagerConnections.NmcliNetworkManagerConnections(VpnManager.Core.Process.IProcessRunner! runner) -> void
+VpnManager.Core.NetworkManager.NmcliNetworkManagerConnections.SetAutoConnectAsync(string! connectionName, bool autoConnect, int priority, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
 VpnManager.Core.Notifications.INotifier
 VpnManager.Core.Notifications.INotifier.NotifyAsync(string! title, string! body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 VpnManager.Core.Notifications.NotifySendNotifier
@@ -863,11 +880,13 @@ VpnManager.Core.Services.TunnelService.DescribeIpv6(string! name) -> Core.Result
 VpnManager.Core.Services.TunnelService.Export(string! name, string! destinationPath) -> Core.Results.Result<string!>
 VpnManager.Core.Services.TunnelService.GeneratePresharedKeyAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<VpnManager.Core.Model.SecretKey!>>!
 VpnManager.Core.Services.TunnelService.GeneratePrivateKeyAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<VpnManager.Core.Model.SecretKey!>>!
+VpnManager.Core.Services.TunnelService.GetPolicy(string! name) -> VpnManager.Core.State.TunnelPolicy!
 VpnManager.Core.Services.TunnelService.Import(string! name, string! sourcePath) -> Core.Results.Result<string!>
 VpnManager.Core.Services.TunnelService.ListTunnelsAsync(bool reconcile = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<System.Collections.Generic.IReadOnlyList<VpnManager.Core.Model.TunnelSummary!>!>>!
 VpnManager.Core.Services.TunnelService.LoadConfiguration(string! name) -> Core.Results.Result<VpnManager.Core.Model.TunnelConfiguration!>
 VpnManager.Core.Services.TunnelService.ResolveInterfaceName(string! tunnelName) -> string!
 VpnManager.Core.Services.TunnelService.SetDisplayName(string! name, string? displayName) -> Core.Results.Result<string!>
+VpnManager.Core.Services.TunnelService.SetPolicyAsync(string! name, VpnManager.Core.State.TunnelPolicy! policy, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<VpnManager.Core.State.TunnelPolicy!>>!
 VpnManager.Core.Services.TunnelService.StartAsync(string! name, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
 VpnManager.Core.Services.TunnelService.StopAsync(string! name, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
 VpnManager.Core.Services.TunnelService.TunnelService(VpnManager.Core.Storage.IWireGuardConfigStore! store, VpnManager.Core.Runtime.IWireGuardRuntimeInspector! runtime, VpnManager.Core.Model.TunnelScope scope = VpnManager.Core.Model.TunnelScope.System, VpnManager.Core.State.IApplicationStateStore? stateStore = null, VpnManager.Core.NetworkManager.INetworkManagerConnections? networkManager = null, string? networkManagerOwner = null, bool readOnly = false, VpnManager.Core.Runtime.IDnsStateReader? dnsStateReader = null, VpnManager.Core.Storage.IConfigFileSystem? fileSystem = null, string? importDirectory = null) -> void
@@ -895,8 +914,26 @@ VpnManager.Core.State.ThemePreference
 VpnManager.Core.State.ThemePreference.Dark = 2 -> VpnManager.Core.State.ThemePreference
 VpnManager.Core.State.ThemePreference.Light = 1 -> VpnManager.Core.State.ThemePreference
 VpnManager.Core.State.ThemePreference.System = 0 -> VpnManager.Core.State.ThemePreference
+VpnManager.Core.State.TunnelPolicy
+VpnManager.Core.State.TunnelPolicy.AutoReconnect.get -> bool
+VpnManager.Core.State.TunnelPolicy.AutoReconnect.init -> void
+VpnManager.Core.State.TunnelPolicy.<Clone>$() -> VpnManager.Core.State.TunnelPolicy!
+VpnManager.Core.State.TunnelPolicy.Deconstruct(out bool AutoReconnect, out VpnManager.Core.NetworkManager.NetworkManagerDnsMode DnsMode, out System.Collections.Generic.IReadOnlyList<string!>? DnsSearchDomains) -> void
+VpnManager.Core.State.TunnelPolicy.DnsMode.get -> VpnManager.Core.NetworkManager.NetworkManagerDnsMode
+VpnManager.Core.State.TunnelPolicy.DnsMode.init -> void
+VpnManager.Core.State.TunnelPolicy.DnsSearchDomains.get -> System.Collections.Generic.IReadOnlyList<string!>?
+VpnManager.Core.State.TunnelPolicy.DnsSearchDomains.init -> void
+VpnManager.Core.State.TunnelPolicy.Equals(VpnManager.Core.State.TunnelPolicy? other) -> bool
+VpnManager.Core.State.TunnelPolicy.SearchDomains.get -> System.Collections.Generic.IReadOnlyList<string!>!
+VpnManager.Core.State.TunnelPolicy.TunnelPolicy(bool AutoReconnect = true, VpnManager.Core.NetworkManager.NetworkManagerDnsMode DnsMode = VpnManager.Core.NetworkManager.NetworkManagerDnsMode.Profile, System.Collections.Generic.IReadOnlyList<string!>? DnsSearchDomains = null) -> void
 VpnManager.Core.State.TunnelStateEntry
+VpnManager.Core.State.TunnelStateEntry.AutoReconnect.get -> bool
+VpnManager.Core.State.TunnelStateEntry.AutoReconnect.init -> void
 VpnManager.Core.State.TunnelStateEntry.<Clone>$() -> VpnManager.Core.State.TunnelStateEntry!
+VpnManager.Core.State.TunnelStateEntry.DnsMode.get -> VpnManager.Core.NetworkManager.NetworkManagerDnsMode
+VpnManager.Core.State.TunnelStateEntry.DnsMode.init -> void
+VpnManager.Core.State.TunnelStateEntry.DnsSearchDomains.get -> System.Collections.Generic.IReadOnlyList<string!>!
+VpnManager.Core.State.TunnelStateEntry.DnsSearchDomains.init -> void
 VpnManager.Core.State.TunnelStateEntry.Equals(VpnManager.Core.State.TunnelStateEntry? other) -> bool
 VpnManager.Core.State.TunnelStateEntry.ListenPort.get -> int?
 VpnManager.Core.State.TunnelStateEntry.ListenPort.init -> void

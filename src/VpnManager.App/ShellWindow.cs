@@ -194,8 +194,9 @@ internal sealed class ShellWindow : IAsyncDisposable
 
             try
             {
+                // NetworkManager owns autoconnect; the old application retry would
+                // race it and is deliberately not called here.
                 await _presenter.PollStateAsync().ConfigureAwait(true);
-                await _presenter.ReconnectAsync().ConfigureAwait(true);
             }
             catch (Exception)
             {

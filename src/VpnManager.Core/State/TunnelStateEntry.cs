@@ -1,4 +1,5 @@
 using VpnManager.Core.Model;
+using VpnManager.Core.NetworkManager;
 
 namespace VpnManager.Core.State;
 
@@ -32,4 +33,13 @@ public sealed record TunnelStateEntry
     /// An unverified entry is shown as "not verified" and pruned on reconciliation.
     /// </summary>
     public bool Verified { get; init; }
+
+    /// <summary>Gets whether NetworkManager may reconnect the profile after a link change.</summary>
+    public bool AutoReconnect { get; init; } = true;
+
+    /// <summary>Gets how the profile's DNS entries are applied.</summary>
+    public NetworkManagerDnsMode DnsMode { get; init; } = NetworkManagerDnsMode.Profile;
+
+    /// <summary>Gets the search domains the split-DNS mode routes through the tunnel.</summary>
+    public IReadOnlyList<string> DnsSearchDomains { get; init; } = [];
 }

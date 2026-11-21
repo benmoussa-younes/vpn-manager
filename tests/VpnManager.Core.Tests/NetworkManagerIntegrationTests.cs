@@ -364,6 +364,43 @@ public sealed class NmcliNetworkManagerConnectionsTests
     }
 
     [Fact]
+    public async Task Setting_autoconnect_passes_the_policy_to_nmcli()
+    {
+        var runner = new FakeProcessRunner(_ => ProcessResult.Completed(0, string.Empty, string.Empty));
+        var connections = new NmcliNetworkManagerConnections(runner);
+
+        var result = await connections.SetAutoConnectAsync("work-vpn", autoConnect: true, priority: 10);
+
+        Assert.True(result.IsSuccess);
+        var command = string.Join(' ', Assert.Single(runner.Requests).Arguments);
+        Assert.Contains("connection modify work-vpn", command, StringComparison.Ordinal);
+        Assert.Contains("connection.autoconnect yes", command, StringComparison.Ordinal);
+        Assert.Contains("connection.autoconnect-priority 10", command, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Applying_dns_classifies_families_and_sets_the_policy()
+    {
+        var runner = new FakeProcessRunner(_ => ProcessResult.Completed(0, string.Empty, string.Empty));
+        var connections = new NmcliNetworkManagerConnections(runner);
+
+        var result = await connections.ApplyDnsAsync(
+            "work-vpn",
+            ["10.0.0.1", "2001:db8::1", "~corp.example"],
+            ["search.example"],
+            NetworkManagerDnsMode.Split);
+
+        Assert.True(result.IsSuccess);
+        var command = string.Join(' ', Assert.Single(runner.Requests).Arguments);
+        Assert.Contains("ipv4.dns 10.0.0.1", command, StringComparison.Ordinal);
+        Assert.Contains("ipv6.dns 2001:db8::1", command, StringComparison.Ordinal);
+        Assert.Contains("~corp.example", command, StringComparison.Ordinal);
+        Assert.Contains("search.example", command, StringComparison.Ordinal);
+        Assert.Contains("ipv4.ignore-auto-dns yes", command, StringComparison.Ordinal);
+        Assert.Contains("ipv4.dns-priority -50", command, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Deleting_passes_the_connection_id()
     {
         var runner = new FakeProcessRunner(_ => ProcessResult.Completed(0, string.Empty, string.Empty));

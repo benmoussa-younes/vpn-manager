@@ -10,7 +10,7 @@ namespace VpnManager.Core.State;
 public sealed record ApplicationState
 {
     /// <summary>The current schema version; bump it when the shape changes.</summary>
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;
 
     private Dictionary<string, string> _displayNames = new(StringComparer.Ordinal);
 
