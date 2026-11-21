@@ -16,7 +16,7 @@ internal static class Program
     internal const string ApplicationId = "vpn-manager";
 
     /// <summary>The vendor path component of the XDG application directories.</summary>
-    internal const string Vendor = "vpnmanager";
+    internal const string Vendor = "benmoussa";
 
     /// <summary>The application path component of the XDG application directories.</summary>
     internal const string Application = "vpn-manager";

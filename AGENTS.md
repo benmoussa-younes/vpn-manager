@@ -61,7 +61,7 @@ in the same commit as the API adaptation.
 - Product version `0.1.0`; licence `GPL-3.0-or-later`; documentation
   `CC-BY-SA-4.0`.
 - Core pin `v0.2.1`; the desktop id is `vpn-manager`; the XDG namespace is
-  `vpnmanager/vpn-manager`.
+  `benmoussa/vpn-manager`.
 - A release is a signed tag `v<version>` and the `.deb`, the source archive and
   `SHA256SUMS`.
 

@@ -32,7 +32,7 @@ public sealed class CoverageMembersTests
     {
         using var directory = new TemporaryDirectory();
         var fileSystem = TestFileSystems.SystemConfig();
-        var nested = Path.Combine(directory.Path, "vpnmanager", "vpn-manager");
+        var nested = Path.Combine(directory.Path, "benmoussa", "vpn-manager");
 
         Assert.True(fileSystem.CreateDirectory(nested));
         Assert.True(fileSystem.DirectoryExists(nested));

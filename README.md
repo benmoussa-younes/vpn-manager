@@ -9,7 +9,7 @@ asks for a password, never elevates and never prints a private key.
 
 ## What it does
 
-- Lists the profiles under `~/.config/vpnmanager/vpn-manager` (or the
+- Lists the profiles under `~/.config/benmoussa/vpn-manager` (or the
   `--config-dir` value) and the WireGuard connections NetworkManager owns.
 - Imports a `.conf` file, a pasted profile, or a full configuration text; exports
   a profile. A profile is written owner-only and parsed before it is stored.
@@ -60,9 +60,9 @@ the application itself never elevates.
 
 | Path | Contents |
 |---|---|
-| `~/.config/vpnmanager/vpn-manager/` | The profiles the operator owns (owner-only, `0600`). |
-| `~/.local/state/vpnmanager/vpn-manager/` | State, appearance preferences, application log, operation journal and crash log. |
-| `$XDG_RUNTIME_DIR/vpnmanager-vpn-manager-<user>.sock` | The single-instance claim. |
+| `~/.config/benmoussa/vpn-manager/` | The profiles the operator owns (owner-only, `0600`). |
+| `~/.local/state/benmoussa/vpn-manager/` | State, appearance preferences, application log, operation journal and crash log. |
+| `$XDG_RUNTIME_DIR/benmoussa-vpn-manager-<user>.sock` | The single-instance claim. |
 
 A private key lives in the profile file (owner-only) and in memory while an
 import or an export runs. It is never displayed, logged or passed as a

@@ -11,6 +11,6 @@ internal sealed class FakeOperationJournal : IOperationJournal
     public Result<string> Record(string message)
     {
         Entries.Add(message);
-        return Result<string>.Success("/tmp/vpnmanager/vpn-manager/journal.log");
+        return Result<string>.Success("/tmp/benmoussa/vpn-manager/journal.log");
     }
 }

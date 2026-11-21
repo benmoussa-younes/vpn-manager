@@ -20,7 +20,7 @@ internal sealed class FakeApplicationStateStore : IApplicationStateStore
     {
         State = state;
         Saves++;
-        return Result<string>.Success("/tmp/vpnmanager/vpn-manager/state.json");
+        return Result<string>.Success("/tmp/benmoussa/vpn-manager/state.json");
     }
 
     public Result<string> Export(string path) => Result<string>.Success(path);

@@ -28,7 +28,7 @@ written as `VpnManager.*` on Core v0.2.1.
 
 - Namespaces and assemblies are `VpnManager.Core` and `VpnManager.App`; the
   product identity is `VPN Manager`, the desktop id `vpn-manager`, the XDG
-  namespace `vpnmanager/vpn-manager`.
+  namespace `benmoussa/vpn-manager`.
 - Core is consumed at the pinned tag `v0.2.1` as a sibling source clone.
 - Process execution uses `Core.Execution.IProcessRunner`: argument vectors, fixed
   trusted directories, capped output and a timeout.

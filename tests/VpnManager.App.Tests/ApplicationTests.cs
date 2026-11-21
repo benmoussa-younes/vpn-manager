@@ -74,7 +74,7 @@ public sealed class ApplicationTests
         var environment = new XdgEnvironment(home, configHome, stateHome, null, null, runtime, null, null);
         var platform = LinuxPlatform.Create(new XdgPathResolver(environment));
         var created = CoreHost.Create(new CoreHostOptions(
-            "vpnmanager",
+            "benmoussa",
             "vpn-manager",
             SingleInstance: false,
             Platform: platform));

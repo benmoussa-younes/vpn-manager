@@ -71,13 +71,13 @@ internal static class SelfTest
 
         var paths = ApplicationPaths.Create(
             new PathSet("/tmp/config", "/tmp/state", "/tmp/data", "/tmp/cache", null, [], []),
-            "vpnmanager",
+            "benmoussa",
             "vpn-manager");
         Check(
             output,
             "application paths are namespaced",
             paths.TryGetValue(out var applicationPaths) &&
-            applicationPaths.StateFile("state.json") == "/tmp/state/vpnmanager/vpn-manager/state.json",
+            applicationPaths.StateFile("state.json") == "/tmp/state/benmoussa/vpn-manager/state.json",
             ref failures);
 
         if (failures == 0)
