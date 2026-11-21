@@ -19,6 +19,17 @@ public sealed class ApplicationTests
     }
 
     [Fact]
+    public void ProductHostServicesKeepsTheVendorAndApplicationOnlyInTheSocketName()
+    {
+        var services = new ProductHostServices();
+
+        using var instance = services.CreateSingleInstance("/tmp/vpn-manager-socket/vpnmanager-vpn-manager-user.sock");
+
+        var singleInstance = Assert.IsType<SingleInstanceLock>(instance);
+        Assert.Equal("/tmp/vpn-manager-socket/benmoussa-vpn-manager.socket", singleInstance.SocketPath);
+    }
+
+    [Fact]
     public void LaunchOptionsReadTheConfigDirectoryAndTheReadOnlyFlag()
     {
         string[] arguments = ["--config-dir", "/tmp/tunnels", "--read-only"];

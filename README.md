@@ -62,7 +62,7 @@ the application itself never elevates.
 |---|---|
 | `~/.config/benmoussa/vpn-manager/` | The profiles the operator owns (owner-only, `0600`). |
 | `~/.local/state/benmoussa/vpn-manager/` | State, appearance preferences, application log, operation journal and crash log. |
-| `$XDG_RUNTIME_DIR/benmoussa-vpn-manager-<user>.sock` | The single-instance claim. |
+| `$XDG_RUNTIME_DIR/benmoussa-vpn-manager.socket` | The single-instance claim; the runtime directory is already per-user. |
 
 A private key lives in the profile file (owner-only) and in memory while an
 import or an export runs. It is never displayed, logged or passed as a
