@@ -1,6 +1,7 @@
 using Core.Platform.Linux;
 using Core.UI.Hosting;
 using VpnManager.App.Cli;
+using VpnManager.App.Privileges;
 using VpnManager.App.State;
 using VpnManager.Core.NetworkManager;
 using VpnManager.Core.State;
@@ -50,6 +51,24 @@ public sealed class ApplicationTests
 
         var bad = CliOptions.Parse(["--policy", "wg0", "--dns-mode", "nonsense"]);
         Assert.NotNull(bad.Error);
+    }
+
+    [Fact]
+    public void CliParsesTheFixedPrivilegedAction()
+    {
+        var options = CliOptions.Parse(["--fix-sysctl"]);
+
+        Assert.Equal(CliCommand.FixSysctl, options.Command);
+        Assert.Null(options.Error);
+    }
+
+    [Fact]
+    public void ThePrivilegedRequestCarriesOnlyTheFixedHelperAndVerb()
+    {
+        var request = PkexecRootActionService.BuildRequest();
+
+        Assert.Equal(PkexecRootActionService.PkexecPath, request.FileName);
+        Assert.Equal([PkexecRootActionService.HelperPath, PkexecRootActionService.Verb], request.Arguments);
     }
 
     [Fact]

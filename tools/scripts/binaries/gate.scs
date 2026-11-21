@@ -306,6 +306,51 @@ if aot_mode {
         }
     }
 
+    let helper_directory = "/tmp/vpn-manager-helper-gate-publish"
+    match process.run(process.request("rm", ["-rf", helper_directory]).with_working_directory(root)) {
+        ok(_) => {}
+        error(failure) => {
+            io.write_standard_error_line("FAIL helper aot clean: {failure.kind}")
+            success = false
+        }
+    }
+
+    match process.run(process.request("dotnet", ["publish", "src/VpnManager.Helper/VpnManager.Helper.csproj", "-c", "Release", "-r", "linux-x64", "-o", helper_directory]).with_working_directory(root)) {
+        ok(completed) => {
+            let mutable helper_ilc = 0
+            for line in completed.standard_output.split("\n") {
+                if line.contains("ILC: ") {
+                    helper_ilc = helper_ilc + 1
+                }
+            }
+            if completed.exit_code == 0 and helper_ilc == 0 {
+                io.write_standard_output_line("PASS helper aot publish has zero ILC lines")
+            } else {
+                io.write_standard_error_line("FAIL helper aot publish: exit {completed.exit_code}, {helper_ilc} ILC lines")
+                success = false
+            }
+        }
+        error(failure) => {
+            io.write_standard_error_line("FAIL helper aot publish: {failure.kind}")
+            success = false
+        }
+    }
+
+    match process.run(process.request("./vpn-manager-helper", ["--self-test"]).with_working_directory(helper_directory.to_path())) {
+        ok(completed) => {
+            if completed.exit_code == 0 and completed.standard_output.contains("SELF-TEST PASS") {
+                io.write_standard_output_line("PASS helper aot self-test")
+            } else {
+                io.write_standard_error_line("FAIL helper aot self-test: exit {completed.exit_code} {completed.standard_error.trim_whitespace()}")
+                success = false
+            }
+        }
+        error(failure) => {
+            io.write_standard_error_line("FAIL helper aot self-test: {failure.kind}")
+            success = false
+        }
+    }
+
     match process.run(process.request("./vpn-manager", ["--self-test"]).with_working_directory(publish_directory.to_path())) {
         ok(completed) => {
             if completed.exit_code == 0 and completed.standard_output.contains("SELF-TEST PASS") {

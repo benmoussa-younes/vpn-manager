@@ -13,3 +13,7 @@ elevates.
 Prerequisites: the .NET SDK pinned by `global.json`, a clang toolchain for
 Native AOT, `dpkg-deb`, and Core cloned at the `CORE_VERSION` pin beside this
 repository.
+
+The package also installs the root-owned `vpn-manager-helper` and the polkit
+action `com.bit-crafts.vpn-manager.sysctl-src-valid-mark`; `pkexec` launches the
+helper and polkit asks the operator.

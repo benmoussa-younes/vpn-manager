@@ -93,15 +93,16 @@ public sealed class ArchitectureGuardTests
     }
 
     [Fact]
-    public void The_application_never_names_an_elevation_program()
+    public void Only_the_privileged_action_service_names_the_elevation_launcher()
     {
         var offenders = RepositoryLayout.SourceFiles("src/VpnManager.App")
             .Where(path => File.ReadAllText(path).Contains(PrivilegedToken, StringComparison.Ordinal))
             .Select(RepositoryLayout.RelativePath)
             .ToArray();
 
-        // The application is a per-user editor: it never elevates (ADR-19).
-        Assert.Empty(offenders);
+        // ADR 0007: one narrow seam may name the launcher; the rest of the app
+        // never elevates.
+        Assert.Equal(["src/VpnManager.App/Privileges/PkexecRootActionService.cs"], offenders);
     }
 
     [Fact]

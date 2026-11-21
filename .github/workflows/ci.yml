@@ -34,6 +34,7 @@ jobs:
       - name: Test
         run: >
           dotnet test VpnManager.slnx -c Release --no-build
+          --collect:"XPlat Code Coverage"
           --logger "trx;LogFileName=test-results.trx"
           --results-directory TestResults
 

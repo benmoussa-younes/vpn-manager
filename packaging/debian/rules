@@ -28,6 +28,7 @@ override_dh_auto_test:
 
 override_dh_auto_install:
 	dotnet publish $(APP) -c Release -r $(RID) --self-contained -o $(PREFIX)
+	dotnet publish src/VpnManager.Helper/VpnManager.Helper.csproj -c Release -r $(RID) --self-contained -o $(PREFIX)
 	find $(PREFIX) -type f \( -name '*.dbg' -o -name '*.pdb' -o -name '*.xml' \) -delete
 	chmod -R a+rX debian/$(PKG)/usr
 

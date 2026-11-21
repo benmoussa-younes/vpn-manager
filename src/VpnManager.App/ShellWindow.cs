@@ -9,6 +9,7 @@ using Core.UI.Chrome;
 using Core.UI.Dialogs;
 using Core.UI.Hosting;
 using Core.UI.Preferences;
+using Avalonia.Threading;
 using VpnManager.App.Views;
 using VpnManager.Core.Presentation;
 
@@ -30,6 +31,7 @@ internal sealed class ShellWindow : IAsyncDisposable
     private readonly TunnelListView _content;
     private readonly TunnelListPresenter _presenter;
     private readonly AppearanceService _appearance;
+    private readonly NmcliNetworkManagerMonitor _monitor = new();
     private readonly bool _readOnly;
     private readonly CancellationTokenSource _lifetime = new();
     private bool _loopsStarted;
@@ -122,6 +124,7 @@ internal sealed class ShellWindow : IAsyncDisposable
 
         _disposed = true;
         _lifetime.Cancel();
+        _monitor.Dispose();
         await _presenter.DisposeAsync().ConfigureAwait(true);
         _lifetime.Dispose();
     }
@@ -148,6 +151,8 @@ internal sealed class ShellWindow : IAsyncDisposable
         }
 
         _loopsStarted = true;
+        _monitor.Changed += OnNetworkManagerChanged;
+        _monitor.Start();
         _ = PollTransferLoopAsync();
         _ = PollStateLoopAsync();
     }
@@ -176,6 +181,21 @@ internal sealed class ShellWindow : IAsyncDisposable
                     // A poll is best effort; the next one recovers.
                 }
             }
+        }
+    }
+
+    private void OnNetworkManagerChanged() =>
+        Dispatcher.UIThread.Post(() => _ = PollStateFromEventAsync());
+
+    private async Task PollStateFromEventAsync()
+    {
+        try
+        {
+            await _presenter.PollStateAsync().ConfigureAwait(true);
+        }
+        catch (Exception)
+        {
+            // A monitor hint is best effort; the periodic poll recovers.
         }
     }
 

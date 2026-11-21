@@ -13,9 +13,11 @@ and shows the live state, the transfer counters, the IPv6 classification and the
 DNS containment.
 .PP
 Everything happens in the operator's own configuration directory. The
-application never elevates, never runs a privileged helper, and never reads or
-writes
+application runs unprivileged and never reads or writes
 .IR /etc/wireguard .
+The one privileged action,
+.BR \-\-fix-sysctl ,
+uses the fixed polkit helper to set the full-tunnel sysctl.
 .PP
 Only one instance runs per user: starting the application again surfaces the
 window of the running instance and the new process exits.

@@ -9,6 +9,7 @@ internal enum CliCommand
     Connect = 2,
     Disconnect = 3,
     Policy = 4,
+    FixSysctl = 5,
 }
 
 /// <summary>
@@ -25,7 +26,7 @@ internal sealed record CliOptions(
     string? Error = null)
 {
     internal static bool IsRequested(string[] arguments) =>
-        arguments.Any(argument => argument is "--status" or "--connect" or "--disconnect" or "--policy");
+        arguments.Any(argument => argument is "--status" or "--connect" or "--disconnect" or "--policy" or "--fix-sysctl");
 
     internal static CliOptions Parse(string[] arguments)
     {
@@ -41,6 +42,10 @@ internal sealed record CliOptions(
         if (arguments.Contains("--status", StringComparer.Ordinal))
         {
             command = CliCommand.Status;
+        }
+        else if (arguments.Contains("--fix-sysctl", StringComparer.Ordinal))
+        {
+            command = CliCommand.FixSysctl;
         }
         else if (arguments.Contains("--connect", StringComparer.Ordinal))
         {

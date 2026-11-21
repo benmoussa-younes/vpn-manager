@@ -34,8 +34,8 @@ in the same commit as the API adaptation.
 
 ## Conventions
 
-- Two assemblies: `VpnManager.Core` is headless (no Avalonia, no display, no
-  Linux-only type in its public API); `VpnManager.App` is the Avalonia shell.
+- Three assemblies: `VpnManager.Core` is headless; `VpnManager.App` is the
+  Avalonia shell and CLI; `VpnManager.Helper` is the fixed root helper.
 - MVP: a passive view publishes a `ShellSnapshot`; commands travel back as ids.
   No business rule in code-behind, no DI container, no service locator.
 - `Result<T>`/`CoreError` for an expected failure; an exception is a bug.
@@ -52,8 +52,9 @@ in the same commit as the API adaptation.
   `IProcessRunner`; never a shell string, never `PATH`.
 - The profile store is owner-only (`0600`/`0700`), read no-follow and bounded,
   written atomically. A stored profile is validated before NetworkManager sees it.
-- The application never invokes `sudo`, `pkexec` or a root helper and never reads
-  or writes `/etc/wireguard`. Installing the `.deb` is the operator's decision.
+- The GUI never invokes `sudo` or an arbitrary root command and never reads or
+  writes `/etc/wireguard`. `--fix-sysctl` is the one fixed helper path, through
+  `pkexec` and polkit; installing the `.deb` is the operator's decision.
 - A vulnerability report is private: follow `SECURITY.md`.
 
 ## Repository facts
@@ -74,7 +75,4 @@ in the same commit as the API adaptation.
 ## Limits
 
 - WireGuard only; no server, no multi-protocol, no kill switch.
-- NetworkManager is the connection engine; without it the product reports the
-  limit instead of writing a system unit.
-- X11 is reachable through XWayland; the native Wayland backend is selected when
-  the session offers it, with an X11 fallback.
+- NetworkManager is the engine; X11 is reached through XWayland, native Wayland when offered.

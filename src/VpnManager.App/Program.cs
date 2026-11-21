@@ -3,6 +3,7 @@ using Core.Platform.Linux;
 using Core.UI.Hosting;
 using VpnManager.App.Cli;
 using VpnManager.App.Diagnostics;
+using VpnManager.App.Privileges;
 
 namespace VpnManager.App;
 
@@ -134,6 +135,7 @@ internal static class Program
         Console.WriteLine("  vpn-manager --connect <profile>  bring a profile up through NetworkManager");
         Console.WriteLine("  vpn-manager --disconnect <profile>  take a profile down");
         Console.WriteLine("  vpn-manager --policy <profile> [--auto-reconnect on|off] [--dns-mode profile|system|split|full] [--dns-search a,b]");
+        Console.WriteLine("  vpn-manager --fix-sysctl       set the full-tunnel sysctl through polkit");
         Console.WriteLine("  vpn-manager --self-test          run the display-free self-test");
         Console.WriteLine("  vpn-manager --version            print the version");
         Console.WriteLine("  vpn-manager --help               print this text");
@@ -156,7 +158,10 @@ internal static class Program
                 host,
                 ResolveConfigDirectory(host, arguments),
                 LaunchOptions.IsReadOnly(arguments));
-            var runner = new CliRunner(root.Service, root.Store.ConfigDirectory);
+            var runner = new CliRunner(
+                root.Service,
+                root.Store.ConfigDirectory,
+                new PkexecRootActionService(root.ProcessRunner));
             return runner.RunAsync(options, Console.Out, Console.Error).GetAwaiter().GetResult();
         }
         finally

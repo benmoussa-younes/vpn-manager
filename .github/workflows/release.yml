@@ -73,6 +73,9 @@ jobs:
             -o "artifacts/${prefix}-src.tar.gz" HEAD
           (cd artifacts && sha256sum "${prefix}-src.tar.gz" > "${prefix}-src.tar.gz.sha256")
 
+      - name: SBOM
+        run: pipx run reuse==5.0.2 spdx > artifacts/vpn-manager.spdx
+
       - name: Checksums
         run: |
           cd artifacts

@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using VpnManager.Core.Model;
 using VpnManager.Core.Runtime;
+using VpnManager.App.Privileges;
 using VpnManager.Core.Services;
 using VpnManager.Core.State;
 
@@ -39,14 +40,16 @@ internal sealed class CliRunner
 {
     private readonly TunnelService _service;
     private readonly string _configDirectory;
+    private readonly IRootActionService? _rootActions;
 
-    internal CliRunner(TunnelService service, string configDirectory)
+    internal CliRunner(TunnelService service, string configDirectory, IRootActionService? rootActions = null)
     {
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrWhiteSpace(configDirectory);
 
         _service = service;
         _configDirectory = configDirectory;
+        _rootActions = rootActions;
     }
 
     internal async Task<int> RunAsync(CliOptions options, TextWriter output, TextWriter error, CancellationToken cancellationToken = default)
@@ -71,6 +74,8 @@ internal sealed class CliRunner
                 return await ChangeAsync(options.Name!, connect: false, output, cancellationToken).ConfigureAwait(false);
             case CliCommand.Policy:
                 return await SetPolicyAsync(options, output, cancellationToken).ConfigureAwait(false);
+            case CliCommand.FixSysctl:
+                return await FixSysctlAsync(output, cancellationToken).ConfigureAwait(false);
             default:
                 error.WriteLine("No command was requested.");
                 return 2;
@@ -142,6 +147,25 @@ internal sealed class CliRunner
         }
 
         output.WriteLine(result.Error.Message);
+        return 1;
+    }
+
+    private async Task<int> FixSysctlAsync(TextWriter output, CancellationToken cancellationToken)
+    {
+        if (_rootActions is null || !_rootActions.IsAvailable)
+        {
+            output.WriteLine("The privileged helper is not installed.");
+            return 1;
+        }
+
+        var applied = await _rootActions.SetSrcValidMarkAsync(cancellationToken).ConfigureAwait(false);
+        if (applied.TryGetValue(out var value))
+        {
+            output.WriteLine(value);
+            return 0;
+        }
+
+        output.WriteLine(applied.Error.Message);
         return 1;
     }
 

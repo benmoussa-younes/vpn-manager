@@ -34,9 +34,12 @@ trap 'rm -rf "$stage"' EXIT
 pkg="$stage/pkg"
 mkdir -p "$pkg/DEBIAN" "$pkg/usr/lib/vpn-manager" "$pkg/usr/bin" \
     "$pkg/usr/share/applications" "$pkg/usr/share/icons/hicolor/scalable/apps" \
-    "$pkg/usr/share/doc/vpn-manager" "$pkg/usr/share/man/man1" "$pkg/usr/lib/sysctl.d"
+    "$pkg/usr/share/doc/vpn-manager" "$pkg/usr/share/man/man1" "$pkg/usr/lib/sysctl.d" \
+    "$pkg/usr/share/polkit-1/actions"
 
 dotnet publish "$repo/src/VpnManager.App/VpnManager.App.csproj" \
+    -c Release -r linux-x64 -o "$pkg/usr/lib/vpn-manager"
+dotnet publish "$repo/src/VpnManager.Helper/VpnManager.Helper.csproj" \
     -c Release -r linux-x64 -o "$pkg/usr/lib/vpn-manager"
 
 find "$pkg/usr/lib/vpn-manager" -type f \( -name '*.dbg' -o -name '*.pdb' -o -name '*.xml' \) -delete
@@ -48,6 +51,7 @@ cp "$repo/packaging/icons/vpn-manager.svg" "$pkg/usr/share/icons/hicolor/scalabl
 mkdir -p "$pkg/usr/share/icons/hicolor"
 cp -a "$repo/packaging/icons/hicolor/." "$pkg/usr/share/icons/hicolor/"
 cp "$repo/packaging/debian/60-vpn-manager.conf" "$pkg/usr/lib/sysctl.d/"
+cp "$repo/packaging/polkit/com.bit-crafts.vpn-manager.policy" "$pkg/usr/share/polkit-1/actions/"
 
 cp "$repo/NOTICE" "$repo/THIRD-PARTY" "$pkg/usr/share/doc/vpn-manager/"
 cp "$repo/LICENSES/GPL-3.0-or-later.txt" "$repo/LICENSES/LGPL-3.0-or-later.txt" "$repo/LICENSES/CC-BY-SA-4.0.txt" "$pkg/usr/share/doc/vpn-manager/"
@@ -61,7 +65,7 @@ Version: $version-1
 Architecture: amd64
 Maintainer: Younes Benmoussa <younes.benmoussa@pm.me>
 Installed-Size: $installed_size
-Depends: network-manager, wireguard-tools, procps
+Depends: network-manager, wireguard-tools, procps, pkexec
 Recommends: libnotify-bin, gnome-shell-extension-appindicator
 Suggests: wireguard
 Section: net
@@ -87,8 +91,8 @@ chmod 0755 "$pkg/DEBIAN/postinst"
 find "$pkg" -type d -exec chmod 0755 {} +
 find "$pkg" -type f -exec chmod 0644 {} +
 chmod 0755 "$pkg/usr/lib/vpn-manager/vpn-manager"
+chmod 0755 "$pkg/usr/lib/vpn-manager/vpn-manager-helper"
 chmod 0755 "$pkg/DEBIAN/postinst"
-chmod 0755 "$pkg/usr/lib/vpn-manager/vpn-manager"
 
 (
     cd "$pkg"

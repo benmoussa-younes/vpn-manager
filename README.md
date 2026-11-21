@@ -23,8 +23,8 @@ asks for a password, never elevates and never prints a private key.
   anything.
 - Applies a per-profile NetworkManager policy: automatic reconnection, and the
   `Profile`, `System`, `Split` or `FullTunnel` DNS mode.
-- Offers a headless CLI: `--status [--json]`, `--connect`, `--disconnect` and
-  `--policy`.
+- Offers a headless CLI: `--status [--json]`, `--connect`, `--disconnect`,
+  `--policy` and `--fix-sysctl`.
 
 ## What it is not
 
@@ -32,8 +32,10 @@ asks for a password, never elevates and never prints a private key.
 - Not a multi-protocol client: it manages WireGuard profiles only.
 - Not a kill switch: it reports DNS containment, it never claims a leak is
   impossible.
-- Not a privilege tool: it never invokes `sudo`, `pkexec` or a root helper, and it
-  never reads or writes `/etc/wireguard`.
+- Not a general privilege tool: the GUI runs unprivileged and never invokes
+  `sudo` or an arbitrary root command. One fixed full-tunnel sysctl action goes
+  through the polkit-authorized helper; it never reads or writes
+  `/etc/wireguard`.
 
 ## Command line
 
@@ -47,6 +49,7 @@ vpn-manager --connect <profile>  bring a profile up through NetworkManager
 vpn-manager --disconnect <profile>  take a profile down
 vpn-manager --policy <profile> [--auto-reconnect on|off] \
   [--dns-mode profile|system|split|full] [--dns-search a,b]
+vpn-manager --fix-sysctl       set the full-tunnel sysctl through polkit
 vpn-manager --self-test          run the display-free self-test
 vpn-manager --version            print the version
 vpn-manager --help               print the usage text
@@ -148,6 +151,17 @@ Count the `ILC: ` lines of the publish: zero is the proof. `--self-test` runs
 the display-free claims on the published native binary; `dotnet test` runs the
 Junit-free Xunit suite in JIT.
 
+## Coverage
+
+```bash
+dotnet test VpnManager.slnx -c Release \
+  --collect:"XPlat Code Coverage" --results-directory artifacts/coverage
+```
+
+The report covers the hand-written `VpnManager.Core`, `vpn-manager` and
+`vpn-manager-helper` assemblies. Core is above 95 % line coverage; the Avalonia
+shell is the residual and is tracked in the workstream.
+
 ## Package the Debian package
 
 ```bash
@@ -161,9 +175,12 @@ and the sysctl drop-in, then builds `artifacts/vpn-manager_<version>-1_amd64.deb
 
 - No secret is ever printed: a private key is never displayed, logged or passed
   as a command-line argument.
-- No elevation: the application runs as the operator and never invokes `sudo`,
-  `pkexec` or a privileged helper.
-- No system write: it never reads or writes `/etc/wireguard`.
+- No general elevation: the GUI runs as the operator. The only privileged path
+  is the fixed `--fix-sysctl` action, launched by `pkexec` and authorized by the
+  polkit action `com.bit-crafts.vpn-manager.sysctl-src-valid-mark`; the helper
+  accepts one verb and no caller path or command.
+- No system write to `/etc/wireguard`. The package installs the sysctl drop-in;
+  the explicit `--fix-sysctl` action sets and verifies that one sysctl.
 - Every external command is an argument vector, never a shell string; a bare
   tool name resolves against fixed system directories, never `PATH`.
 - Profiles are read with a bounded, no-follow read and written atomically

@@ -2,9 +2,11 @@
   <Folder Name="/src/">
     <Project Path="src/VpnManager.Core/VpnManager.Core.csproj" />
     <Project Path="src/VpnManager.App/VpnManager.App.csproj" />
+    <Project Path="src/VpnManager.Helper/VpnManager.Helper.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/VpnManager.Core.Tests/VpnManager.Core.Tests.csproj" />
     <Project Path="tests/VpnManager.App.Tests/VpnManager.App.Tests.csproj" />
+    <Project Path="tests/VpnManager.Helper.Tests/VpnManager.Helper.Tests.csproj" />
   </Folder>
 </Solution>

@@ -27,6 +27,11 @@ written as `VpnManager.*` on Core v0.2.2.
   `System`, `Split` and `FullTunnel` DNS modes applied through `nmcli`.
 - A headless CLI: `--status [--json]`, `--connect`, `--disconnect` and
   `--policy --auto-reconnect/--dns-mode/--dns-search`.
+- A fixed root helper and the polkit action
+  `com.bit-crafts.vpn-manager.sysctl-src-valid-mark`; `--fix-sysctl` sets and
+  verifies the full-tunnel sysctl through `pkexec`.
+- An `nmcli monitor` event stream for immediate state refresh, with the periodic
+  poll as fallback.
 
 ### Changed
 
@@ -65,6 +70,6 @@ written as `VpnManager.*` on Core v0.2.2.
 
 ### Removed
 
-- The vendored shared-library source, the root helper, the system scope, the
-  `wg-quick` activation path and the product-local About/Preferences/tray
-  implementations.
+- The vendored shared-library source, the old privileged helper, the system
+  scope, the `wg-quick` activation path and the product-local
+  About/Preferences/tray implementations.

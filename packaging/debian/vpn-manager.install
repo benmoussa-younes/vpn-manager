@@ -7,3 +7,4 @@ THIRD-PARTY usr/share/doc/vpn-manager
 LICENSES/GPL-3.0-or-later.txt usr/share/doc/vpn-manager
 LICENSES/CC-BY-SA-4.0.txt usr/share/doc/vpn-manager
 LICENSES/LGPL-3.0-or-later.txt usr/share/doc/vpn-manager
+packaging/polkit/com.bit-crafts.vpn-manager.policy usr/share/polkit-1/actions
