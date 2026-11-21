@@ -83,13 +83,13 @@ in the previous state directory and are rebuilt as the client runs.
 
 ## Build from source
 
-The product consumes **Core v0.2.1** as source: core is not a NuGet package, and
+The product consumes **Core v0.2.2** as source: core is not a NuGet package, and
 the tag is pinned in [`CORE_VERSION`](CORE_VERSION). Clone it beside this
 repository:
 
 ```bash
-git clone --branch v0.2.1 --depth 1 https://github.com/benmoussa-younes/core.git ../core
-git -C ../core describe --tags --exact-match   # must print v0.2.1
+git clone --branch v0.2.2 --depth 1 https://github.com/benmoussa-younes/core.git ../core
+git -C ../core describe --tags --exact-match   # must print v0.2.2
 ```
 
 Then build, test and run the gate:

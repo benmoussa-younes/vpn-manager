@@ -22,11 +22,11 @@ the build and the tests. It needs Git, `reuse` and the Scripts interpreter on
 
 ## Core
 
-Core is source-only and pinned by [`CORE_VERSION`](CORE_VERSION) (`v0.2.1`). It is
+Core is source-only and pinned by [`CORE_VERSION`](CORE_VERSION) (`v0.2.2`). It is
 a sibling clone, never a NuGet package and never vendored:
 
 ```sh
-git clone --branch v0.2.1 --depth 1 https://github.com/benmoussa-younes/core.git ../core
+git clone --branch v0.2.2 --depth 1 https://github.com/benmoussa-younes/core.git ../core
 ```
 
 The projects reference `../../../core/src/...`; the pin and the references change
@@ -60,7 +60,7 @@ in the same commit as the API adaptation.
 
 - Product version `0.1.0`; licence `GPL-3.0-or-later`; documentation
   `CC-BY-SA-4.0`.
-- Core pin `v0.2.1`; the desktop id is `vpn-manager`; the XDG namespace is
+- Core pin `v0.2.2`; the desktop id is `vpn-manager`; the XDG namespace is
   `benmoussa/vpn-manager`.
 - A release is a signed tag `v<version>` and the `.deb`, the source archive and
   `SHA256SUMS`.

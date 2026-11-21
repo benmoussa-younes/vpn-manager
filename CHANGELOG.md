@@ -11,7 +11,7 @@ and this project adheres to
 ## [0.1.0] - 2026-11-21
 
 The first release of VPN Manager: a per-user WireGuard client for Debian GNOME,
-written as `VpnManager.*` on Core v0.2.1.
+written as `VpnManager.*` on Core v0.2.2.
 
 ### Added
 
@@ -29,7 +29,7 @@ written as `VpnManager.*` on Core v0.2.1.
 - Namespaces and assemblies are `VpnManager.Core` and `VpnManager.App`; the
   product identity is `VPN Manager`, the desktop id `vpn-manager`, the XDG
   namespace `benmoussa/vpn-manager`.
-- Core is consumed at the pinned tag `v0.2.1` as a sibling source clone.
+- Core is consumed at the pinned tag `v0.2.2` as a sibling source clone.
 - Process execution uses `Core.Execution.IProcessRunner`: argument vectors, fixed
   trusted directories, capped output and a timeout.
 - The single-instance claim is `<vendor>-<application>.socket` under the

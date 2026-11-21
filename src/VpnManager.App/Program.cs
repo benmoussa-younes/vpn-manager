@@ -1,5 +1,4 @@
 using Avalonia;
-using Core.Platform;
 using Core.Platform.Linux;
 using Core.UI.Hosting;
 using VpnManager.App.Diagnostics;
@@ -158,5 +157,6 @@ internal static class Program
         Vendor,
         Application,
         SingleInstance: singleInstance,
-        Platform: new CorePlatform(new XdgPathResolver(), new ProductHostServices()));
+        Platform: LinuxPlatform.Create(new XdgPathResolver()),
+        IncludeUserInSingleInstanceName: false);
 }
