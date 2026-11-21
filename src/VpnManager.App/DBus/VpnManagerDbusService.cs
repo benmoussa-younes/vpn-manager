@@ -19,7 +19,7 @@ internal sealed class VpnManagerDbusService : IPathMethodHandler, IAsyncDisposab
     internal const string ObjectPath = "/com/bit_crafts/VpnManager";
     internal const string InterfaceName = "com.bit_crafts.VpnManager1";
 
-    private const string ErrorName = "com.bit_crafts.VpnManager1.Failed";
+    internal const string ErrorName = "com.bit_crafts.VpnManager1.Failed";
     private const string IntrospectionXml = """
         <interface name="com.bit_crafts.VpnManager1">
           <method name="GetStatus"><arg type="s" direction="out"/></method>
@@ -78,6 +78,25 @@ internal sealed class VpnManagerDbusService : IPathMethodHandler, IAsyncDisposab
     {
         ArgumentNullException.ThrowIfNull(context);
 
+        try
+        {
+            await DispatchAsync(context).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // The caller cancelled or went away; there is nobody to answer.
+        }
+        catch (Exception exception)
+        {
+            // A body that does not match the signature, or any unexpected
+            // failure, must answer with an error instead of tearing the session
+            // service down: one bad call would otherwise stop every client.
+            TryReplyError(context, exception);
+        }
+    }
+
+    private async Task DispatchAsync(MethodContext context)
+    {
         if (context.IsDBusIntrospectRequest)
         {
             context.ReplyIntrospectXml(
@@ -163,6 +182,18 @@ internal sealed class VpnManagerDbusService : IPathMethodHandler, IAsyncDisposab
         var policy = new TunnelPolicy(autoReconnect, mode.Value, search);
         var result = await _service.SetPolicyAsync(name, policy, cancellationToken).ConfigureAwait(false);
         return result.IsSuccess ? "ok" : result.Error.Message;
+    }
+
+    private static void TryReplyError(MethodContext context, Exception exception)
+    {
+        try
+        {
+            context.ReplyError(ErrorName, exception.Message);
+        }
+        catch (Exception)
+        {
+            // The connection is already unusable; there is nothing left to answer.
+        }
     }
 
     private static void Reply(MethodContext context, string value)

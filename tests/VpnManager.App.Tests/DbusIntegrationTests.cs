@@ -67,7 +67,67 @@ public sealed class DbusIntegrationTests
         Assert.Contains("Unknown DNS mode", output, StringComparison.Ordinal);
     }
 
-    private static async Task<string> CallAsync(string method, params string[] arguments)
+    [Fact]
+    public async Task AMalformedBodyIsRefusedAndTheServiceKeepsServing()
+    {
+        Assert.SkipUnless(
+            Environment.GetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS") is { Length: > 0 },
+            "No session D-Bus address; run under dbus-run-session.");
+
+        var service = new TunnelService(
+            new FakeConfigStore(),
+            new FakeRuntimeInspector(),
+            TunnelScope.User,
+            new FakeStateStore(),
+            new FakeNetworkManager(),
+            "alice");
+        await using var dbus = new VpnManagerDbusService(service, "/tmp/vpn-manager-dbus-tests");
+        using var lifetime = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        await dbus.StartAsync(lifetime.Token);
+
+        // Connect takes a string; an int32 body must be an error reply, not an
+        // exception that takes the session service down.
+        var malformed = await RunRawAsync("int32:42");
+
+        Assert.NotEqual(0, malformed.ExitCode);
+        Assert.Contains(VpnManagerDbusService.ErrorName, malformed.Error, StringComparison.Ordinal);
+
+        var version = await CallAsync("Version");
+        Assert.Contains("0.1.0", version, StringComparison.Ordinal);
+    }
+
+    private static async Task<(int ExitCode, string Output, string Error)> RunRawAsync(string typedArgument)
+    {
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "dbus-send",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            },
+        };
+        process.StartInfo.ArgumentList.Add("--session");
+        process.StartInfo.ArgumentList.Add("--print-reply");
+        process.StartInfo.ArgumentList.Add("--type=method_call");
+        process.StartInfo.ArgumentList.Add("--dest=com.bit-crafts.VpnManager");
+        process.StartInfo.ArgumentList.Add("/com/bit_crafts/VpnManager");
+        process.StartInfo.ArgumentList.Add("com.bit_crafts.VpnManager1.Connect");
+        process.StartInfo.ArgumentList.Add(typedArgument);
+
+        process.Start();
+        var output = await process.StandardOutput.ReadToEndAsync();
+        var error = await process.StandardError.ReadToEndAsync();
+        await process.WaitForExitAsync();
+
+        return (process.ExitCode, output, error);
+    }
+
+    private static async Task<(int ExitCode, string Output, string Error)> RunAsync(
+        string method,
+        params string[] arguments)
     {
         using var process = new Process
         {
@@ -98,7 +158,13 @@ public sealed class DbusIntegrationTests
         var error = await process.StandardError.ReadToEndAsync();
         await process.WaitForExitAsync();
 
-        Assert.True(process.ExitCode == 0, error);
+        return (process.ExitCode, output, error);
+    }
+
+    private static async Task<string> CallAsync(string method, params string[] arguments)
+    {
+        var (exitCode, output, error) = await RunAsync(method, arguments);
+        Assert.True(exitCode == 0, error);
         return output;
     }
 }

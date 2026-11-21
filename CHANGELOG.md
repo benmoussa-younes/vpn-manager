@@ -57,6 +57,9 @@ written as `VpnManager.*` on Core v0.2.2.
   hold immediately instead of at the next activation.
 - `--dns-search ""` clears the stored search domains; an empty value no longer
   silently kept the previous list.
+- A D-Bus call whose body does not match the method signature now receives a
+  typed `com.bit_crafts.VpnManager1.Failed` reply; it used to raise inside the
+  handler and disconnect the session service.
 
 ### Security
 
