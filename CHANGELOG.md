@@ -32,6 +32,8 @@ written as `VpnManager.*` on Core v0.2.1.
 - Core is consumed at the pinned tag `v0.2.1` as a sibling source clone.
 - Process execution uses `Core.Execution.IProcessRunner`: argument vectors, fixed
   trusted directories, capped output and a timeout.
+- The single-instance claim is `<vendor>-<application>.socket` under the
+  per-user XDG runtime directory; the account suffix is no longer repeated.
 - Profiles are stored through the platform atomic writer, owner-only, and the
   state and preferences through `JsonSettingsStore<T>`.
 - The appearance preferences use `Core.Mvp.Services.AppearanceService`; the old
