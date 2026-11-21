@@ -135,6 +135,13 @@ if not report("REUSE default GPL", reuse.contains("GPL-3.0-or-later"), "REUSE.to
     success = false
 }
 
+let control = read_text(base, "packaging/debian/control")
+let package_script = read_text(base, "packaging/build-deb.sh")
+let dependencies_ok = control.contains("network-manager") and control.contains("wireguard-tools") and control.contains("pkexec") and package_script.contains("network-manager") and package_script.contains("wireguard-tools") and package_script.contains("pkexec")
+if not report("debian dependencies", dependencies_ok, "network-manager, wireguard-tools and pkexec") {
+    success = false
+}
+
 let mutable markdown_to_check: list<string> = []
 match process.run(process.request("git", ["ls-files", "--cached", "--others", "--exclude-standard"]).with_working_directory(root)) {
     ok(completed) => {

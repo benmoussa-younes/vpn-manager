@@ -61,6 +61,7 @@ public interface INetworkManagerConnections
         IReadOnlyList<string> dnsEntries,
         IReadOnlyList<string> searchDomains,
         NetworkManagerDnsMode mode,
+        bool includeIpv6 = true,
         CancellationToken cancellationToken = default);
 
     /// <summary>Brings a connection up through NetworkManager.</summary>

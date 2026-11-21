@@ -1,3 +1,4 @@
+using System.Net;
 using Core.Results;
 using VpnManager.Core.Configuration;
 using VpnManager.Core.Model;
@@ -838,8 +839,19 @@ public sealed class TunnelService
             return auto;
         }
 
+        var includeIpv6 = configuration.Interface.Addresses
+            .Select(address => address.Split('/', 2)[0])
+            .Any(address => IPAddress.TryParse(address, out var parsed) &&
+                parsed.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6);
+
         return await _networkManager
-            .ApplyDnsAsync(name, configuration.Interface.Dns, policy.SearchDomains, policy.DnsMode, cancellationToken)
+            .ApplyDnsAsync(
+                name,
+                configuration.Interface.Dns,
+                policy.SearchDomains,
+                policy.DnsMode,
+                includeIpv6,
+                cancellationToken)
             .ConfigureAwait(false);
     }
 

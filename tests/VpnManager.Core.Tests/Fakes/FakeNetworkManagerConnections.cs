@@ -28,7 +28,7 @@ internal sealed class FakeNetworkManagerConnections : INetworkManagerConnections
     internal List<(string Name, bool AutoConnect, int Priority)> AutoConnectChanges { get; } = [];
 
     /// <summary>The DNS changes, in order.</summary>
-    internal List<(string Name, IReadOnlyList<string> Dns, IReadOnlyList<string> Search, NetworkManagerDnsMode Mode)> DnsChanges { get; } = [];
+    internal List<(string Name, IReadOnlyList<string> Dns, IReadOnlyList<string> Search, NetworkManagerDnsMode Mode, bool IncludeIpv6)> DnsChanges { get; } = [];
 
     /// <summary>When set, the policy calls fail with this error.</summary>
     internal CoreError? PolicyError { get; set; }
@@ -77,9 +77,10 @@ internal sealed class FakeNetworkManagerConnections : INetworkManagerConnections
         IReadOnlyList<string> dnsEntries,
         IReadOnlyList<string> searchDomains,
         NetworkManagerDnsMode mode,
+        bool includeIpv6 = true,
         CancellationToken cancellationToken = default)
     {
-        DnsChanges.Add((connectionName, dnsEntries, searchDomains, mode));
+        DnsChanges.Add((connectionName, dnsEntries, searchDomains, mode, includeIpv6));
         return Task.FromResult(PolicyError is null
             ? Result<string>.Success(connectionName)
             : Result<string>.Failure(PolicyError));

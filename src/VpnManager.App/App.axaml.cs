@@ -30,8 +30,13 @@ public partial class App : CoreApplication
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var host = Program.Host
-                ?? throw new InvalidOperationException("The Core host must be created before the desktop lifetime starts.");
+            if (Program.Host is not { } host)
+            {
+                // A headless test starts the application for its resources and
+                // never creates a product host.
+                base.OnFrameworkInitializationCompleted();
+                return;
+            }
 
             host.Attach(this);
 

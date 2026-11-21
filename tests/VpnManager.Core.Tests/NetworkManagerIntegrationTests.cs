@@ -351,6 +351,26 @@ public sealed class NmcliNetworkManagerConnectionsTests
     }
 
     [Fact]
+    public async Task Ipv4_only_profiles_do_not_set_ipv6_dns_properties()
+    {
+        var runner = new FakeProcessRunner(_ => ProcessResult.Completed(0, string.Empty, string.Empty));
+        var connections = new NmcliNetworkManagerConnections(runner);
+
+        var result = await connections.ApplyDnsAsync(
+            "work-vpn",
+            ["1.1.1.1"],
+            ["corp.example"],
+            NetworkManagerDnsMode.Split,
+            includeIpv6: false);
+
+        Assert.True(result.IsSuccess);
+        var command = string.Join(' ', Assert.Single(runner.Requests).Arguments);
+        Assert.Contains("ipv4.dns 1.1.1.1", command, StringComparison.Ordinal);
+        Assert.Contains("ipv4.dns-search corp.example", command, StringComparison.Ordinal);
+        Assert.DoesNotContain("ipv6.", command, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task A_connection_name_that_looks_like_an_option_is_refused_before_nmcli()
     {
         var runner = new FakeProcessRunner(_ => ProcessResult.Completed(0, string.Empty, string.Empty));

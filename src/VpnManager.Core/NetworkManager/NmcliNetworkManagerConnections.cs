@@ -226,6 +226,7 @@ public sealed class NmcliNetworkManagerConnections : INetworkManagerConnections
         IReadOnlyList<string> dnsEntries,
         IReadOnlyList<string> searchDomains,
         NetworkManagerDnsMode mode,
+        bool includeIpv6 = true,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionName);
@@ -281,28 +282,42 @@ public sealed class NmcliNetworkManagerConnections : INetworkManagerConnections
             arguments.AddRange(
             [
                 "ipv4.dns", string.Empty,
-                "ipv6.dns", string.Empty,
                 "ipv4.dns-search", string.Empty,
-                "ipv6.dns-search", string.Empty,
                 "ipv4.ignore-auto-dns", "no",
-                "ipv6.ignore-auto-dns", "no",
                 "ipv4.dns-priority", "0",
-                "ipv6.dns-priority", "0",
             ]);
+
+            if (includeIpv6)
+            {
+                arguments.AddRange(
+                [
+                    "ipv6.dns", string.Empty,
+                    "ipv6.dns-search", string.Empty,
+                    "ipv6.ignore-auto-dns", "no",
+                    "ipv6.dns-priority", "0",
+                ]);
+            }
         }
         else
         {
             arguments.AddRange(
             [
                 "ipv4.dns", string.Join(',', ipv4),
-                "ipv6.dns", string.Join(',', ipv6),
                 "ipv4.dns-search", string.Join(',', search.Distinct(StringComparer.OrdinalIgnoreCase)),
-                "ipv6.dns-search", string.Join(',', search.Distinct(StringComparer.OrdinalIgnoreCase)),
                 "ipv4.ignore-auto-dns", "yes",
-                "ipv6.ignore-auto-dns", "yes",
                 "ipv4.dns-priority", "-50",
-                "ipv6.dns-priority", "-50",
             ]);
+
+            if (includeIpv6)
+            {
+                arguments.AddRange(
+                [
+                    "ipv6.dns", string.Join(',', ipv6),
+                    "ipv6.dns-search", string.Join(',', search.Distinct(StringComparer.OrdinalIgnoreCase)),
+                    "ipv6.ignore-auto-dns", "yes",
+                    "ipv6.dns-priority", "-50",
+                ]);
+            }
         }
 
         var result = await RunAsync(arguments, cancellationToken).ConfigureAwait(false);
