@@ -14,7 +14,10 @@ internal sealed class SessionEndWatcher : IDisposable
     private const string Path = "/org/gnome/SessionManager";
     private const string Interface = "org.gnome.SessionManager";
 
+    private const string Service = "org.gnome.SessionManager";
+
     private DBusConnection? _connection;
+    private string? _clientId;
     private IDisposable? _query;
     private IDisposable? _end;
     private int _ending;
@@ -45,10 +48,11 @@ internal sealed class SessionEndWatcher : IDisposable
         {
             await connection.ConnectAsync().ConfigureAwait(false);
             _connection = connection;
+            _clientId = await TryRegisterAsync(connection).ConfigureAwait(false);
             _query = await connection
                 .AddMatchAsync(
                     Rule("QueryEndSession"),
-                    _ => MarkEnding(),
+                    _ => OnQueryEndSession(),
                     emitOnCapturedContext: false,
                     ObserverFlags.None,
                     state: null)
@@ -70,6 +74,67 @@ internal sealed class SessionEndWatcher : IDisposable
             _end = null;
             _connection = null;
             connection.Dispose();
+        }
+    }
+
+    private static async Task<string?> TryRegisterAsync(DBusConnection connection)
+    {
+        try
+        {
+            // gnome-session only waits for registered clients; the broadcast
+            // signals still drive the watcher when registration is unavailable.
+            var writer = connection.GetMessageWriter();
+            writer.WriteMethodCallHeader(
+                Service,
+                Path,
+                Interface,
+                "RegisterClient",
+                "ss",
+                MessageFlags.None);
+            writer.WriteString("VPN Manager");
+            writer.WriteString("vpn-manager");
+            return await connection
+                .CallMethodAsync(
+                    writer.CreateMessage(),
+                    static (message, _) => message.GetBodyReader().ReadString(),
+                    null)
+                .ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is DBusExceptionBase or IOException or SocketException or InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
+    private void OnQueryEndSession()
+    {
+        MarkEnding();
+        if (_clientId is { } clientId && _connection is { } connection)
+        {
+            _ = RespondAsync(connection, clientId);
+        }
+    }
+
+    private static async Task RespondAsync(DBusConnection connection, string clientId)
+    {
+        try
+        {
+            var writer = connection.GetMessageWriter();
+            writer.WriteMethodCallHeader(
+                Service,
+                Path,
+                Interface,
+                "EndSessionResponse",
+                "sbs",
+                MessageFlags.None);
+            writer.WriteString(clientId);
+            writer.WriteBool(true);
+            writer.WriteString(string.Empty);
+            await connection.CallMethodAsync(writer.CreateMessage()).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is DBusExceptionBase or IOException or SocketException or InvalidOperationException)
+        {
+            // The session is ending anyway; a lost response only delays it.
         }
     }
 

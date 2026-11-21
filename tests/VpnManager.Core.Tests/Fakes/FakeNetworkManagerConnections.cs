@@ -45,6 +45,9 @@ internal sealed class FakeNetworkManagerConnections : INetworkManagerConnections
     /// <summary>When set, activation and deactivation fail with this error.</summary>
     internal CoreError? ChangeError { get; set; }
 
+    /// <summary>When set, a connection id change fails with this error.</summary>
+    internal CoreError? IdChangeError { get; set; }
+
     /// <summary>When set, ensuring a connection fails with this error.</summary>
     internal CoreError? EnsureError { get; set; }
 
@@ -97,6 +100,11 @@ internal sealed class FakeNetworkManagerConnections : INetworkManagerConnections
         string newConnectionName,
         CancellationToken cancellationToken = default)
     {
+        if (IdChangeError is not null)
+        {
+            return Task.FromResult(Result<string>.Failure(IdChangeError));
+        }
+
         IdChanges.Add((connectionName, newConnectionName));
         return Task.FromResult(Result<string>.Success(newConnectionName));
     }

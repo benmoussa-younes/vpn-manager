@@ -7,7 +7,6 @@ using VpnManager.App.Tests.Fakes;
 using VpnManager.App.Views;
 using VpnManager.Core.NetworkManager;
 using VpnManager.Core.Presentation;
-using ProductQuitChoice = VpnManager.Core.Presentation.QuitChoice;
 
 namespace VpnManager.App.Tests;
 
@@ -87,23 +86,6 @@ public sealed class TunnelListViewTests
             var pushed = Assert.Single(host.NavigationService.Pushed);
             Assert.Equal("wg0", pushed.Title);
             Assert.IsType<TunnelDetailView>(pushed.View);
-        });
-    }
-
-    [Fact]
-    public async Task TheQuitConfirmationMapsTheDialogAnswer()
-    {
-        await HeadlessTestSession.RunAsync(async () =>
-        {
-            var host = new FakeApplicationHost();
-            var view = new TunnelListView();
-            view.AttachHost(host);
-
-            host.DialogsService.Confirm = ConfirmResult.Accept;
-            var choice = await view.ConfirmQuitAsync(["wg0"]);
-
-            Assert.Equal(ProductQuitChoice.DisconnectAndQuit, choice);
-            Assert.Single(host.DialogsService.Requests);
         });
     }
 

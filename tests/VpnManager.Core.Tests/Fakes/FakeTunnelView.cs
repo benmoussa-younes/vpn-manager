@@ -58,11 +58,6 @@ internal sealed class FakeTunnelView : ITunnelListView
     /// <summary>Key identity updates.</summary>
     internal List<(bool HasPrivateKey, string? PublicKey)> KeyUpdates { get; } = [];
 
-    /// <summary>The connected-name lists passed to <see cref="ConfirmQuitAsync"/>.</summary>
-    internal List<IReadOnlyList<string>> QuitConfirmations { get; } = [];
-
-    /// <summary>The answer <see cref="ConfirmQuitAsync"/> returns.</summary>
-    internal QuitChoice QuitAnswer { get; set; } = QuitChoice.DisconnectAndQuit;
 
     /// <summary>The last policy snapshot shown.</summary>
     internal TunnelPolicySnapshot? Policy { get; private set; }
@@ -78,11 +73,6 @@ internal sealed class FakeTunnelView : ITunnelListView
 
     public void HidePolicy() => PolicyVisible = false;
 
-    public Task<QuitChoice> ConfirmQuitAsync(IReadOnlyList<string> connectedNames, CancellationToken cancellationToken = default)
-    {
-        QuitConfirmations.Add(connectedNames);
-        return Task.FromResult(QuitAnswer);
-    }
 
     /// <summary>The connected-name lists passed to <see cref="ConfirmCloseAsync"/>.</summary>
     internal List<IReadOnlyList<string>> CloseConfirmations { get; } = [];

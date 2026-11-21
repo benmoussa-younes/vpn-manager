@@ -12,7 +12,6 @@ using Core.Diagnostics;
 using Core.Results;
 using VpnManager.App.Controls;
 using VpnManager.Core.Presentation;
-using QuitChoice = VpnManager.Core.Presentation.QuitChoice;
 
 namespace VpnManager.App.Views;
 
@@ -571,33 +570,6 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         _busy = busy;
         BusyChanged?.Invoke(busy);
         Publish();
-    }
-
-    /// <inheritdoc />
-    public async Task<QuitChoice> ConfirmQuitAsync(IReadOnlyList<string> connectedNames, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(connectedNames);
-
-        var host = _host;
-        if (host is null)
-        {
-            return QuitChoice.Cancel;
-        }
-
-        var result = await host.Dialogs.ConfirmAsync(
-            new ConfirmRequest(
-                "Quit with a VPN connected?",
-                $"Still connected: {string.Join(", ", connectedNames)}.",
-                "Disconnect and quit",
-                "Stay connected and quit"),
-            cancellationToken).ConfigureAwait(true);
-
-        return result switch
-        {
-            ConfirmResult.Accept => QuitChoice.DisconnectAndQuit,
-            ConfirmResult.Alternative => QuitChoice.StayConnectedAndQuit,
-            _ => QuitChoice.Cancel,
-        };
     }
 
     /// <inheritdoc />

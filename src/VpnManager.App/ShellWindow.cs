@@ -112,7 +112,7 @@ internal sealed class ShellWindow : IAsyncDisposable
         _content.Publish();
 
         Window.Opened += OnOpened;
-        _ = _sessionEnd.StartAsync();
+        _ = StartSessionWatcherAsync();
     }
 
     /// <summary>Gets the shell window the application lifetime hosts.</summary>
@@ -150,6 +150,18 @@ internal sealed class ShellWindow : IAsyncDisposable
         _monitor.Dispose();
         await _presenter.DisposeAsync().ConfigureAwait(true);
         _lifetime.Dispose();
+    }
+
+    private async Task StartSessionWatcherAsync()
+    {
+        try
+        {
+            await _sessionEnd.StartAsync().ConfigureAwait(true);
+        }
+        catch (Exception)
+        {
+            // A best-effort hint: without it the close still asks normally.
+        }
     }
 
     private async ValueTask<bool> ConfirmCloseAsync() =>

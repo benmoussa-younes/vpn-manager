@@ -31,13 +31,17 @@ public partial class App : CoreApplication
     private void OnSessionSignal(PosixSignalContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        context.Cancel = true;
 
         var shutdown = _shutdown;
-        if (shutdown is not null)
+        if (shutdown is null || shutdown.IsStarted)
         {
-            Dispatcher.UIThread.Post(() => _ = shutdown.RunAsync().AsTask());
+            // No coordinator, or already shutting down: let the default
+            // termination win instead of swallowing a second signal.
+            return;
         }
+
+        context.Cancel = true;
+        Dispatcher.UIThread.Post(() => _ = shutdown.RunAsync().AsTask());
     }
 
     /// <inheritdoc />
@@ -80,6 +84,11 @@ public partial class App : CoreApplication
             // the window never receives a close event.
             _sigterm = PosixSignalRegistration.Create(PosixSignal.SIGTERM, OnSessionSignal);
             _sigint = PosixSignalRegistration.Create(PosixSignal.SIGINT, OnSessionSignal);
+            desktop.Exit += (_, _) =>
+            {
+                _sigterm?.Dispose();
+                _sigint?.Dispose();
+            };
 
             window.QuitRequested += () => shutdown.RunAsync();
 

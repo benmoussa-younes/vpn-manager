@@ -13,9 +13,9 @@ namespace VpnManager.App.Views;
 
 /// <summary>
 /// The rename page (MVP, passive view): one text box for the display name. The
-/// display name is only a label in this application — the configuration file, the
-/// interface and the NetworkManager connection keep the real tunnel name. The
-/// actions live in the shell toolbar.
+/// display name is also the NetworkManager connection id; the configuration file,
+/// the interface and the real tunnel name stay unchanged. The actions live in the
+/// shell toolbar.
 /// </summary>
 public sealed class TunnelRenameView : UserControl, IView
 {
@@ -45,7 +45,7 @@ public sealed class TunnelRenameView : UserControl, IView
                 Card("Display name", Row("Real name", _realName), Row("Shown as", _displayName)),
                 new TextBlock
                 {
-                    Text = "The display name is only a label in this application. The tunnel keeps its real name everywhere else.",
+                    Text = "The display name is also the NetworkManager connection name. The configuration file, the interface and the real tunnel name stay unchanged.",
                     Classes = { "muted" },
                     TextWrapping = TextWrapping.Wrap,
                 },

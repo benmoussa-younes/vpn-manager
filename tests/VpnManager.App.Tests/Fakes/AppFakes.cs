@@ -334,19 +334,14 @@ internal sealed class FakeNavigation : INavigationHost
 
 internal sealed class FakeTray : ITrayService
 {
-    internal CommandSet? Menu { get; private set; }
-
-    internal string? ToolTip { get; private set; }
-
-    internal int HideCount { get; private set; }
-
+    // The product has no tray; the host contract still requires the member.
     public void Show(string toolTip, CommandSet menu)
     {
-        ToolTip = toolTip;
-        Menu = menu;
     }
 
-    public void Hide() => HideCount++;
+    public void Hide()
+    {
+    }
 }
 
 internal sealed class FakeApplicationHost : IApplicationHost

@@ -1,3 +1,4 @@
+using Core.Results;
 using VpnManager.Core.Model;
 using VpnManager.Core.NetworkManager;
 using VpnManager.Core.Services;
@@ -70,6 +71,44 @@ public sealed class DisplayNameNetworkManagerTests
         var listed = await service.ListTunnelsAsync();
         Assert.True(listed.IsSuccess);
         Assert.Equal("Home", Assert.Single(listed.Value).DisplayName);
+    }
+
+    [Fact]
+    public async Task A_failed_networkmanager_listing_is_not_reported_as_disconnected()
+    {
+        var (service, networkManager, _) = Build("wg0", "wg0", ["user:alice"], active: true);
+        networkManager.ListError = new CoreError("test.list_failed", "NetworkManager is unavailable.");
+
+        var stopped = await service.StopAsync("wg0");
+
+        Assert.True(stopped.IsFailure);
+        Assert.Empty(networkManager.Deactivated);
+    }
+
+    [Fact]
+    public async Task Deleting_a_profile_keeps_a_connection_whose_id_does_not_match()
+    {
+        var (service, networkManager, state) = Build("Corp VPN", "wg0", ["user:alice"]);
+        state.State.DisplayNames.Clear();
+
+        var deleted = await service.DeleteAsync("wg0");
+
+        Assert.True(deleted.IsSuccess);
+        Assert.Empty(networkManager.Deleted);
+    }
+
+    [Fact]
+    public async Task A_refused_networkmanager_rename_rolls_the_state_back()
+    {
+        var (service, networkManager, _) = Build("wg0", "wg0", ["user:alice"]);
+        networkManager.IdChangeError = new CoreError("test.rename_failed", "NetworkManager refused the rename.");
+
+        var renamed = await service.SetDisplayName("wg0", "Home");
+
+        Assert.True(renamed.IsFailure);
+        var listed = await service.ListTunnelsAsync();
+        Assert.True(listed.IsSuccess);
+        Assert.Null(Assert.Single(listed.Value).DisplayName);
     }
 
     [Fact]

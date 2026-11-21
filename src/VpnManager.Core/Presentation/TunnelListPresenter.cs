@@ -149,7 +149,7 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
     /// Re-reads the tunnel list and updates the view only when a row changed,
     /// without the busy overlay and without raising an error. It is the quiet poll
     /// that makes a tunnel toggled outside the application — in GNOME Settings, for
-    /// example — appear here and in the tray menu.
+    /// example — appear here.
     /// </summary>
     /// <returns><see langword="true"/> when the view was updated.</returns>
     public async Task<bool> PollStateAsync()
@@ -556,7 +556,10 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
         View.SetStatus("Edit cancelled.");
     }
 
-    /// <summary>Opens the rename page for a tunnel. The display name is a UI label only.</summary>
+    /// <summary>
+    /// Opens the rename page. The display name is also the NetworkManager
+    /// connection id; the file, the interface and the real tunnel name stay.
+    /// </summary>
     /// <param name="name">The real tunnel name.</param>
     public void BeginRename(string name)
     {
@@ -805,46 +808,9 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
     }
 
     /// <summary>
-    /// Asks the operator what to do about the connected tunnels before a quit. The
-    /// shell calls this from its own quit confirmation, so the tray, the menu and
-    /// the window close all ask once.
-    /// </summary>
-    /// <returns><see langword="true"/> when the application may quit.</returns>
-    public async Task<bool> ConfirmQuitAsync()
-    {
-        var tunnels = await _service.ListTunnelsAsync().ConfigureAwait(true);
-        var connected = tunnels.TryGetValue(out var rows)
-            ? rows.Where(row => row.State == TunnelState.Up).Select(row => row.Name).ToArray()
-            : [];
-
-        if (connected.Length == 0)
-        {
-            return true;
-        }
-
-        // The window may be hidden in the tray; the confirm dialog must be visible.
-        View.ShowWindow();
-        var choice = await View.ConfirmQuitAsync(connected).ConfigureAwait(true);
-        if (choice == QuitChoice.Cancel)
-        {
-            return false;
-        }
-
-        if (choice == QuitChoice.DisconnectAndQuit)
-        {
-            foreach (var name in connected)
-            {
-                _ = await _service.StopAsync(name).ConfigureAwait(true);
-            }
-        }
-
-        return true;
-    }
-
-    /// <summary>
-    /// Asks what to do about the connected tunnels before the window closes with
-    /// no tray host. Closing disconnects the VPN: there would be no window and no
-    /// icon left to manage it.
+    /// Asks what to do about the connected tunnels before the window closes.
+    /// Closing disconnects the VPN: once the window is gone nothing would manage
+    /// it.
     /// </summary>
     /// <returns><see langword="true"/> when the application may close.</returns>
     public async Task<bool> ConfirmCloseAsync()

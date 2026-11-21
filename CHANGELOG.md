@@ -89,6 +89,16 @@ written as `VpnManager.*` on Core v0.2.2.
   stays readable after the toast disappears.
 - `--disconnect` on a tunnel that is already down is a success, not an
   `nmcli` error: the operator asked for a state, not for a transition.
+- A failed NetworkManager listing is no longer reported as "already
+  disconnected": the failure reaches the caller.
+- Deleting a profile only deletes the NetworkManager connection whose id
+  represents it, never a connection matched by interface alone.
+- A refused NetworkManager rename rolls the stored display name back, so the
+  application and NetworkManager never keep different names after a failure.
+- The session-end watcher registers with gnome-session and answers its
+  `QueryEndSession`, as well as observing the broadcast signals.
+- The three-way quit choice is gone with the tray: closing and quitting share
+  the disconnect confirmation, and the dead command surface is removed.
 - The `Full tunnel` DNS mode sets the root routing domain (`~.`) explicitly
   instead of relying on NetworkManager adding it because of the default route.
 - A read-only session shows a persistent warning banner as well as the header

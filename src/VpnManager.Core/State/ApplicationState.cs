@@ -24,10 +24,11 @@ public sealed record ApplicationState
     public IReadOnlyList<TunnelStateEntry> Tunnels { get; init; } = [];
 
     /// <summary>
-    /// Gets the operator's display names, keyed by the real tunnel name. The name
-    /// is only what the application shows; the file, the interface and the
-    /// NetworkManager connection keep the real name. A missing entry shows the real
-    /// name. It is never null, even when a saved document has no such property.
+    /// Gets the operator's display names, keyed by the real tunnel name. The
+    /// display name is also the NetworkManager connection id; the file, the
+    /// interface and the real tunnel name stay unchanged. A missing entry shows
+    /// the real name. It is never null, even when a saved document has no such
+    /// property.
     /// </summary>
     public Dictionary<string, string> DisplayNames
     {

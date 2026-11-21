@@ -5,7 +5,7 @@ namespace VpnManager.Core.Services;
 /// <summary>
 /// Keeps one instance of the application per user. The first instance binds a
 /// Unix domain socket; a later launch connects to it, asks it to show its window
-/// and exits, so there is never a second window or a second tray icon.
+/// and exits, so there is never a second window.
 /// </summary>
 public sealed class SingleInstanceGuard : IDisposable
 {

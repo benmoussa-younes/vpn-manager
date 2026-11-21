@@ -8,47 +8,6 @@ namespace VpnManager.Core.Tests;
 public sealed class QuitFlowTests
 {
     [Fact]
-    public async Task Quitting_with_a_connected_tunnel_asks_and_can_cancel()
-    {
-        var view = new FakeTunnelView { QuitAnswer = QuitChoice.Cancel };
-        var presenter = await PresenterWithConnectedTunnelAsync(view);
-
-        var quit = await presenter.ConfirmQuitAsync();
-
-        Assert.False(quit);
-        Assert.Equal(["wg0"], Assert.Single(view.QuitConfirmations));
-        Assert.True(view.WindowShown);
-    }
-
-    [Fact]
-    public async Task Quitting_disconnects_the_connected_tunnels_when_asked()
-    {
-        var view = new FakeTunnelView { QuitAnswer = QuitChoice.DisconnectAndQuit };
-        var presenter = await PresenterWithConnectedTunnelAsync(view);
-
-        var quit = await presenter.ConfirmQuitAsync();
-
-        Assert.True(quit);
-        Assert.True(view.WindowShown);
-    }
-
-    [Fact]
-    public async Task Quitting_with_no_connected_tunnel_exits_without_asking()
-    {
-        var view = new FakeTunnelView();
-        var store = new FakeWireGuardConfigStore();
-        store.Files["wg0"] = TestData.SampleConfigText;
-        var service = new TunnelService(store, new FakeWireGuardRuntimeInspector());
-        var presenter = new TunnelListPresenter(view, service);
-
-        var quit = await presenter.ConfirmQuitAsync();
-
-        Assert.True(quit);
-        Assert.Empty(view.QuitConfirmations);
-        Assert.False(view.WindowShown);
-    }
-
-    [Fact]
     public async Task Closing_with_a_connected_tunnel_asks_and_can_cancel()
     {
         var view = new FakeTunnelView { CloseAnswer = false };

@@ -142,13 +142,6 @@ public interface ITunnelListView : IView
     /// <param name="message">The message, or <see langword="null"/>.</param>
     void SetError(string? message);
 
-    /// <summary>
-    /// Asks the operator what to do about the tunnels still connected before the
-    /// application exits.
-    /// </summary>
-    /// <param name="connectedNames">The connected tunnel names.</param>
-    /// <param name="cancellationToken">Cancels the wait.</param>
-    /// <returns>The operator's answer.</returns>
     /// <summary>Shows the policy page for one tunnel.</summary>
     /// <param name="snapshot">The policy currently stored.</param>
     void ShowPolicy(TunnelPolicySnapshot snapshot);
@@ -156,12 +149,10 @@ public interface ITunnelListView : IView
     /// <summary>Closes the policy page.</summary>
     void HidePolicy();
 
-    Task<QuitChoice> ConfirmQuitAsync(IReadOnlyList<string> connectedNames, CancellationToken cancellationToken = default);
-
     /// <summary>
     /// Asks whether closing the window may disconnect the connected tunnels and
-    /// quit. It is the close path when no tray host exists: nothing would keep the
-    /// tunnel observable, so the choice is disconnect-and-quit or stay open.
+    /// quit. Closing leaves nothing to manage the tunnel, so the choice is
+    /// disconnect-and-quit or stay open.
     /// </summary>
     /// <param name="connectedNames">The tunnels that are up.</param>
     /// <param name="cancellationToken">Cancels the wait.</param>
