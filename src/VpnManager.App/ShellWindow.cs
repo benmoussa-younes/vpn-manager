@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Platform;
 using Core.Diagnostics;
+using Core.Mvp.Models;
 using Core.Platform.Linux;
 using Core.Results;
 using Core.Mvp.Presentation;
@@ -10,6 +11,7 @@ using Core.UI.Dialogs;
 using Core.UI.Hosting;
 using Core.UI.Preferences;
 using Avalonia.Threading;
+using VpnManager.App.Tray;
 using VpnManager.App.Views;
 using VpnManager.Core.Presentation;
 
@@ -31,13 +33,19 @@ internal sealed class ShellWindow : IAsyncDisposable
     private readonly TunnelListView _content;
     private readonly TunnelListPresenter _presenter;
     private readonly AppearanceService _appearance;
+    private readonly Func<CancellationToken, Task<bool>> _trayHostProbe;
+    private readonly WindowPlacementService _placement;
     private readonly NmcliNetworkManagerMonitor _monitor = new();
     private readonly bool _readOnly;
     private readonly CancellationTokenSource _lifetime = new();
     private bool _loopsStarted;
     private bool _disposed;
 
-    internal ShellWindow(CoreHost host, CompositionRoot root, bool readOnly)
+    internal ShellWindow(
+        CoreHost host,
+        CompositionRoot root,
+        bool readOnly,
+        Func<CancellationToken, Task<bool>>? trayHostProbe = null)
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(root);
@@ -45,6 +53,7 @@ internal sealed class ShellWindow : IAsyncDisposable
         _host = host;
         _root = root;
         _readOnly = readOnly;
+        _trayHostProbe = trayHostProbe ?? StatusNotifierHostProbe.IsHostRegisteredAsync;
 
         var atomicFiles = new LinuxAtomicFileWriterFactory();
         var fileSystem = new LinuxFileSystemAdapter();
@@ -60,7 +69,19 @@ internal sealed class ShellWindow : IAsyncDisposable
         Window.Height = 720;
         Window.MinWidth = 720;
         Window.MinHeight = 520;
-        Window.CloseBehavior = CloseBehavior.HideToTray;
+        // No tray host means no way back: the fallback is a real quit, with the
+        // operator's confirmation when a tunnel is still connected.
+        Window.CloseBehavior = CloseBehavior.Quit;
+
+        var placementPath = host.Paths.StateFile("window.json");
+        _placement = new WindowPlacementService(Window, placementPath, atomicFiles, fileSystem);
+        if (!File.Exists(placementPath))
+        {
+            // First launch: let the shared placement code clamp the default size
+            // to the work area instead of overflowing a small screen.
+            Window.Opened += (_, _) =>
+                Window.ApplyPlacement(new WindowPlacement(0, 0, 1100, 720, false));
+        }
 
         _content = new TunnelListView();
         _content.AttachHost(Window);
@@ -77,6 +98,7 @@ internal sealed class ShellWindow : IAsyncDisposable
             journal: root.Journal);
 
         Window.ConfirmQuit = () => new ValueTask<bool>(_presenter.ConfirmQuitAsync());
+        Window.ConfirmClose = () => new ValueTask<bool>(_presenter.ConfirmQuitAsync());
 
         _content.StateBackupRequested += path => Report(root.StateStore.Export(path));
         _content.StateRestoreRequested += RestoreState;
@@ -91,6 +113,7 @@ internal sealed class ShellWindow : IAsyncDisposable
         _content.Publish();
 
         Window.Opened += OnOpened;
+        _ = ApplyTrayAvailabilityAsync();
     }
 
     /// <summary>Gets the shell window the application lifetime hosts.</summary>
@@ -127,6 +150,32 @@ internal sealed class ShellWindow : IAsyncDisposable
         _monitor.Dispose();
         await _presenter.DisposeAsync().ConfigureAwait(true);
         _lifetime.Dispose();
+    }
+
+    /// <summary>
+    /// Flips the close behaviour to hide only when a tray host is registered;
+    /// otherwise the window keeps the quit fallback and no tray menu is published.
+    /// </summary>
+    private async Task ApplyTrayAvailabilityAsync()
+    {
+        bool available;
+        try
+        {
+            available = await _trayHostProbe(_lifetime.Token).ConfigureAwait(true);
+        }
+        catch (Exception)
+        {
+            available = false;
+        }
+
+        if (!available || _disposed)
+        {
+            return;
+        }
+
+        Window.CloseBehavior = CloseBehavior.HideToTray;
+        _content.TrayAvailable = true;
+        _content.Publish();
     }
 
     private void OnOpened(object? sender, EventArgs e)

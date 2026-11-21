@@ -1,4 +1,4 @@
-using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
@@ -26,7 +26,11 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     private const string ReadOnlyMessage =
         "Read-only session: creating, editing, deleting and starting or stopping tunnels is disabled.";
 
-    private const string EmptyMessage = "The tunnels list is empty.";
+    private const string EmptyHeading = "No tunnels yet";
+
+    private const string EmptyDetail = "Import a WireGuard profile to get started.";
+
+    private const string EmptyAction = "Import a profile\u2026";
 
     /// <summary>The product name shown in the header bar and the window title.</summary>
     internal const string ProductTitle = "VPN Manager";
@@ -34,7 +38,7 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     private static readonly TransferView ZeroTransfer = new("0 B/s", "0 B", "0 B/s", "0 B");
 
     private readonly ListBox _tunnelList = new() { SelectionMode = SelectionMode.Single, Background = Brushes.Transparent };
-    private readonly TextBlock _emptyText;
+    private readonly EmptyState _emptyState;
     private readonly List<string> _rowNames = [];
     private readonly Dictionary<string, string> _tunnelStates = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (TextBlock Down, TextBlock Up)> _rowTransfers = new(StringComparer.Ordinal);
@@ -62,21 +66,14 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
         AddHandler(DragDrop.DropEvent, OnDrop);
 
-        _emptyText = new TextBlock
-        {
-            Text = EmptyMessage,
-            Classes = { "muted" },
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
-            TextAlignment = TextAlignment.Center,
-            TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(24),
-            IsVisible = false,
-        };
+        _emptyState = new EmptyState();
+        _emptyState.Configure(EmptyHeading, EmptyDetail, EmptyAction);
+        _emptyState.ActionRequested += () => HandleCommand("import");
+        _emptyState.IsVisible = false;
 
         var listPanel = new Panel();
         listPanel.Children.Add(_tunnelList);
-        listPanel.Children.Add(_emptyText);
+        listPanel.Children.Add(_emptyState);
 
         Content = listPanel;
     }
@@ -147,8 +144,8 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     /// <summary>Gets the tunnel list control, for tests and layout checks.</summary>
     public ListBox TunnelList => _tunnelList;
 
-    /// <summary>Gets the centred empty message, for tests.</summary>
-    internal TextBlock EmptyText => _emptyText;
+    /// <summary>Gets the centred empty state, for tests.</summary>
+    internal EmptyState EmptyStateView => _emptyState;
 
     /// <summary>Gets the editor currently open on the shell stack, or <see langword="null"/>.</summary>
     internal TunnelEditorView? OpenEditor => _editor;
@@ -186,6 +183,12 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         _host = host;
         Publish();
     }
+
+    /// <summary>
+    /// Gets or sets whether a tray host is registered. Without one, publishing a
+    /// menu would leave an invisible icon and a hidden window.
+    /// </summary>
+    internal bool TrayAvailable { get; set; }
 
     /// <summary>Gets or sets the window-visibility provider the tray menu and the tray command use.</summary>
     internal Func<bool> WindowVisible { get; set; } = static () => true;
@@ -287,7 +290,17 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     /// <param name="readOnly">Whether the session must not change anything.</param>
     public void SetReadOnly(bool readOnly)
     {
+        var leftReadOnly = _readOnly && !readOnly;
         _readOnly = readOnly;
+
+        // The empty-state action mutates the store, so it is absent in read-only.
+        _emptyState.Configure(EmptyHeading, EmptyDetail, readOnly ? string.Empty : EmptyAction);
+
+        if (leftReadOnly && _host is not null)
+        {
+            _host.Notifications.DismissBanner();
+        }
+
         Publish();
 
         if (_detail is not null)
@@ -313,6 +326,15 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         // window controls, the menu and the toolbar and nothing else.
         var subtitle = _readOnly ? ReadOnlyMessage : string.Empty;
         _host.SetSnapshot(new ShellSnapshot(ProductTitle, subtitle, BuildCommands(), _busy));
+
+        // A persistent, toned notice: the subtitle carries the text, the banner
+        // carries the severity. Re-asserted on every publish, so an error toast
+        // cannot silently erase it.
+        if (_readOnly)
+        {
+            _host.Notifications.Banner(ReadOnlyMessage, MessageSeverity.Warning);
+        }
+
         PublishTray();
     }
 
@@ -344,7 +366,7 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
             _suspendSelection = false;
         }
 
-        _emptyText.IsVisible = tunnels.Count == 0;
+        _emptyState.IsVisible = tunnels.Count == 0;
         _lastTunnels = tunnels;
         RefreshDetail();
         Publish();
@@ -554,6 +576,12 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     private void PublishTray()
     {
         // Only reached from Publish, which already returned when there is no host.
+        if (!TrayAvailable)
+        {
+            _host!.Tray.Hide();
+            return;
+        }
+
         IReadOnlyList<TunnelListItem> tunnels = _readOnly ? [] : _lastTunnels;
         _host!.Tray.Show(ProductTitle, BuildTrayCommands(TrayMenuBuilder.Build(tunnels, WindowVisible())));
     }
@@ -639,6 +667,7 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
             ColumnDefinitions = new ColumnDefinitions("*,Auto"),
             VerticalAlignment = VerticalAlignment.Center,
         };
+        AutomationProperties.SetName(row, string.Concat(tunnel.ShownName, ", ", tunnel.State));
         Grid.SetColumn(identity, 0);
         Grid.SetColumn(state, 1);
         row.Children.Add(identity);

@@ -315,13 +315,15 @@ internal sealed class FakeTray : ITrayService
 
     internal string? ToolTip { get; private set; }
 
+    internal int HideCount { get; private set; }
+
     public void Show(string toolTip, CommandSet menu)
     {
         ToolTip = toolTip;
         Menu = menu;
     }
 
-    public void Hide() { }
+    public void Hide() => HideCount++;
 }
 
 internal sealed class FakeApplicationHost : IApplicationHost

@@ -1,3 +1,6 @@
+using Avalonia.Automation;
+using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Core.Mvp.Services;
 using VpnManager.App.Tests.Fakes;
 using VpnManager.App.Views;
@@ -99,6 +102,83 @@ public sealed class TunnelListViewTests
 
             Assert.Equal(ProductQuitChoice.DisconnectAndQuit, choice);
             Assert.Single(host.DialogsService.Requests);
+        });
+    }
+
+    [Fact]
+    public async Task AReadOnlySessionShowsAPersistentWarningBanner()
+    {
+        await HeadlessTestSession.RunAsync(() =>
+        {
+            var host = new FakeApplicationHost();
+            var view = new TunnelListView();
+            view.AttachHost(host);
+
+            view.SetReadOnly(true);
+
+            Assert.Contains(
+                host.NotificationsService.Banners,
+                banner => banner.Message.Contains("Read-only", StringComparison.Ordinal)
+                    && banner.Severity == MessageSeverity.Warning);
+        });
+    }
+
+    [Fact]
+    public async Task TheEmptyStateOffersAnImportAction()
+    {
+        await HeadlessTestSession.RunAsync(async () =>
+        {
+            var host = new FakeApplicationHost();
+            host.FilesService.Open = ["/tmp/a.conf"];
+            var view = new TunnelListView();
+            view.AttachHost(host);
+            var imported = new List<string>();
+            view.ImportRequested += path => imported.Add(path);
+
+            view.ShowTunnels([], null);
+
+            Assert.Equal("Import a profile\u2026", view.EmptyStateView.ActionLabel);
+            view.EmptyStateView.ActionButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await Task.Yield();
+            Assert.Equal(["/tmp/a.conf"], imported);
+
+            view.SetReadOnly(true);
+            Assert.Equal(string.Empty, view.EmptyStateView.ActionLabel);
+        });
+    }
+
+    [Fact]
+    public async Task RowsCarryAnAutomationName()
+    {
+        await HeadlessTestSession.RunAsync(() =>
+        {
+            var host = new FakeApplicationHost();
+            var view = new TunnelListView();
+            view.AttachHost(host);
+
+            view.ShowTunnels([Row("wg0", "Up")], "wg0");
+
+            var row = Assert.IsAssignableFrom<Control>(Assert.Single(view.TunnelList.Items));
+            Assert.Equal("wg0, Up", AutomationProperties.GetName(row));
+        });
+    }
+
+    [Fact]
+    public async Task TheTrayMenuIsOnlyPublishedWhenAHostIsRegistered()
+    {
+        await HeadlessTestSession.RunAsync(() =>
+        {
+            var host = new FakeApplicationHost();
+            var view = new TunnelListView();
+            view.AttachHost(host);
+
+            Assert.Null(host.TrayService.Menu);
+            Assert.True(host.TrayService.HideCount >= 1);
+
+            view.TrayAvailable = true;
+            view.Publish();
+
+            Assert.NotNull(host.TrayService.Menu);
         });
     }
 

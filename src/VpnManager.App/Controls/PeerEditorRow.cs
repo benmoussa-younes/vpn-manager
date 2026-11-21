@@ -1,3 +1,4 @@
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -105,18 +106,17 @@ public sealed class PeerEditorRow : UserControl
             MinHeight = multiline ? 64 : 0,
         };
 
+        var label = new TextBlock
+        {
+            Text = caption,
+            Classes = { "muted" },
+        };
+        AutomationProperties.SetLabeledBy(box, label);
+
         var panel = new StackPanel
         {
             Spacing = 4,
-            Children =
-            {
-                new TextBlock
-                {
-                    Text = caption,
-                    Classes = { "muted" },
-                },
-                box,
-            },
+            Children = { label, box },
         };
 
         Grid.SetRow(panel, row);

@@ -1,3 +1,4 @@
+using Avalonia.Automation;
 using Core.Mvp.Presentation;
 using VpnManager.App.Tests.Fakes;
 using VpnManager.App.Views;
@@ -41,6 +42,23 @@ public sealed class ViewTests
             Assert.Equal("10.0.0.1", input.Dns);
             Assert.Equal("1420", input.Mtu);
             Assert.Single(input.Peers);
+        });
+    }
+
+    [Fact]
+    public async Task TheEditorFieldsAreLabelledForAssistiveTechnology()
+    {
+        await HeadlessTestSession.RunAsync(() =>
+        {
+            var view = new TunnelEditorView();
+            view.Load(Snapshot(hasPrivateKey: false, publicKey: null));
+
+            Assert.NotNull(AutomationProperties.GetLabeledBy(view.NameBox));
+            Assert.NotNull(AutomationProperties.GetLabeledBy(view.DnsBox));
+
+            var peerPublicKey = Assert.Single(view.PeerRows).Field(EditorField.PeerPublicKey);
+            Assert.NotNull(peerPublicKey);
+            Assert.NotNull(AutomationProperties.GetLabeledBy(peerPublicKey));
         });
     }
 

@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -406,6 +407,7 @@ public sealed class TunnelEditorView : UserControl, IView
             Margin = new Thickness(0, 0, 12, 0),
             VerticalAlignment = VerticalAlignment.Center,
         };
+        AutomationProperties.SetLabeledBy(control, caption);
         Grid.SetColumn(caption, 0);
         Grid.SetColumn(control, 1);
         grid.Children.Add(caption);

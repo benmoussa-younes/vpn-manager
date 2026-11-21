@@ -75,6 +75,9 @@ public sealed class EmptyState : UserControl
     /// <summary>Gets the detail line.</summary>
     public string Detail => _detail.Text ?? string.Empty;
 
+    /// <summary>Gets the action button, for tests.</summary>
+    internal Button ActionButton => _action;
+
     /// <summary>Gets the action label, or an empty string.</summary>
     public string ActionLabel => _action.IsVisible ? _action.Content?.ToString() ?? string.Empty : string.Empty;
 }

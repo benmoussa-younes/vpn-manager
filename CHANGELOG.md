@@ -34,6 +34,15 @@ written as `VpnManager.*` on Core v0.2.2.
   poll as fallback.
 - A user-session D-Bus service, `com.bit-crafts.VpnManager`, with status,
   connect, disconnect and policy methods; the package ships its activation file.
+- A tray-host probe: the window hides to the tray only when a
+  StatusNotifier host is registered; otherwise closing quits, and asks first
+  when a tunnel is connected. Without this, a GNOME session without the
+  AppIndicator extension lost the window with no way back.
+- The window remembers its size and position (`window.json` under the state
+  directory) and the first launch clamps the default size to the work area.
+- The empty profile list offers an "Import a profile…" action.
+- List rows carry an automation name and editor fields are labelled for
+  assistive technology; keyboard focus is drawn as a ring.
 
 ### Changed
 
@@ -52,6 +61,8 @@ written as `VpnManager.*` on Core v0.2.2.
 
 ### Fixed
 
+- A read-only session shows a persistent warning banner as well as the header
+  subtitle, so the mode is visible before an action is refused.
 - Changing a profile's DNS policy while its connection is active now reapplies
   the device (`nmcli device reapply`): the new search domains and containment
   hold immediately instead of at the next activation.
