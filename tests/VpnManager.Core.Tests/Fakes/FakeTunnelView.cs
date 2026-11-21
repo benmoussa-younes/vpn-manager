@@ -70,6 +70,18 @@ internal sealed class FakeTunnelView : ITunnelListView
         return Task.FromResult(QuitAnswer);
     }
 
+    /// <summary>The connected-name lists passed to <see cref="ConfirmCloseAsync"/>.</summary>
+    internal List<IReadOnlyList<string>> CloseConfirmations { get; } = [];
+
+    /// <summary>The answer <see cref="ConfirmCloseAsync"/> returns.</summary>
+    internal bool CloseAnswer { get; set; } = true;
+
+    public Task<bool> ConfirmCloseAsync(IReadOnlyList<string> connectedNames, CancellationToken cancellationToken = default)
+    {
+        CloseConfirmations.Add(connectedNames);
+        return Task.FromResult(CloseAnswer);
+    }
+
 
     /// <summary>Whether the presenter asked the view to show the window.</summary>
     internal bool WindowShown { get; private set; }

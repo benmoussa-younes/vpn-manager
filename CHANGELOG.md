@@ -34,10 +34,14 @@ written as `VpnManager.*` on Core v0.2.2.
   poll as fallback.
 - A user-session D-Bus service, `com.bit-crafts.VpnManager`, with status,
   connect, disconnect and policy methods; the package ships its activation file.
-- A tray-host probe: the window hides to the tray only when a
-  StatusNotifier host is registered; otherwise closing quits, and asks first
-  when a tunnel is connected. Without this, a GNOME session without the
-  AppIndicator extension lost the window with no way back.
+- A tray-host probe with three behaviours: with a host the window hides to the
+  tray and the menu keeps the three-way quit choice; without one, closing asks
+  to disconnect the VPN (or quits directly when nothing is up), so a tunnel is
+  never left running with no window and no icon. Without this, a GNOME session
+  without the AppIndicator extension lost the window with no way back.
+- The window identity on Wayland is set explicitly to `vpn-manager`, the
+  desktop entry's base name, so the GNOME dash and the Alt+Tab switcher show
+  the product name and icon instead of "Unknown". This needs Avalonia 12.1.6.
 - The window remembers its size and position (`window.json` under the state
   directory) and the first launch clamps the default size to the work area.
 - The empty profile list offers an "Import a profile…" action.
@@ -61,6 +65,8 @@ written as `VpnManager.*` on Core v0.2.2.
 
 ### Fixed
 
+- Renaming a tunnel refreshes the open detail page's header immediately; a list
+  refresh also no longer overwrites the header and toolbar of a pushed page.
 - Connecting no longer fails after the tunnel is already up: the connect path
   applies the policy to the profile and lets activation apply it, and only an
   explicit policy change on a live connection reapplies the device. The laptop

@@ -325,18 +325,25 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
             return;
         }
 
-        // The list is the root page: it carries no identity in the chrome, only
-        // the read-only notice when the session is read-only, so the bar shows the
-        // window controls, the menu and the toolbar and nothing else.
-        var subtitle = _readOnly ? ReadOnlyMessage : string.Empty;
-        _host.SetSnapshot(new ShellSnapshot(ProductTitle, subtitle, BuildCommands(), _busy));
-
         // A persistent, toned notice: the subtitle carries the text, the banner
         // carries the severity. Re-asserted on every publish, so an error toast
         // cannot silently erase it.
         if (_readOnly)
         {
             _host.Notifications.Banner(ReadOnlyMessage, MessageSeverity.Warning);
+        }
+
+        // A pushed page owns the header and the toolbar. Republishing the list
+        // chrome while a detail or an editor is active would replace them on the
+        // next refresh and show the old page title; only the tray follows the list.
+        var active = _host.Navigation.Active;
+        if (active is null || ReferenceEquals(active, this))
+        {
+            // The list is the root page: it carries no identity in the chrome, only
+            // the read-only notice when the session is read-only, so the bar shows the
+            // window controls, the menu and the toolbar and nothing else.
+            var subtitle = _readOnly ? ReadOnlyMessage : string.Empty;
+            _host.SetSnapshot(new ShellSnapshot(ProductTitle, subtitle, BuildCommands(), _busy));
         }
 
         PublishTray();
@@ -558,6 +565,28 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
             ConfirmResult.Alternative => QuitChoice.StayConnectedAndQuit,
             _ => QuitChoice.Cancel,
         };
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> ConfirmCloseAsync(IReadOnlyList<string> connectedNames, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(connectedNames);
+
+        var host = _host;
+        if (host is null)
+        {
+            return false;
+        }
+
+        var result = await host.Dialogs.ConfirmAsync(
+            new ConfirmRequest(
+                "Disconnect the VPN and quit?",
+                $"Closing VPN Manager will disconnect: {string.Join(", ", connectedNames)}.",
+                "Disconnect and quit",
+                "Cancel"),
+            cancellationToken).ConfigureAwait(true);
+
+        return result == ConfirmResult.Accept;
     }
 
     /// <inheritdoc />
@@ -810,6 +839,14 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         if (item is not null)
         {
             _detail.UpdateItem(item);
+
+            // The page title is part of the shell snapshot, not of the page body:
+            // a rename must republish it while the page is active, or the header
+            // keeps the old display name until the page is reopened.
+            if (_host is not null && ReferenceEquals(_host.Navigation.Active, _detail))
+            {
+                _detail.PublishSnapshot(_host);
+            }
         }
         else
         {

@@ -794,6 +794,38 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
         return true;
     }
 
+    /// <summary>
+    /// Asks what to do about the connected tunnels before the window closes with
+    /// no tray host. Closing disconnects the VPN: there would be no window and no
+    /// icon left to manage it.
+    /// </summary>
+    /// <returns><see langword="true"/> when the application may close.</returns>
+    public async Task<bool> ConfirmCloseAsync()
+    {
+        var tunnels = await _service.ListTunnelsAsync().ConfigureAwait(true);
+        var connected = tunnels.TryGetValue(out var rows)
+            ? rows.Where(row => row.State == TunnelState.Up).Select(row => row.Name).ToArray()
+            : [];
+
+        if (connected.Length == 0)
+        {
+            return true;
+        }
+
+        View.ShowWindow();
+        if (!await View.ConfirmCloseAsync(connected).ConfigureAwait(true))
+        {
+            return false;
+        }
+
+        foreach (var name in connected)
+        {
+            _ = await _service.StopAsync(name).ConfigureAwait(true);
+        }
+
+        return true;
+    }
+
     /// <summary>Imports a configuration file as a tunnel named after the file stem.</summary>
     /// <param name="sourcePath">The file the operator chose.</param>
     /// <returns>A task that completes when the view has been updated.</returns>

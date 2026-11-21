@@ -185,6 +185,42 @@ public sealed class TunnelListViewTests
     }
 
     [Fact]
+    public async Task RenamingAPageUpdatesItsHeaderWithoutReopening()
+    {
+        await HeadlessTestSession.RunAsync(() =>
+        {
+            var host = new FakeApplicationHost();
+            var view = new TunnelListView();
+            view.AttachHost(host);
+            view.ShowTunnels([Row("wg0", "Up")], "wg0");
+            view.OpenDetail("wg0");
+            Assert.Equal("wg0", host.Snapshot!.Title);
+
+            view.ShowTunnels([Row("wg0", "Up") with { DisplayName = "Home" }], "wg0");
+
+            Assert.Equal("Home", host.Snapshot!.Title);
+        });
+    }
+
+    [Fact]
+    public async Task ClosingAsksToDisconnectWhenTheTunnelIsUp()
+    {
+        await HeadlessTestSession.RunAsync(async () =>
+        {
+            var host = new FakeApplicationHost();
+            var view = new TunnelListView();
+            view.AttachHost(host);
+
+            host.DialogsService.Confirm = ConfirmResult.Accept;
+            Assert.True(await view.ConfirmCloseAsync(["wg0"]));
+            Assert.Contains("disconnect", Assert.Single(host.DialogsService.Requests).Body, StringComparison.OrdinalIgnoreCase);
+
+            host.DialogsService.Confirm = ConfirmResult.Alternative;
+            Assert.False(await view.ConfirmCloseAsync(["wg0"]));
+        });
+    }
+
+    [Fact]
     public async Task TheTrayMenuIsOnlyPublishedWhenAHostIsRegistered()
     {
         await HeadlessTestSession.RunAsync(() =>

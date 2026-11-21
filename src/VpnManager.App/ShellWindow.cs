@@ -98,8 +98,10 @@ internal sealed class ShellWindow : IAsyncDisposable
             notifier: root.Notifier,
             journal: root.Journal);
 
-        Window.ConfirmQuit = () => new ValueTask<bool>(_presenter.ConfirmQuitAsync());
-        Window.ConfirmClose = () => new ValueTask<bool>(_presenter.ConfirmQuitAsync());
+        // Until a tray host answers, the safe behaviour is the one that leaves
+        // nothing running in the background: quit and disconnect the VPN.
+        Window.ConfirmQuit = () => new ValueTask<bool>(_presenter.ConfirmCloseAsync());
+        Window.ConfirmClose = () => new ValueTask<bool>(_presenter.ConfirmCloseAsync());
 
         _content.StateBackupRequested += path => Report(root.StateStore.Export(path));
         _content.StateRestoreRequested += RestoreState;
@@ -175,6 +177,7 @@ internal sealed class ShellWindow : IAsyncDisposable
         }
 
         Window.CloseBehavior = CloseBehavior.HideToTray;
+        Window.ConfirmQuit = () => new ValueTask<bool>(_presenter.ConfirmQuitAsync());
         _content.TrayAvailable = true;
         _content.Publish();
     }

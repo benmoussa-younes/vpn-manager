@@ -156,6 +156,13 @@ public sealed class ApplicationTests
     }
 
     [Fact]
+    public void TheWaylandWindowIdentityMatchesTheDesktopEntry()
+    {
+        Assert.Equal(Program.ApplicationId, Program.WaylandOptions().AppId);
+        Assert.Equal("vpn-manager", Program.WaylandOptions().AppId);
+    }
+
+    [Fact]
     public void ThePrivilegedRequestCarriesOnlyTheFixedHelperAndVerb()
     {
         var request = PkexecRootActionService.BuildRequest();

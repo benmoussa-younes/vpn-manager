@@ -162,10 +162,20 @@ internal static class Program
     internal static Action<AppBuilder, string[]> StartDesktopLifetime { get; set; } =
         static (builder, arguments) => builder.StartWithClassicDesktopLifetime(arguments);
 
+    /// <summary>
+    /// The Wayland window identity. It must equal the desktop entry's base name,
+    /// or the GNOME shell cannot match the window to its icon and name and shows
+    /// "Unknown" in the dash and the Alt+Tab switcher.
+    /// </summary>
+    /// <returns>The Wayland platform options.</returns>
+    internal static WaylandPlatformOptions WaylandOptions() => new() { AppId = ApplicationId };
+
     /// <summary>Avalonia configuration; also used by the visual designer.</summary>
     /// <returns>The application builder.</returns>
     public static AppBuilder BuildAvaloniaApp() =>
-        CoreAppBuilder.Configure<App>(ApplicationId).LogToTrace();
+        CoreAppBuilder.Configure<App>(ApplicationId)
+            .With(WaylandOptions())
+            .LogToTrace();
 
     internal static void PrintUsage()
     {

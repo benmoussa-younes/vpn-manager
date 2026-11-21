@@ -142,6 +142,16 @@ public interface ITunnelListView : IView
     /// <returns>The operator's answer.</returns>
     Task<QuitChoice> ConfirmQuitAsync(IReadOnlyList<string> connectedNames, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Asks whether closing the window may disconnect the connected tunnels and
+    /// quit. It is the close path when no tray host exists: nothing would keep the
+    /// tunnel observable, so the choice is disconnect-and-quit or stay open.
+    /// </summary>
+    /// <param name="connectedNames">The tunnels that are up.</param>
+    /// <param name="cancellationToken">Cancels the wait.</param>
+    /// <returns><see langword="true"/> when the application may close.</returns>
+    Task<bool> ConfirmCloseAsync(IReadOnlyList<string> connectedNames, CancellationToken cancellationToken = default);
+
     /// <summary>Shows and focuses the main window, so a dialog cannot stay hidden.</summary>
     void ShowWindow();
 }

@@ -290,6 +290,7 @@ VpnManager.Core.Presentation.EditorSnapshot.Title.get -> string!
 VpnManager.Core.Presentation.EditorSnapshot.Title.init -> void
 VpnManager.Core.Presentation.ITunnelListView
 VpnManager.Core.Presentation.ITunnelListView.AppendEditorPeerRow(VpnManager.Core.Presentation.EditorPeerInput! peer) -> void
+VpnManager.Core.Presentation.ITunnelListView.ConfirmCloseAsync(System.Collections.Generic.IReadOnlyList<string!>! connectedNames, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 VpnManager.Core.Presentation.ITunnelListView.ConfirmQuitAsync(System.Collections.Generic.IReadOnlyList<string!>! connectedNames, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<VpnManager.Core.Presentation.QuitChoice>!
 VpnManager.Core.Presentation.ITunnelListView.CreateRequested -> System.Action!
 VpnManager.Core.Presentation.ITunnelListView.DeleteRequested -> System.Action<string!>!
@@ -395,6 +396,7 @@ VpnManager.Core.Presentation.TunnelListPresenter.BeginEditAsync(string! name) ->
 VpnManager.Core.Presentation.TunnelListPresenter.BeginRename(string! name) -> void
 VpnManager.Core.Presentation.TunnelListPresenter.CancelEditor() -> void
 VpnManager.Core.Presentation.TunnelListPresenter.CancelRename() -> void
+VpnManager.Core.Presentation.TunnelListPresenter.ConfirmCloseAsync() -> System.Threading.Tasks.Task<bool>!
 VpnManager.Core.Presentation.TunnelListPresenter.ConfirmQuitAsync() -> System.Threading.Tasks.Task<bool>!
 VpnManager.Core.Presentation.TunnelListPresenter.DeleteAsync(string! name) -> System.Threading.Tasks.Task!
 VpnManager.Core.Presentation.TunnelListPresenter.ExportAsync(string! destinationPath) -> System.Threading.Tasks.Task!
