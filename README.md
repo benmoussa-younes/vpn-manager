@@ -68,6 +68,18 @@ A private key lives in the profile file (owner-only) and in memory while an
 import or an export runs. It is never displayed, logged or passed as a
 command-line argument.
 
+### Coming from the BitCrafts WireGuard Manager
+
+The old application stored its profiles under `~/.config/bitcrafts/wireguard`.
+Point the new client at that directory to keep managing them in place:
+
+```bash
+vpn-manager --config-dir ~/.config/bitcrafts/wireguard
+```
+
+The display aliases and the other application state are not migrated; they live
+in the old state directory and are rebuilt as the client runs.
+
 ## Build from source
 
 The product consumes **Core v0.2.1** as source: core is not a NuGet package, and

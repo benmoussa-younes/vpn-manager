@@ -3,7 +3,6 @@ version = 1
 # The product, its tests and its build files are GPL-3.0-or-later.
 [[annotations]]
 path = "**"
-precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Younes BENMOUSSA <younes.benmoussa@pm.me>"
 SPDX-License-Identifier = "GPL-3.0-or-later"
 
