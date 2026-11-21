@@ -86,6 +86,21 @@ public sealed class TunnelListPresenterTests
     }
 
     [Fact]
+    public async Task Saving_an_edit_preserves_the_stored_wg_quick_hooks()
+    {
+        var context = CreateContext();
+        context.Store.Files["wg0"] = TestData.SampleConfigText;
+
+        await context.Presenter.BeginEditAsync("wg0");
+        await context.Presenter.SaveAsync(CreateInput(name: "wg0", privateKey: TestData.InterfacePrivateKey, addresses: "10.10.0.11/32"));
+
+        var write = Assert.Single(context.Store.Writes);
+        Assert.Contains("PreUp = ", write.Contents, StringComparison.Ordinal);
+        Assert.Contains("PostUp = ", write.Contents, StringComparison.Ordinal);
+        Assert.Contains("PostDown = ", write.Contents, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Saving_an_invalid_field_marks_that_field_and_writes_nothing()
     {
         var context = CreateContext();
