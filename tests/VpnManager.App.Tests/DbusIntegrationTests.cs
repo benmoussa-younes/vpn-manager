@@ -44,7 +44,30 @@ public sealed class DbusIntegrationTests
         Assert.Contains("wg0", status, StringComparison.Ordinal);
     }
 
-    private static async Task<string> CallAsync(string method)
+    [Fact]
+    public async Task TheServiceRefusesAnUnknownDnsMode()
+    {
+        Assert.SkipUnless(
+            Environment.GetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS") is { Length: > 0 },
+            "No session D-Bus address; run under dbus-run-session.");
+
+        var service = new TunnelService(
+            new FakeConfigStore(),
+            new FakeRuntimeInspector(),
+            TunnelScope.User,
+            new FakeStateStore(),
+            new FakeNetworkManager(),
+            "alice");
+        await using var dbus = new VpnManagerDbusService(service, "/tmp/vpn-manager-dbus-tests");
+        using var lifetime = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        await dbus.StartAsync(lifetime.Token);
+
+        var output = await CallAsync("SetPolicy", "wg0", "true", "nonsense", "");
+
+        Assert.Contains("Unknown DNS mode", output, StringComparison.Ordinal);
+    }
+
+    private static async Task<string> CallAsync(string method, params string[] arguments)
     {
         using var process = new Process
         {
@@ -65,6 +88,10 @@ public sealed class DbusIntegrationTests
         process.StartInfo.ArgumentList.Add("/com/bit_crafts/VpnManager");
         process.StartInfo.ArgumentList.Add("--method");
         process.StartInfo.ArgumentList.Add(string.Concat("com.bit_crafts.VpnManager1.", method));
+        foreach (var argument in arguments)
+        {
+            process.StartInfo.ArgumentList.Add(argument);
+        }
 
         process.Start();
         var output = await process.StandardOutput.ReadToEndAsync();

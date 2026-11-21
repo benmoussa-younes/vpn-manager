@@ -71,6 +71,18 @@ public sealed class ApplicationTests
         Assert.Equal([PkexecRootActionService.HelperPath, PkexecRootActionService.Verb], request.Arguments);
     }
 
+    [Theory]
+    [InlineData("--policy", "wg0")]
+    [InlineData("--policy", "wg0", "--auto-reconnect", "maybe")]
+    [InlineData("--policy", "wg0", "--dns-mode", "nonsense")]
+    [InlineData("--connect", "--json")]
+    public void CliRejectsAnIncompleteOrInvalidPolicy(string first, params string[] rest)
+    {
+        var options = CliOptions.Parse([first, .. rest]);
+
+        Assert.NotNull(options.Error);
+    }
+
     [Fact]
     public void CliRejectsACommandWithoutAProfileName()
     {

@@ -1,6 +1,8 @@
 #nullable enable
 const VpnManager.Core.Configuration.RoutingModeConvergence.FullFwMarkValue = 51820 -> int
 const VpnManager.Core.Configuration.RoutingModeConvergence.FullTable = "auto" -> string!
+const VpnManager.Core.Configuration.WireGuardConfigParser.MaximumLines = 10000 -> int
+const VpnManager.Core.Configuration.WireGuardConfigParser.MaximumPeers = 1000 -> int
 const VpnManager.Core.Configuration.WireGuardConfigParser.MaximumTextLength = 1048576 -> int
 const VpnManager.Core.Model.WireGuardErrorCodes.AddressInvalid = "validation.address.invalid" -> string!
 const VpnManager.Core.Model.WireGuardErrorCodes.AddressMissing = "validation.address.missing" -> string!

@@ -24,6 +24,12 @@ public static class WireGuardConfigParser
     /// <summary>The largest configuration text the parser accepts.</summary>
     public const int MaximumTextLength = 1_048_576;
 
+    /// <summary>The largest number of source lines the parser accepts.</summary>
+    public const int MaximumLines = 10_000;
+
+    /// <summary>The largest number of peers the parser accepts.</summary>
+    public const int MaximumPeers = 1_000;
+
     /// <summary>
     /// Parses configuration text into a configuration named <paramref name="name"/>.
     /// </summary>
@@ -43,6 +49,11 @@ public static class WireGuardConfigParser
         }
 
         var lines = Preprocess(text);
+        if (lines.Count > MaximumLines)
+        {
+            return Failure($"The configuration has more than {MaximumLines} lines; refusing to parse it.");
+        }
+
         var interfaceBuilder = InterfaceBuilder.Empty;
         var peerBuilders = new List<PeerBuilder>();
         PeerBuilder? currentPeer = null;
@@ -83,6 +94,11 @@ public static class WireGuardConfigParser
 
             if (line.Content == PeerSection)
             {
+                if (peerBuilders.Count >= MaximumPeers)
+                {
+                    return Failure($"The configuration has more than {MaximumPeers} peers; refusing to parse it.");
+                }
+
                 currentPeer = new PeerBuilder { Label = NameLabelBefore(lines, index) };
                 peerBuilders.Add(currentPeer);
                 continue;
@@ -143,12 +159,16 @@ public static class WireGuardConfigParser
     /// <returns>The declared name, or <see langword="null"/> when there is none.</returns>
     public static string? ReadDeclaredName(string? text)
     {
-        if (text is null)
+        if (text is null || text.Length > MaximumTextLength)
         {
             return null;
         }
 
         var lines = Preprocess(text);
+        if (lines.Count > MaximumLines)
+        {
+            return null;
+        }
         for (var index = 0; index < lines.Count; index++)
         {
             if (lines[index].Content != InterfaceSection)
