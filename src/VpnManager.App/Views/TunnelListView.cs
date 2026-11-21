@@ -543,6 +543,8 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
 
         return new CommandSet(
         [
+            new AppCommand("new", "New", IconKey: "WgmNew", ToolTip: "Create a new tunnel", Shortcut: "Ctrl+N", IsEnabled: canMutate, Group: "view"),
+            new AppCommand("edit", "Edit", IconKey: "WgmEdit", ToolTip: "Edit the selected tunnel", Shortcut: "Ctrl+E", IsEnabled: canMutate && selected is not null, Group: "selected"),
             new AppCommand("refresh", "Refresh", IconKey: "WgmRefresh", ToolTip: "Re-read the tunnel list", Shortcut: "Ctrl+R", IsEnabled: !_busy, Group: "view"),
             new AppCommand("toggle", up ? "Disconnect" : "Connect", IconKey: up ? "WgmDisconnect" : "WgmConnect", ToolTip: up ? "Disconnect the selected tunnel" : "Connect the selected tunnel", IsEnabled: canMutate && selected is not null, IsChecked: up, Group: "selected"),
             new AppCommand("rename", "Rename", IconKey: "WgmRename", ToolTip: "Change the tunnel's display name", IsEnabled: canMutate && selected is not null, Group: "selected"),
@@ -841,7 +843,7 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         var answer = await host.Dialogs.ConfirmAsync(
             new ConfirmRequest(
                 $"Delete '{name}'?",
-                "This removes the tunnel configuration from disk. A running tunnel is not stopped first.",
+                "This removes the tunnel configuration from disk. Stop a running tunnel first; the application refuses to delete one that is up.",
                 "Delete",
                 Destructive: true)).ConfigureAwait(true);
 
