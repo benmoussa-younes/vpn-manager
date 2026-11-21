@@ -131,6 +131,32 @@ public sealed class DbusIntegrationTests
         Assert.Contains("0.1.0", version, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task TheServiceNoticesWhenTheSessionBusCloses()
+    {
+        Assert.SkipUnless(
+            Environment.GetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS") is { Length: > 0 },
+            "No session D-Bus address; run under dbus-run-session.");
+
+        var dbus = new VpnManagerDbusService(
+            new TunnelService(
+                new FakeConfigStore(),
+                new FakeRuntimeInspector(),
+                TunnelScope.User,
+                new FakeStateStore(),
+                new FakeNetworkManager(),
+                "alice"),
+            "/tmp/vpn-manager-dbus-tests");
+        using var lifetime = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        Assert.True(await dbus.TryStartAsync(lifetime.Token));
+        Assert.False(dbus.Disconnected.IsCompleted);
+
+        await dbus.DisposeAsync();
+
+        var reason = await dbus.Disconnected.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Null(reason);
+    }
+
     private static async Task<(int ExitCode, string Output, string Error)> RunRawAsync(string typedArgument)
     {
         using var process = new Process

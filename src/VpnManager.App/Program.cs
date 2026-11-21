@@ -74,7 +74,7 @@ internal static class Program
 
         if (args.Contains("--dbus", StringComparer.Ordinal))
         {
-            return RunDbus(args);
+            return RunDbusAsync(args).GetAwaiter().GetResult();
         }
 
         if (CliOptions.IsRequested(args))
@@ -187,7 +187,7 @@ internal static class Program
         Console.WriteLine("  vpn-manager --help               print this text");
     }
 
-    private static int RunDbus(string[] arguments)
+    private static async Task<int> RunDbusAsync(string[] arguments)
     {
         var created = CoreHost.Create(HostOptions(singleInstance: false));
         if (created.TryGetError(out var hostError))
@@ -205,25 +205,34 @@ internal static class Program
         };
         Console.CancelKeyPress += cancel;
 
+        VpnManagerDbusService? service = null;
         try
         {
             var root = new CompositionRoot(
                 host,
                 ResolveConfigDirectory(host, arguments),
                 LaunchOptions.IsReadOnly(arguments));
-            var service = new VpnManagerDbusService(
+            service = new VpnManagerDbusService(
                 root.Service,
                 root.Store.ConfigDirectory,
                 new PkexecRootActionService(root.ProcessRunner));
-            if (!service.TryStartAsync(stopping.Token).GetAwaiter().GetResult())
+            if (!await service.TryStartAsync(stopping.Token).ConfigureAwait(false))
             {
                 Console.Error.WriteLine($"vpn-manager: {VpnManagerDbusService.ServiceName} is already owned by another process.");
                 return 1;
             }
 
             Console.WriteLine($"{VpnManagerDbusService.ServiceName} on {VpnManagerDbusService.ObjectPath}");
-            VpnManagerDbusService.RunAsync(stopping.Token).GetAwaiter().GetResult();
-            service.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            var idle = VpnManagerDbusService.RunAsync(stopping.Token);
+            if (await Task.WhenAny(idle, service.Disconnected).ConfigureAwait(false) != idle)
+            {
+                // The session bus ended: exit with it instead of lingering without
+                // a bus, which is what a logout would otherwise leave behind.
+                Console.Error.WriteLine("vpn-manager: the session bus closed; stopping.");
+                return 0;
+            }
+
+            await idle.ConfigureAwait(false);
             return 0;
         }
         catch (OperationCanceledException)
@@ -237,8 +246,13 @@ internal static class Program
         }
         finally
         {
+            if (service is not null)
+            {
+                await service.DisposeAsync().ConfigureAwait(false);
+            }
+
             Console.CancelKeyPress -= cancel;
-            host.ShutdownAsync().AsTask().GetAwaiter().GetResult();
+            await host.ShutdownAsync().ConfigureAwait(false);
         }
     }
 

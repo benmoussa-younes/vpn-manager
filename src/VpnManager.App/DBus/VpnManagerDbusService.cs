@@ -37,6 +37,7 @@ internal sealed class VpnManagerDbusService : IPathMethodHandler, IAsyncDisposab
     private readonly TunnelService _service;
     private readonly CliRunner _cli;
     private DBusConnection? _connection;
+    private Task<Exception?>? _disconnected;
 
     internal VpnManagerDbusService(
         TunnelService service,
@@ -56,6 +57,12 @@ internal sealed class VpnManagerDbusService : IPathMethodHandler, IAsyncDisposab
     /// <inheritdoc />
     public bool HandlesChildPaths => false;
 
+    /// <summary>
+    /// Gets a task that completes when the session bus connection ends, so the
+    /// process exits with the session instead of lingering without a bus.
+    /// </summary>
+    public Task<Exception?> Disconnected => _disconnected ?? Task.FromResult<Exception?>(null);
+
     /// <summary>Connects to the session bus and tries to own the well-known name.</summary>
     /// <param name="cancellationToken">Cancels the connection.</param>
     /// <returns><see langword="true"/> when this process owns the name; a second
@@ -73,6 +80,7 @@ internal sealed class VpnManagerDbusService : IPathMethodHandler, IAsyncDisposab
 
         connection.AddMethodHandler(this);
         _connection = connection;
+        _disconnected = connection.DisconnectedAsync();
         return true;
     }
 

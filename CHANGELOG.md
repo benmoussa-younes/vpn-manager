@@ -69,6 +69,8 @@ written as `VpnManager.*` on Core v0.2.2.
 - A launch without `XDG_RUNTIME_DIR` uses an owner-only directory under the
   state home instead of the sticky `/tmp` fallback, where another local account
   could pre-create the single-instance socket name.
+- The `--dbus` service now exits when the session bus ends; it used to keep
+  running without a bus after a logout.
 
 ### Security
 
