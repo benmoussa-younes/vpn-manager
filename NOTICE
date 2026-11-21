@@ -20,8 +20,8 @@ Public License, version 3 or later. Its source is available at
 https://github.com/benmoussa-younes/core, and the pinned release archive is
 attached to its GitHub release.
 
-The profile manager is derived from the BitCrafts WireGuard Manager 1.2.4
-codebase, Copyright (C) 2026 Younes BENMOUSSA, licensed under GPL-3.0-or-later.
+The profile manager is derived from the previous WireGuard manager codebase,
+Copyright (C) 2026 Younes BENMOUSSA, licensed under GPL-3.0-or-later.
 
 The third-party components are listed in THIRD-PARTY; their licence texts are in
 LICENSES/.

@@ -196,6 +196,24 @@ match process.run(process.request("grep", ["-rInE", "--exclude-dir=.git", "--exc
     }
 }
 
+match process.run(process.request("grep", ["-rInE", "--exclude-dir=.git", "--exclude-dir=bin", "--exclude-dir=obj", "--exclude-dir=artifacts", "--exclude-dir=publish", "--exclude=gate.scs", "bitcrafts|BitCrafts", "."]).with_working_directory(root)) {
+    ok(completed) => {
+        if completed.exit_code == 1 {
+            io.write_standard_output_line("PASS no old product name")
+        } else if completed.exit_code == 0 {
+            io.write_standard_error_line("FAIL no old product name: {completed.standard_output.trim_whitespace()}")
+            success = false
+        } else {
+            io.write_standard_error_line("FAIL no old product name: grep exit {completed.exit_code}")
+            success = false
+        }
+    }
+    error(failure) => {
+        io.write_standard_error_line("FAIL no old product name: {failure.kind}")
+        success = false
+    }
+}
+
 match process.run(process.request("dotnet", ["build", "VpnManager.slnx", "-c", "Release"]).with_working_directory(root)) {
     ok(completed) => {
         if completed.exit_code == 0 {
