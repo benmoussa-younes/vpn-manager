@@ -138,7 +138,7 @@ public sealed class CliRunnerTests
         var networkManager = new FakeNetworkManager();
         if (withConnection)
         {
-            networkManager.Connections.Add(new NetworkManagerConnection("wg0", "wg0", false, ["user:alice"]));
+            networkManager.Connections.Add(new NetworkManagerConnection("wg0", "wg0", IsActive: true, Permissions: ["user:alice"]));
         }
 
         var service = new TunnelService(

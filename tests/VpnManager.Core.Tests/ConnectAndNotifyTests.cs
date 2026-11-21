@@ -153,6 +153,22 @@ public sealed class ConnectAndNotifyTests
     }
 
     [Fact]
+    public async Task Stopping_an_inactive_tunnel_is_a_success()
+    {
+        var store = new FakeWireGuardConfigStore();
+        store.Files["wg0"] = TestData.SampleConfigText;
+        var networkManager = new FakeNetworkManagerConnections();
+        networkManager.Connections.Add(new NetworkManagerConnection("wg0", "wg0", false, ["user:alice"]));
+        var service = Build(store, networkManager, owner: "alice");
+
+        var stopped = await service.StopAsync("wg0");
+
+        Assert.True(stopped.IsSuccess);
+        Assert.Empty(networkManager.Deactivated);
+        Assert.Equal(("wg0", false, 0), Assert.Single(networkManager.AutoConnectChanges));
+    }
+
+    [Fact]
     public async Task A_policy_change_on_an_active_connection_is_reapplied_live()
     {
         var store = new FakeWireGuardConfigStore();

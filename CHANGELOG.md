@@ -87,6 +87,10 @@ written as `VpnManager.*` on Core v0.2.2.
   crashed with "Cannot re-show a closed window".
 - A failure shown as a toast is also written to the application log, so it
   stays readable after the toast disappears.
+- `--disconnect` on a tunnel that is already down is a success, not an
+  `nmcli` error: the operator asked for a state, not for a transition.
+- The `Full tunnel` DNS mode sets the root routing domain (`~.`) explicitly
+  instead of relying on NetworkManager adding it because of the default route.
 - A read-only session shows a persistent warning banner as well as the header
   subtitle, so the mode is visible before an action is refused.
 - Changing a profile's DNS policy while its connection is active now reapplies

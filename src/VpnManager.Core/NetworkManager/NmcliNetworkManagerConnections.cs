@@ -283,6 +283,14 @@ public sealed class NmcliNetworkManagerConnections : INetworkManagerConnections
             search.Add(domain);
         }
 
+        var domains = search.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (mode == NetworkManagerDnsMode.FullTunnel && !domains.Contains("~.", StringComparer.Ordinal))
+        {
+            // Make the mode explicit instead of relying on NetworkManager adding
+            // the root routing domain because the tunnel owns the default route.
+            domains.Insert(0, "~.");
+        }
+
         Invalidate(connectionName);
 
         var arguments = new List<string> { "connection", "modify", connectionName };
@@ -313,7 +321,7 @@ public sealed class NmcliNetworkManagerConnections : INetworkManagerConnections
             arguments.AddRange(
             [
                 "ipv4.dns", string.Join(',', ipv4),
-                "ipv4.dns-search", string.Join(',', search.Distinct(StringComparer.OrdinalIgnoreCase)),
+                "ipv4.dns-search", string.Join(',', domains),
                 "ipv4.ignore-auto-dns", "yes",
                 "ipv4.dns-priority", "-50",
             ]);
@@ -323,7 +331,7 @@ public sealed class NmcliNetworkManagerConnections : INetworkManagerConnections
                 arguments.AddRange(
                 [
                     "ipv6.dns", string.Join(',', ipv6),
-                    "ipv6.dns-search", string.Join(',', search.Distinct(StringComparer.OrdinalIgnoreCase)),
+                    "ipv6.dns-search", string.Join(',', domains),
                     "ipv6.ignore-auto-dns", "yes",
                     "ipv6.dns-priority", "-50",
                 ]);

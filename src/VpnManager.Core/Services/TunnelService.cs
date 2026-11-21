@@ -754,7 +754,13 @@ public sealed class TunnelService
 
         var connection = await FindNetworkManagerConnectionAsync(name, cancellationToken).ConfigureAwait(false);
         var connectionId = connection?.Name ?? name;
-        var down = await _networkManager.DeactivateAsync(connectionId, cancellationToken).ConfigureAwait(false);
+
+        // A disconnect on a tunnel that is already down is a no-op, not an
+        // nmcli error: the operator asked for a state, not for a transition.
+        var down = connection is null || !connection.IsActive
+            ? Result<string>.Success(connectionId)
+            : await _networkManager.DeactivateAsync(connectionId, cancellationToken).ConfigureAwait(false);
+
         if (down.IsSuccess &&
             connection is not null &&
             _store.Exists(name).TryGetValue(out var hasFile) &&

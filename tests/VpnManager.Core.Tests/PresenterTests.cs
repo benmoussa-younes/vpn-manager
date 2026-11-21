@@ -597,6 +597,7 @@ public sealed class EditorInputMapperTests
         var inspector = new FakeWireGuardRuntimeInspector();
         inspector.InterfaceNames.Add("wg0");
         var networkManager = new FakeNetworkManagerConnections();
+        networkManager.Connections.Add(new NetworkManagerConnection("wg0", "wg0", IsActive: true, Permissions: []));
         var service = new TunnelService(store, inspector, networkManager: networkManager);
         var link = new FakePhysicalLinkReader { Link = new PhysicalLink("wlan0", "192.168.1.1") };
         var presenter = new TunnelListPresenter(view, service, physicalLink: link);
@@ -645,6 +646,7 @@ public sealed class EditorInputMapperTests
         var inspector = new FakeWireGuardRuntimeInspector();
         inspector.InterfaceNames.Add("wg0");
         var networkManager = new FakeNetworkManagerConnections();
+        networkManager.Connections.Add(new NetworkManagerConnection("wg0", "wg0", IsActive: true, Permissions: []));
         var service = new TunnelService(store, inspector, networkManager: networkManager);
         var link = new FakePhysicalLinkReader { Link = new PhysicalLink("wlan0", "192.168.1.1") };
         var presenter = new TunnelListPresenter(view, service, physicalLink: link);
@@ -671,6 +673,7 @@ public sealed class EditorInputMapperTests
         var inspector = new FakeWireGuardRuntimeInspector();
         inspector.InterfaceNames.Add("wg0");
         var networkManager = new FakeNetworkManagerConnections();
+        networkManager.Connections.Add(new NetworkManagerConnection("wg0", "wg0", IsActive: true, Permissions: []));
         var service = new TunnelService(store, inspector, networkManager: networkManager);
         var link = new FakePhysicalLinkReader { Link = new PhysicalLink("wlan0", "192.168.1.1") };
         var presenter = new TunnelListPresenter(view, service, clock, physicalLink: link);

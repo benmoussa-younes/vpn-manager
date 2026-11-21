@@ -434,6 +434,23 @@ public sealed class NmcliNetworkManagerConnectionsTests
     }
 
     [Fact]
+    public async Task A_full_tunnel_policy_adds_the_root_routing_domain()
+    {
+        var runner = new FakeProcessRunner(_ => ProcessResult.Completed(0, string.Empty, string.Empty));
+        var connections = new NmcliNetworkManagerConnections(runner);
+
+        var result = await connections.ApplyDnsAsync(
+            "wg0",
+            ["10.2.0.1"],
+            ["corp.example"],
+            NetworkManagerDnsMode.FullTunnel);
+
+        Assert.True(result.IsSuccess);
+        var command = string.Join(' ', Assert.Single(runner.Requests).Arguments);
+        Assert.Contains("ipv4.dns-search ~.,corp.example", command, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task A_reapply_uses_the_device_verb_and_refuses_an_option_shaped_name()
     {
         var runner = new FakeProcessRunner(_ => ProcessResult.Completed(0, string.Empty, string.Empty));
