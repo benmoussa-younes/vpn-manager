@@ -35,7 +35,7 @@ pkg="$stage/pkg"
 mkdir -p "$pkg/DEBIAN" "$pkg/usr/lib/vpn-manager" "$pkg/usr/bin" \
     "$pkg/usr/share/applications" "$pkg/usr/share/icons/hicolor/scalable/apps" \
     "$pkg/usr/share/doc/vpn-manager" "$pkg/usr/share/man/man1" "$pkg/usr/lib/sysctl.d" \
-    "$pkg/usr/share/polkit-1/actions"
+    "$pkg/usr/share/polkit-1/actions" "$pkg/usr/share/dbus-1/services"
 
 dotnet publish "$repo/src/VpnManager.App/VpnManager.App.csproj" \
     -c Release -r linux-x64 -o "$pkg/usr/lib/vpn-manager"
@@ -52,6 +52,7 @@ mkdir -p "$pkg/usr/share/icons/hicolor"
 cp -a "$repo/packaging/icons/hicolor/." "$pkg/usr/share/icons/hicolor/"
 cp "$repo/packaging/debian/60-vpn-manager.conf" "$pkg/usr/lib/sysctl.d/"
 cp "$repo/packaging/polkit/com.bit-crafts.vpn-manager.policy" "$pkg/usr/share/polkit-1/actions/"
+cp "$repo/packaging/dbus/com.bit-crafts.VpnManager.service" "$pkg/usr/share/dbus-1/services/"
 
 cp "$repo/NOTICE" "$repo/THIRD-PARTY" "$pkg/usr/share/doc/vpn-manager/"
 cp "$repo/LICENSES/GPL-3.0-or-later.txt" "$repo/LICENSES/LGPL-3.0-or-later.txt" "$repo/LICENSES/CC-BY-SA-4.0.txt" "$pkg/usr/share/doc/vpn-manager/"

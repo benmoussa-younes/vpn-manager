@@ -3,6 +3,7 @@ using Core.Platform.Linux;
 using Core.UI.Hosting;
 using VpnManager.App.Cli;
 using VpnManager.App.Diagnostics;
+using VpnManager.App.DBus;
 using VpnManager.App.Privileges;
 
 namespace VpnManager.App;
@@ -64,6 +65,11 @@ internal static class Program
         if (DiagnosticsCommand.IsRequested(args))
         {
             return RunDiagnostics(args);
+        }
+
+        if (args.Contains("--dbus", StringComparer.Ordinal))
+        {
+            return RunDbus(args);
         }
 
         if (CliOptions.IsRequested(args))
@@ -136,9 +142,60 @@ internal static class Program
         Console.WriteLine("  vpn-manager --disconnect <profile>  take a profile down");
         Console.WriteLine("  vpn-manager --policy <profile> [--auto-reconnect on|off] [--dns-mode profile|system|split|full] [--dns-search a,b]");
         Console.WriteLine("  vpn-manager --fix-sysctl       set the full-tunnel sysctl through polkit");
+        Console.WriteLine("  vpn-manager --dbus             run the session D-Bus service");
         Console.WriteLine("  vpn-manager --self-test          run the display-free self-test");
         Console.WriteLine("  vpn-manager --version            print the version");
         Console.WriteLine("  vpn-manager --help               print this text");
+    }
+
+    private static int RunDbus(string[] arguments)
+    {
+        var created = CoreHost.Create(HostOptions(singleInstance: false));
+        if (created.TryGetError(out var hostError))
+        {
+            Console.Error.WriteLine($"vpn-manager: {hostError.Message}");
+            return 1;
+        }
+
+        var host = created.Value;
+        using var stopping = new CancellationTokenSource();
+        ConsoleCancelEventHandler cancel = (_, eventArgs) =>
+        {
+            eventArgs.Cancel = true;
+            stopping.Cancel();
+        };
+        Console.CancelKeyPress += cancel;
+
+        try
+        {
+            var root = new CompositionRoot(
+                host,
+                ResolveConfigDirectory(host, arguments),
+                LaunchOptions.IsReadOnly(arguments));
+            var service = new VpnManagerDbusService(
+                root.Service,
+                root.Store.ConfigDirectory,
+                new PkexecRootActionService(root.ProcessRunner));
+            service.StartAsync(stopping.Token).GetAwaiter().GetResult();
+            Console.WriteLine($"{VpnManagerDbusService.ServiceName} on {VpnManagerDbusService.ObjectPath}");
+            VpnManagerDbusService.RunAsync(stopping.Token).GetAwaiter().GetResult();
+            service.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            return 0;
+        }
+        catch (OperationCanceledException)
+        {
+            return 0;
+        }
+        catch (Exception exception)
+        {
+            Console.Error.WriteLine($"vpn-manager: D-Bus service failed: {exception.GetType().Name}");
+            return 1;
+        }
+        finally
+        {
+            Console.CancelKeyPress -= cancel;
+            host.ShutdownAsync().AsTask().GetAwaiter().GetResult();
+        }
     }
 
     private static int RunCli(string[] arguments)

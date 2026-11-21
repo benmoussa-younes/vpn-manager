@@ -32,6 +32,8 @@ written as `VpnManager.*` on Core v0.2.2.
   verifies the full-tunnel sysctl through `pkexec`.
 - An `nmcli monitor` event stream for immediate state refresh, with the periodic
   poll as fallback.
+- A user-session D-Bus service, `com.bit-crafts.VpnManager`, with status,
+  connect, disconnect and policy methods; the package ships its activation file.
 
 ### Changed
 

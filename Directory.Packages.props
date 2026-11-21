@@ -14,5 +14,6 @@
     <PackageVersion Include="xunit.v3.mtp-off" Version="4.0.1" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
+    <PackageVersion Include="Tmds.DBus.Protocol" Version="0.94.1" />
   </ItemGroup>
 </Project>

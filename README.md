@@ -25,6 +25,9 @@ asks for a password, never elevates and never prints a private key.
   `Profile`, `System`, `Split` or `FullTunnel` DNS mode.
 - Offers a headless CLI: `--status [--json]`, `--connect`, `--disconnect`,
   `--policy` and `--fix-sysctl`.
+- Exposes the same operations on the user session bus as
+  `com.bit-crafts.VpnManager` (interface `com.bit_crafts.VpnManager1`) for
+  enterprise orchestration.
 
 ## What it is not
 
