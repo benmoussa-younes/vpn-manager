@@ -157,6 +157,47 @@ public sealed class DbusIntegrationTests
         Assert.Null(reason);
     }
 
+    [Fact]
+    public async Task TheEndSessionSignalIsNoticed()
+    {
+        Assert.SkipUnless(
+            Environment.GetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS") is { Length: > 0 },
+            "No session D-Bus address; run under dbus-run-session.");
+
+        using var watcher = new SessionEndWatcher();
+        await watcher.StartAsync();
+        Assert.False(watcher.IsEnding);
+
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "gdbus",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            },
+        };
+        process.StartInfo.ArgumentList.Add("emit");
+        process.StartInfo.ArgumentList.Add("--session");
+        process.StartInfo.ArgumentList.Add("--object-path");
+        process.StartInfo.ArgumentList.Add("/org/gnome/SessionManager");
+        process.StartInfo.ArgumentList.Add("--signal");
+        process.StartInfo.ArgumentList.Add("org.gnome.SessionManager.QueryEndSession");
+        process.StartInfo.ArgumentList.Add("0");
+        process.Start();
+        await process.WaitForExitAsync();
+
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+        while (!watcher.IsEnding && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(25);
+        }
+
+        Assert.True(watcher.IsEnding, "The QueryEndSession signal was not observed.");
+    }
+
     private static async Task<(int ExitCode, string Output, string Error)> RunRawAsync(string typedArgument)
     {
         using var process = new Process

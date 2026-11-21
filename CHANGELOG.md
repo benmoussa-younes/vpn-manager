@@ -67,6 +67,12 @@ written as `VpnManager.*` on Core v0.2.2.
 
 - Renaming a tunnel refreshes the open detail page's header immediately; a list
   refresh also no longer overwrites the header and toolbar of a pushed page.
+- Closing with the VPN up shows one Cancel button instead of a duplicate: the
+  dialog's built-in Cancel is the only one.
+- A logout or a shutdown no longer shows the disconnect dialog. The app watches
+  the GNOME session manager (QueryEndSession/EndSession) and exits quietly;
+  SIGTERM and SIGINT take the same path, so a session that is ending is never
+  blocked by a question.
 - Connecting no longer fails after the tunnel is already up: the connect path
   applies the policy to the profile and lets activation apply it, and only an
   explicit policy change on a live connection reapplies the device. The laptop

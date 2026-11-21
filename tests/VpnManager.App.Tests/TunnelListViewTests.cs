@@ -213,7 +213,9 @@ public sealed class TunnelListViewTests
 
             host.DialogsService.Confirm = ConfirmResult.Accept;
             Assert.True(await view.ConfirmCloseAsync(["wg0"]));
-            Assert.Contains("disconnect", Assert.Single(host.DialogsService.Requests).Body, StringComparison.OrdinalIgnoreCase);
+            var request = Assert.Single(host.DialogsService.Requests);
+            Assert.Contains("disconnect", request.Body, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(string.Empty, request.AlternativeLabel);
 
             host.DialogsService.Confirm = ConfirmResult.Alternative;
             Assert.False(await view.ConfirmCloseAsync(["wg0"]));

@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -13,6 +14,10 @@ namespace VpnManager.App;
 /// </summary>
 public partial class App : CoreApplication
 {
+    private ShutdownCoordinator? _shutdown;
+    private PosixSignalRegistration? _sigterm;
+    private PosixSignalRegistration? _sigint;
+
     /// <inheritdoc />
     protected override string ApplicationId => Program.ApplicationId;
 
@@ -21,6 +26,18 @@ public partial class App : CoreApplication
     {
         base.Initialize();
         AvaloniaXamlLoader.Load(this);
+    }
+
+    private void OnSessionSignal(PosixSignalContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        context.Cancel = true;
+
+        var shutdown = _shutdown;
+        if (shutdown is not null)
+        {
+            Dispatcher.UIThread.Post(() => _ = shutdown.RunAsync().AsTask());
+        }
     }
 
     /// <inheritdoc />
@@ -56,6 +73,13 @@ public partial class App : CoreApplication
                 ownedShell.DisposeAsync,
                 () => host.ShutdownAsync(),
                 () => desktop.Shutdown());
+            _shutdown = shutdown;
+
+            // A logout or a shutdown is not an operator quit: answer the close
+            // request without the disconnect dialog, and exit on SIGTERM even if
+            // the window never receives a close event.
+            _sigterm = PosixSignalRegistration.Create(PosixSignal.SIGTERM, OnSessionSignal);
+            _sigint = PosixSignalRegistration.Create(PosixSignal.SIGINT, OnSessionSignal);
 
             window.QuitRequested += () => shutdown.RunAsync();
 

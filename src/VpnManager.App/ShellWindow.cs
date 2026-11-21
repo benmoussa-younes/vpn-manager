@@ -34,6 +34,7 @@ internal sealed class ShellWindow : IAsyncDisposable
     private readonly TunnelListPresenter _presenter;
     private readonly AppearanceService _appearance;
     private readonly Func<CancellationToken, Task<bool>> _trayHostProbe;
+    private readonly SessionEndWatcher _sessionEnd;
     private readonly WindowPlacementService _placement;
     private readonly NmcliNetworkManagerMonitor _monitor = new();
     private readonly bool _readOnly;
@@ -45,7 +46,8 @@ internal sealed class ShellWindow : IAsyncDisposable
         CoreHost host,
         CompositionRoot root,
         bool readOnly,
-        Func<CancellationToken, Task<bool>>? trayHostProbe = null)
+        Func<CancellationToken, Task<bool>>? trayHostProbe = null,
+        SessionEndWatcher? sessionEnd = null)
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(root);
@@ -54,6 +56,7 @@ internal sealed class ShellWindow : IAsyncDisposable
         _root = root;
         _readOnly = readOnly;
         _trayHostProbe = trayHostProbe ?? StatusNotifierHostProbe.IsHostRegisteredAsync;
+        _sessionEnd = sessionEnd ?? new SessionEndWatcher();
 
         var atomicFiles = new LinuxAtomicFileWriterFactory();
         var fileSystem = new LinuxFileSystemAdapter();
@@ -99,9 +102,10 @@ internal sealed class ShellWindow : IAsyncDisposable
             journal: root.Journal);
 
         // Until a tray host answers, the safe behaviour is the one that leaves
-        // nothing running in the background: quit and disconnect the VPN.
-        Window.ConfirmQuit = () => new ValueTask<bool>(_presenter.ConfirmCloseAsync());
-        Window.ConfirmClose = () => new ValueTask<bool>(_presenter.ConfirmCloseAsync());
+        // nothing running in the background: quit and disconnect the VPN. A
+        // session that is ending never shows that dialog.
+        Window.ConfirmQuit = ConfirmCloseAsync;
+        Window.ConfirmClose = ConfirmCloseAsync;
 
         _content.StateBackupRequested += path => Report(root.StateStore.Export(path));
         _content.StateRestoreRequested += RestoreState;
@@ -117,6 +121,7 @@ internal sealed class ShellWindow : IAsyncDisposable
 
         Window.Opened += OnOpened;
         _ = ApplyTrayAvailabilityAsync();
+        _ = _sessionEnd.StartAsync();
     }
 
     /// <summary>Gets the shell window the application lifetime hosts.</summary>
@@ -150,6 +155,7 @@ internal sealed class ShellWindow : IAsyncDisposable
 
         _disposed = true;
         _lifetime.Cancel();
+        _sessionEnd.Dispose();
         _monitor.Dispose();
         await _presenter.DisposeAsync().ConfigureAwait(true);
         _lifetime.Dispose();
@@ -181,6 +187,9 @@ internal sealed class ShellWindow : IAsyncDisposable
         _content.TrayAvailable = true;
         _content.Publish();
     }
+
+    private async ValueTask<bool> ConfirmCloseAsync() =>
+        _sessionEnd.IsEnding || await _presenter.ConfirmCloseAsync().ConfigureAwait(true);
 
     private void OnOpened(object? sender, EventArgs e)
     {

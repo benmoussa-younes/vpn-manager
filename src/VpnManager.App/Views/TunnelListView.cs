@@ -578,12 +578,13 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
             return false;
         }
 
+        // The dialog always renders its own Cancel; a second one here would be a
+        // duplicate. The alternative stays hidden.
         var result = await host.Dialogs.ConfirmAsync(
             new ConfirmRequest(
                 "Disconnect the VPN and quit?",
                 $"Closing VPN Manager will disconnect: {string.Join(", ", connectedNames)}.",
-                "Disconnect and quit",
-                "Cancel"),
+                "Disconnect and quit"),
             cancellationToken).ConfigureAwait(true);
 
         return result == ConfirmResult.Accept;
