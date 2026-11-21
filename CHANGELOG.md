@@ -50,6 +50,14 @@ written as `VpnManager.*` on Core v0.2.2.
 - The appearance preferences use `Core.Mvp.Services.AppearanceService`; the old
   product-local preferences dialog is gone.
 
+### Fixed
+
+- Changing a profile's DNS policy while its connection is active now reapplies
+  the device (`nmcli device reapply`): the new search domains and containment
+  hold immediately instead of at the next activation.
+- `--dns-search ""` clears the stored search domains; an empty value no longer
+  silently kept the previous list.
+
 ### Security
 
 - A stored profile is re-parsed and re-validated before it is handed to

@@ -52,7 +52,7 @@ vpn-manager --status [--json]    print the profiles and their policy
 vpn-manager --connect <profile>  bring a profile up through NetworkManager
 vpn-manager --disconnect <profile>  take a profile down
 vpn-manager --policy <profile> [--auto-reconnect on|off] \
-  [--dns-mode profile|system|split|full] [--dns-search a,b]
+  [--dns-mode profile|system|split|full] [--dns-search a,b|'']
 vpn-manager --fix-sysctl       set the full-tunnel sysctl through polkit
 vpn-manager --self-test          run the display-free self-test
 vpn-manager --version            print the version
@@ -195,7 +195,9 @@ and the sysctl drop-in, then builds `artifacts/vpn-manager_<version>-1_amd64.deb
 - DNS containment is reported as `Contained`/`Split`/`Uncontained`/`Unknown`;
   no leak is claimed impossible. The DNS mode is applied through NetworkManager
   (`ipv4.dns`, `ipv6.dns`, `dns-search`, `dns-priority`,
-  `ignore-auto-dns`), never by editing `/etc/resolv.conf`.
+  `ignore-auto-dns`), never by editing `/etc/resolv.conf`. A policy change on an
+  active connection is reapplied with `nmcli device reapply`, so it holds at
+  once; `--dns-search ""` clears the stored search domains.
 - A user-scope session configures a profile but cannot bring it up without the
   NetworkManager policy that every GNOME session already has; the interface says
   so instead of failing silently.

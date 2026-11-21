@@ -327,6 +327,22 @@ public sealed class NmcliNetworkManagerConnections : INetworkManagerConnections
     }
 
     /// <inheritdoc />
+    public async Task<Result<string>> ReapplyAsync(string deviceName, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(deviceName);
+
+        if (!IsSafeConnectionName(deviceName))
+        {
+            return Result<string>.Failure(WireGuardErrors.NetworkManagerInvalidConnection(deviceName));
+        }
+
+        var result = await RunAsync(["device", "reapply", deviceName], cancellationToken).ConfigureAwait(false);
+        return result.TryGetValue(out _)
+            ? Result<string>.Success(deviceName)
+            : Result<string>.Failure(result.Error);
+    }
+
+    /// <inheritdoc />
     public Task<Result<string>> ActivateAsync(string connectionName, CancellationToken cancellationToken = default) =>
         ChangeStateAsync("up", connectionName, cancellationToken);
 

@@ -3,6 +3,7 @@ using VpnManager.App.Tests.Fakes;
 using VpnManager.Core.Model;
 using VpnManager.Core.NetworkManager;
 using VpnManager.Core.Services;
+using VpnManager.Core.State;
 
 namespace VpnManager.App.Tests;
 
@@ -40,6 +41,37 @@ public sealed class CliRunnerTests
         Assert.Equal(("wg0", false, 0), Assert.Single(networkManager.AutoConnectChanges));
         var dns = Assert.Single(networkManager.DnsChanges);
         Assert.Contains("corp.example", dns.Search);
+    }
+
+    [Fact]
+    public async Task AnExplicitEmptySearchListClearsTheStoredDomains()
+    {
+        var (runner, _, networkManager, state) = CreateRunner(withConnection: true);
+        state.State = new ApplicationState
+        {
+            Tunnels =
+            [
+                new TunnelStateEntry
+                {
+                    Name = "wg0",
+                    Scope = TunnelScope.User,
+                    Source = "Configuration",
+                    AutoReconnect = true,
+                    DnsMode = NetworkManagerDnsMode.Split,
+                    DnsSearchDomains = ["corp.example"],
+                },
+            ],
+        };
+        using var output = new StringWriter();
+
+        var code = await runner.RunAsync(
+            CliOptions.Parse(["--policy", "wg0", "--dns-search", string.Empty]),
+            output,
+            TextWriter.Null);
+
+        Assert.Equal(0, code);
+        Assert.Empty(state.State.Tunnels.Single(entry => entry.Name == "wg0").DnsSearchDomains);
+        Assert.Empty(networkManager.DnsChanges[^1].Search);
     }
 
     [Fact]

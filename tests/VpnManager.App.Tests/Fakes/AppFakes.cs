@@ -133,6 +133,8 @@ internal sealed class FakeNetworkManager : INetworkManagerConnections
 
     internal List<string> Activated { get; } = [];
 
+    internal List<string> Reapplied { get; } = [];
+
     internal List<string> Deactivated { get; } = [];
 
     internal List<(string Name, bool AutoConnect, int Priority)> AutoConnectChanges { get; } = [];
@@ -158,6 +160,12 @@ internal sealed class FakeNetworkManager : INetworkManagerConnections
     {
         DnsChanges.Add((connectionName, dnsEntries, searchDomains, mode, includeIpv6));
         return Task.FromResult(Result<string>.Success(connectionName));
+    }
+
+    public Task<Result<string>> ReapplyAsync(string deviceName, CancellationToken cancellationToken = default)
+    {
+        Reapplied.Add(deviceName);
+        return Task.FromResult(Result<string>.Success(deviceName));
     }
 
     public Task<Result<string>> ActivateAsync(string connectionName, CancellationToken cancellationToken = default)

@@ -371,6 +371,24 @@ public sealed class NmcliNetworkManagerConnectionsTests
     }
 
     [Fact]
+    public async Task A_reapply_uses_the_device_verb_and_refuses_an_option_shaped_name()
+    {
+        var runner = new FakeProcessRunner(_ => ProcessResult.Completed(0, string.Empty, string.Empty));
+        var connections = new NmcliNetworkManagerConnections(runner);
+
+        var applied = await connections.ReapplyAsync("wg0");
+
+        Assert.True(applied.IsSuccess);
+        Assert.Equal(["device", "reapply", "wg0"], Assert.Single(runner.Requests).Arguments);
+
+        var refused = await connections.ReapplyAsync("--all");
+
+        Assert.True(refused.IsFailure);
+        Assert.Equal(WireGuardErrorCodes.NetworkManagerInvalidConnection, refused.Error.Code);
+        Assert.Single(runner.Requests);
+    }
+
+    [Fact]
     public async Task A_connection_name_that_looks_like_an_option_is_refused_before_nmcli()
     {
         var runner = new FakeProcessRunner(_ => ProcessResult.Completed(0, string.Empty, string.Empty));

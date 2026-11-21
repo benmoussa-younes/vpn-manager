@@ -68,6 +68,17 @@ public interface INetworkManagerConnections
     /// <param name="connectionName">The connection id.</param>
     /// <param name="cancellationToken">Cancels the wait.</param>
     /// <returns>The connection id, or a failure.</returns>
+    /// <summary>
+    /// Reapplies the IP configuration of an active device, so a profile change
+    /// takes effect without dropping the connection. <c>nmcli connection modify</c>
+    /// only updates the stored profile; the active device keeps the previous DNS
+    /// until it reapplies.
+    /// </summary>
+    /// <param name="deviceName">The kernel interface of the active connection.</param>
+    /// <param name="cancellationToken">Cancels the wait.</param>
+    /// <returns>The device name, or a failure.</returns>
+    Task<Result<string>> ReapplyAsync(string deviceName, CancellationToken cancellationToken = default);
+
     Task<Result<string>> ActivateAsync(string connectionName, CancellationToken cancellationToken = default);
 
     /// <summary>Takes a connection down through NetworkManager.</summary>

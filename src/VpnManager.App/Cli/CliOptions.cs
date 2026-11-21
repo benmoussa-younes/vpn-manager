@@ -106,9 +106,18 @@ internal sealed record CliOptions(
             }
         }
 
-        if (TryValue(arguments, "--dns-search", out var searchText))
+        var searchIndex = Array.IndexOf(arguments, "--dns-search");
+        if (searchIndex >= 0)
         {
-            searchDomains = searchText
+            if (searchIndex + 1 >= arguments.Length ||
+                arguments[searchIndex + 1].StartsWith("--", StringComparison.Ordinal))
+            {
+                return new CliOptions(command, json, name, Error: "--dns-search expects a comma-separated list, or an empty value to clear it.");
+            }
+
+            // An explicit empty value is a clear, not a missing option: the stored
+            // list is replaced with nothing.
+            searchDomains = arguments[searchIndex + 1]
                 .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         }
 

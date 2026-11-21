@@ -54,6 +54,24 @@ public sealed class ApplicationTests
     }
 
     [Fact]
+    public void AnEmptyDnsSearchValueMeansClearTheStoredList()
+    {
+        var options = CliOptions.Parse(["--policy", "wg0", "--dns-search", string.Empty]);
+
+        Assert.Null(options.Error);
+        Assert.NotNull(options.DnsSearchDomains);
+        Assert.Empty(options.DnsSearchDomains);
+    }
+
+    [Fact]
+    public void ADnsSearchWithoutAValueIsAnError()
+    {
+        var options = CliOptions.Parse(["--policy", "wg0", "--dns-search"]);
+
+        Assert.NotNull(options.Error);
+    }
+
+    [Fact]
     public void CliParsesTheFixedPrivilegedAction()
     {
         var options = CliOptions.Parse(["--fix-sysctl"]);

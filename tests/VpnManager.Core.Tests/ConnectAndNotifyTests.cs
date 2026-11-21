@@ -138,6 +138,38 @@ public sealed class ConnectAndNotifyTests
     }
 
     [Fact]
+    public async Task A_policy_change_on_an_active_connection_is_reapplied_live()
+    {
+        var store = new FakeWireGuardConfigStore();
+        store.Files["wg0"] = TestData.SampleConfigText;
+        var networkManager = new FakeNetworkManagerConnections();
+        networkManager.Connections.Add(new NetworkManagerConnection("wg0", "wg0-if", true, ["user:alice"]));
+        var service = Build(store, networkManager, owner: "alice");
+
+        var saved = await service.SetPolicyAsync(
+            "wg0",
+            new TunnelPolicy(AutoReconnect: true, DnsMode: NetworkManagerDnsMode.FullTunnel, DnsSearchDomains: []));
+
+        Assert.True(saved.IsSuccess);
+        Assert.Equal("wg0-if", Assert.Single(networkManager.Reapplied));
+    }
+
+    [Fact]
+    public async Task A_policy_change_on_an_inactive_connection_is_not_reapplied()
+    {
+        var store = new FakeWireGuardConfigStore();
+        store.Files["wg0"] = TestData.SampleConfigText;
+        var networkManager = new FakeNetworkManagerConnections();
+        networkManager.Connections.Add(new NetworkManagerConnection("wg0", "wg0-if", false, ["user:alice"]));
+        var service = Build(store, networkManager, owner: "alice");
+
+        var saved = await service.SetPolicyAsync("wg0", new TunnelPolicy(DnsMode: NetworkManagerDnsMode.Split));
+
+        Assert.True(saved.IsSuccess);
+        Assert.Empty(networkManager.Reapplied);
+    }
+
+    [Fact]
     public async Task Deleting_a_profile_removes_the_networkmanager_connection_too()
     {
         var store = new FakeWireGuardConfigStore();

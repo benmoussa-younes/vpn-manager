@@ -844,7 +844,7 @@ public sealed class TunnelService
             .Any(address => IPAddress.TryParse(address, out var parsed) &&
                 parsed.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6);
 
-        return await _networkManager
+        var applied = await _networkManager
             .ApplyDnsAsync(
                 name,
                 configuration.Interface.Dns,
@@ -853,6 +853,18 @@ public sealed class TunnelService
                 includeIpv6,
                 cancellationToken)
             .ConfigureAwait(false);
+        if (!applied.IsSuccess)
+        {
+            return applied;
+        }
+
+        // `nmcli connection modify` updates the stored profile only: an active
+        // device keeps the previous DNS, and an operator who just changed the
+        // policy expects it to hold now, so reapply the IP configuration.
+        var connection = await FindNetworkManagerConnectionAsync(name, cancellationToken).ConfigureAwait(false);
+        return connection is { IsActive: true }
+            ? await _networkManager.ReapplyAsync(connection.InterfaceName, cancellationToken).ConfigureAwait(false)
+            : applied;
     }
 
     /// <summary>
