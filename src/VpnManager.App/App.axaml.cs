@@ -52,15 +52,32 @@ public partial class App : CoreApplication
 
             var window = shell.Window;
             var ownedShell = shell;
-            window.QuitRequested += async () =>
-            {
-                await ownedShell.DisposeAsync().ConfigureAwait(true);
-                await host.ShutdownAsync().ConfigureAwait(true);
-                desktop.Shutdown();
-            };
+            var shutdown = new ShutdownCoordinator(
+                ownedShell.DisposeAsync,
+                () => host.ShutdownAsync(),
+                () => desktop.Shutdown());
 
-            host.ActivationRequested += () => Dispatcher.UIThread.Post(window.ShowWindow);
-            host.Activated += _ => Dispatcher.UIThread.Post(window.ShowWindow);
+            window.QuitRequested += () => shutdown.RunAsync();
+
+            // With the quit close behaviour, closing the window must end the
+            // process: nothing else keeps it alive, and a window that cannot be
+            // re-shown must not leave an unreachable instance behind.
+            window.Closed += (_, _) => _ = shutdown.RunAsync().AsTask();
+
+            host.ActivationRequested += () =>
+            {
+                if (!shutdown.IsStarted)
+                {
+                    Dispatcher.UIThread.Post(window.ShowWindow);
+                }
+            };
+            host.Activated += _ =>
+            {
+                if (!shutdown.IsStarted)
+                {
+                    Dispatcher.UIThread.Post(window.ShowWindow);
+                }
+            };
         }
 
         base.OnFrameworkInitializationCompleted();

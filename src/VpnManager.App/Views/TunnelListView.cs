@@ -8,6 +8,7 @@ using Core.Mvp.Composition;
 using Core.Mvp.Presentation;
 using Core.Mvp.Services;
 using Core.Mvp.Views;
+using Core.Diagnostics;
 using Core.Results;
 using VpnManager.App.Controls;
 using VpnManager.Core.Presentation;
@@ -183,6 +184,9 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         _host = host;
         Publish();
     }
+
+    /// <summary>Gets or sets the diagnostic log, when the shell provides one.</summary>
+    internal IApplicationLogger? Logger { get; set; }
 
     /// <summary>
     /// Gets or sets whether a tray host is registered. Without one, publishing a
@@ -507,7 +511,9 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
             return;
         }
 
-        // Errors are transient toasts in the corner, not a persistent banner.
+        // Errors are transient toasts in the corner, not a persistent banner, so
+        // the diagnostic log is where a failure stays readable after the toast.
+        Logger?.Log(LogLevel.Warning, message);
         _host.Notifications.Toast(message, MessageSeverity.Error);
     }
 

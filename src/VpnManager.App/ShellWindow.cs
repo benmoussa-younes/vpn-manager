@@ -84,6 +84,7 @@ internal sealed class ShellWindow : IAsyncDisposable
         }
 
         _content = new TunnelListView();
+        _content.Logger = _root.Logger;
         _content.AttachHost(Window);
         _content.SetReadOnly(readOnly);
         _content.WindowVisible = () => Window.IsVisible;

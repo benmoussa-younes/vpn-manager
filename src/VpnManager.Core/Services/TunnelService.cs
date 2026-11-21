@@ -809,7 +809,7 @@ public sealed class TunnelService
             var parsed = WireGuardConfigParser.Parse(name, text);
             if (parsed.TryGetValue(out var configuration))
             {
-                var applied = await ApplyPolicyAsync(name, configuration, cancellationToken).ConfigureAwait(false);
+                var applied = await ApplyPolicyAsync(name, configuration, reapplyWhenActive: true, cancellationToken).ConfigureAwait(false);
                 if (!applied.IsSuccess)
                 {
                     return Result<TunnelPolicy>.Failure(applied.Error);
@@ -823,6 +823,7 @@ public sealed class TunnelService
     private async Task<Result<string>> ApplyPolicyAsync(
         string name,
         TunnelConfiguration configuration,
+        bool reapplyWhenActive,
         CancellationToken cancellationToken)
     {
         if (_networkManager is null)
@@ -858,9 +859,19 @@ public sealed class TunnelService
             return applied;
         }
 
-        // `nmcli connection modify` updates the stored profile only: an active
-        // device keeps the previous DNS, and an operator who just changed the
-        // policy expects it to hold now, so reapply the IP configuration.
+        if (!reapplyWhenActive)
+        {
+            // The connect path applies the policy to the profile and then activates
+            // it, so the settings take effect at activation. Reapplying here races
+            // the autoconnect that may already have brought the new profile up, and
+            // nmcli refuses the reapply with "Can't reapply changes to
+            // 'connection.permissions' setting" while the tunnel is up.
+            return applied;
+        }
+
+        // An explicit policy change on a live connection must hold at once:
+        // `nmcli connection modify` updated the stored profile only, so reapply
+        // the IP configuration of the active device.
         var connection = await FindNetworkManagerConnectionAsync(name, cancellationToken).ConfigureAwait(false);
         return connection is { IsActive: true }
             ? await _networkManager.ReapplyAsync(connection.InterfaceName, cancellationToken).ConfigureAwait(false)
@@ -986,7 +997,7 @@ public sealed class TunnelService
         {
             var ensured = await _networkManager!.EnsureAsync(name, name, temp, _networkManagerOwner, cancellationToken).ConfigureAwait(false);
             return ensured.IsSuccess
-                ? await ApplyPolicyAsync(name, validConfiguration, cancellationToken).ConfigureAwait(false)
+                ? await ApplyPolicyAsync(name, validConfiguration, reapplyWhenActive: false, cancellationToken).ConfigureAwait(false)
                 : Result<string>.Failure(ensured.Error);
         }
         finally

@@ -1,4 +1,5 @@
 using Avalonia.Automation;
+using Core.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Core.Mvp.Services;
@@ -160,6 +161,26 @@ public sealed class TunnelListViewTests
 
             var row = Assert.IsAssignableFrom<Control>(Assert.Single(view.TunnelList.Items));
             Assert.Equal("wg0, Up", AutomationProperties.GetName(row));
+        });
+    }
+
+    [Fact]
+    public async Task AnErrorIsWrittenToTheApplicationLog()
+    {
+        await HeadlessTestSession.RunAsync(() =>
+        {
+            var host = new FakeApplicationHost();
+            var logger = new FakeLogger();
+            var view = new TunnelListView { Logger = logger };
+            view.AttachHost(host);
+
+            view.SetError("nmcli failed with exit code 4");
+
+            Assert.Contains(
+                logger.Entries,
+                entry => entry.Level == LogLevel.Warning
+                    && entry.Message.Contains("nmcli failed", StringComparison.Ordinal));
+            Assert.Contains(host.NotificationsService.Toasts, toast => toast.Severity == MessageSeverity.Error);
         });
     }
 

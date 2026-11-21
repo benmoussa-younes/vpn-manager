@@ -119,6 +119,34 @@ public sealed class ApplicationTests
     }
 
     [Fact]
+    public async Task ShutdownRunsOnceWhicheverPathAsksFirst()
+    {
+        var disposed = 0;
+        var hostShutdown = 0;
+        var desktop = 0;
+        var coordinator = new ShutdownCoordinator(
+            () =>
+            {
+                disposed++;
+                return ValueTask.CompletedTask;
+            },
+            () =>
+            {
+                hostShutdown++;
+                return ValueTask.CompletedTask;
+            },
+            () => desktop++);
+
+        await Task.WhenAll(coordinator.RunAsync().AsTask(), coordinator.RunAsync().AsTask());
+        await coordinator.RunAsync();
+
+        Assert.True(coordinator.IsStarted);
+        Assert.Equal(1, disposed);
+        Assert.Equal(1, hostShutdown);
+        Assert.Equal(1, desktop);
+    }
+
+    [Fact]
     public void CliParsesTheFixedPrivilegedAction()
     {
         var options = CliOptions.Parse(["--fix-sysctl"]);

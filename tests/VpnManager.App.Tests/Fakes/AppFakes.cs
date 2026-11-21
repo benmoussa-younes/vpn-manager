@@ -3,6 +3,7 @@ using Core.Mvp.Presentation;
 using Core.Mvp.Presenters;
 using Core.Mvp.Services;
 using Core.Mvp.Views;
+using Core.Diagnostics;
 using Core.Results;
 using VpnManager.App.Privileges;
 using VpnManager.Core.Model;
@@ -211,6 +212,17 @@ internal sealed class FakeProcessRunner : IProcessRunner
     {
         Requests.Add(request);
         return Task.FromResult(Result);
+    }
+}
+
+internal sealed class FakeLogger : IApplicationLogger
+{
+    internal List<(LogLevel Level, string Message)> Entries { get; } = [];
+
+    public void Log(LogLevel level, string message) => Entries.Add((level, message));
+
+    public void Dispose()
+    {
     }
 }
 

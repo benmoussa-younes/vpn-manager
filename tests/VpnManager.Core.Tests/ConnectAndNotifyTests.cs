@@ -97,6 +97,21 @@ public sealed class ConnectAndNotifyTests
     }
 
     [Fact]
+    public async Task Starting_does_not_reapply_the_profile_it_is_about_to_activate()
+    {
+        var store = new FakeWireGuardConfigStore();
+        store.Files["wg0"] = TestData.SampleConfigText;
+        var networkManager = new FakeNetworkManagerConnections();
+        networkManager.Connections.Add(new NetworkManagerConnection("wg0", "wg0-if", true, ["user:alice"]));
+        var service = Build(store, networkManager, owner: "alice");
+
+        var result = await service.StartAsync("wg0");
+
+        Assert.True(result.IsSuccess);
+        Assert.Empty(networkManager.Reapplied);
+    }
+
+    [Fact]
     public async Task Stopping_marks_the_profile_as_manually_disconnected()
     {
         var store = new FakeWireGuardConfigStore();

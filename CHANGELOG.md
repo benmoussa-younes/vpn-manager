@@ -61,6 +61,16 @@ written as `VpnManager.*` on Core v0.2.2.
 
 ### Fixed
 
+- Connecting no longer fails after the tunnel is already up: the connect path
+  applies the policy to the profile and lets activation apply it, and only an
+  explicit policy change on a live connection reapplies the device. The laptop
+  journal showed NetworkManager refusing the reapply with "Can't reapply
+  changes to 'connection.permissions' setting" while the VPN was active.
+- Closing the window with the quit behaviour now ends the process. It used to
+  close the window and leave an unreachable instance behind, and a later launch
+  crashed with "Cannot re-show a closed window".
+- A failure shown as a toast is also written to the application log, so it
+  stays readable after the toast disappears.
 - A read-only session shows a persistent warning banner as well as the header
   subtitle, so the mode is visible before an action is refused.
 - Changing a profile's DNS policy while its connection is active now reapplies
