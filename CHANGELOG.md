@@ -10,9 +10,8 @@ and this project adheres to
 
 ## [0.1.0] - 2026-11-21
 
-The first release of VPN Manager: the per-user WireGuard client migrated from the
-BitCrafts WireGuard Manager 1.2.4 codebase, renamed to `VpnManager.*` and adapted
-to Core v0.2.1.
+The first release of VPN Manager: a per-user WireGuard client for Debian GNOME,
+written as `VpnManager.*` on Core v0.2.1.
 
 ### Added
 
@@ -57,6 +56,6 @@ to Core v0.2.1.
 
 ### Removed
 
-- The vendored BitCrafts.Core 0.6.5 source, the root helper, the system scope,
-  the `wg-quick` activation path and the product-local About/Preferences/tray
+- The vendored shared-library source, the root helper, the system scope, the
+  `wg-quick` activation path and the product-local About/Preferences/tray
   implementations.
