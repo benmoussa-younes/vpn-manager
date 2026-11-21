@@ -1,0 +1,41 @@
+#!/usr/bin/make -f
+# Debian source-package rules for VPN Manager. The local `build-deb.sh` builds a
+# binary package without debhelper; this file is the policy source for a future
+# signed source package.
+
+export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT = 1
+export DOTNET_CLI_TELEMETRY_OPTOUT = 1
+export DOTNET_NOLOGO = 1
+
+SOLUTION := VpnManager.slnx
+APP := src/VpnManager.App/VpnManager.App.csproj
+PKG := vpn-manager
+RID := linux-x64
+PREFIX := debian/$(PKG)/usr/lib/vpn-manager
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	@:
+
+override_dh_auto_build:
+	dotnet restore $(SOLUTION)
+	dotnet build $(SOLUTION) -c Release --no-restore
+
+override_dh_auto_test:
+	dotnet test $(SOLUTION) -c Release --no-build
+
+override_dh_auto_install:
+	dotnet publish $(APP) -c Release -r $(RID) --self-contained -o $(PREFIX)
+	find $(PREFIX) -type f \( -name '*.dbg' -o -name '*.pdb' -o -name '*.xml' \) -delete
+	chmod -R a+rX debian/$(PKG)/usr
+
+override_dh_auto_clean:
+	rm -rf src/*/bin src/*/obj tests/*/bin tests/*/obj artifacts
+
+# The bundled native libraries are private to the application, so no shlibs
+# entry may be published for them. dh_shlibdeps still runs, so the package
+# depends on the system libraries the binaries actually link.
+override_dh_makeshlibs:
+	@:

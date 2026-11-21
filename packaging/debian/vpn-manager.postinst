@@ -1,0 +1,11 @@
+#!/bin/sh
+# Apply the WireGuard reverse-path sysctl immediately, so a full tunnel connects
+# before the next boot. Only the package's own drop-in is applied; a failure is
+# not a package failure.
+set -e
+
+if [ "$1" = "configure" ] && command -v sysctl >/dev/null 2>&1; then
+    sysctl -q -p /usr/lib/sysctl.d/60-vpn-manager.conf || true
+fi
+
+#DEBHELPER#

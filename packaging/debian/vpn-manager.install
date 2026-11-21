@@ -1,0 +1,9 @@
+packaging/vpn-manager.desktop usr/share/applications
+packaging/icons/vpn-manager.svg usr/share/icons/hicolor/scalable/apps
+packaging/icons/hicolor usr/share/icons
+packaging/debian/60-vpn-manager.conf usr/lib/sysctl.d
+NOTICE usr/share/doc/vpn-manager
+THIRD-PARTY usr/share/doc/vpn-manager
+LICENSES/GPL-3.0-or-later.txt usr/share/doc/vpn-manager
+LICENSES/CC-BY-SA-4.0.txt usr/share/doc/vpn-manager
+LICENSES/LGPL-3.0-or-later.txt usr/share/doc/vpn-manager

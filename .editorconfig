@@ -1,0 +1,57 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{cs,csx}]
+indent_size = 4
+
+[*.{json,jsonc,yml,yaml,xml,props,targets,csproj,slnx}]
+indent_size = 2
+
+[*.cs]
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_style_expression_bodied_properties = when_on_single_line:suggestion
+csharp_prefer_braces = true:warning
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = false:suggestion
+dotnet_diagnostic.CA2007.severity = none
+dotnet_diagnostic.IDE0005.severity = warning
+
+# Result<T>.Success/Failure is the intended ergonomic factory API.
+[src/Core/Results/Result.cs]
+dotnet_diagnostic.CA1000.severity = none
+
+# IService and IModel are deliberate marker contracts for the MVP layers; the
+# whole point is that they carry no members.
+[src/Core.Mvp/Services/IService.cs]
+dotnet_diagnostic.CA1040.severity = none
+
+[src/Core.Mvp/Models/IModel.cs]
+dotnet_diagnostic.CA1040.severity = none
+
+# The MVP is C# only, so the VB 'Error' keyword does not apply; 'error' is the
+# clearest name for a CoreError parameter and for an error severity.
+[src/Core.Mvp/Views/IView.cs]
+dotnet_diagnostic.CA1716.severity = none
+
+# DataKind names the value domain a cell holds; 'Integer' and 'Decimal' are the
+# clearest kind names and are never confusable with a CLR type in that context.
+[src/Core.Serialization/Values/DataKind.cs]
+dotnet_diagnostic.CA1720.severity = none
+
+[src/Core.Mvp/Services/MessageSeverity.cs]
+dotnet_diagnostic.CA1716.severity = none
+
+# The design names this type BoundedQueue; it is the bounded, close-based
+# producer/consumer queue the parallel walk is built on, so the 'Queue' suffix is
+# the accurate name, not a generic-collection clash.
+[src/Core.Concurrency/BoundedQueue.cs]
+dotnet_diagnostic.CA1711.severity = none

@@ -1,0 +1,32 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="VpnManager.App.App">
+    <!--
+        The shared Core.UI theme is the one source of colour and interaction:
+        the tokens and symbolic icons are merged into the application resources
+        and the shared control styles are included first. The product keeps only
+        the styles its own controls need (the data fields and the tunnel list).
+        The theme variant follows the system (light or dark); the base
+        CoreApplication owns Fluent and the startup variant.
+    -->
+    <Application.Resources>
+        <ResourceDictionary>
+            <!--
+                The product's type size: a step above the shared default, set as a
+                direct entry so it wins over the merged shared tokens for the whole
+                application, dialogs and tooltips included.
+            -->
+            <x:Double x:Key="FontSize">15</x:Double>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://Core.UI/Themes/Tokens.axaml" />
+                <ResourceInclude Source="avares://Core.UI/Themes/Icons.axaml" />
+                <ResourceInclude Source="avares://vpn-manager/Themes/Icons.axaml" />
+                <ResourceInclude Source="avares://Core.UI/Themes/Accents.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+    <Application.Styles>
+        <StyleInclude Source="avares://Core.UI/Themes/Controls.axaml" />
+        <StyleInclude Source="avares://vpn-manager/Themes/Controls.axaml" />
+    </Application.Styles>
+</Application>

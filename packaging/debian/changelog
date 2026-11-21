@@ -1,0 +1,12 @@
+vpn-manager (0.1.0-1) unstable; urgency=medium
+
+  * Initial release of VPN Manager: the per-user WireGuard client migrated from
+    the BitCrafts WireGuard Manager 1.2.4 codebase, renamed to VpnManager.* and
+    adapted to Core v0.2.1.
+  * NetworkManager is the connection engine; the application never elevates and
+    never reads or writes /etc/wireguard.
+  * Profiles are read no-follow and bounded, validated before they reach
+    NetworkManager, and written atomically owner-only.
+  * The package applies only its own sysctl drop-in on install.
+
+ -- Younes Benmoussa <younes.benmoussa@pm.me>  Sat, 21 Nov 2026 15:30:00 +0000

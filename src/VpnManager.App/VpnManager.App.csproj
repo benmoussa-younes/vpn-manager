@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>vpn-manager</AssemblyName>
+    <Description>Avalonia desktop client for WireGuard on a Debian GNOME host.</Description>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <PublishAot>true</PublishAot>
+    <StripSymbols>true</StripSymbols>
+    <IlcTreatWarningsAsErrors>true</IlcTreatWarningsAsErrors>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Wayland" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\VpnManager.Core\VpnManager.Core.csproj" />
+    <ProjectReference Include="../../../core/src/Core/Core.csproj" />
+    <ProjectReference Include="../../../core/src/Core.Platform.Linux/Core.Platform.Linux.csproj" />
+    <ProjectReference Include="../../../core/src/Core.UI/Core.UI.csproj" />
+    <ProjectReference Include="../../../core/src/Core.Mvp/Core.Mvp.csproj" />
+    <ProjectReference Include="../../../core/src/Core.Serialization/Core.Serialization.csproj" />
+    <ProjectReference Include="../../../core/src/Core.IO/Core.IO.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="VpnManager.App.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\tray-icon.png" />
+    <AvaloniaResource Include="Assets\app-icon.png" />
+  </ItemGroup>
+</Project>

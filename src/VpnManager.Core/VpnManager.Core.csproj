@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Headless domain and presentation logic for VPN Manager: WireGuard configuration, validation and runtime inspection. Linux, NativeAOT and trim-safe.</Description>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <IsAotCompatible>true</IsAotCompatible>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <EnableAotAnalyzer>true</EnableAotAnalyzer>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="VpnManager.Core.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../core/src/Core/Core.csproj" />
+    <ProjectReference Include="../../../core/src/Core.Platform/Core.Platform.csproj" />
+    <ProjectReference Include="../../../core/src/Core.IO/Core.IO.csproj" />
+    <ProjectReference Include="../../../core/src/Core.Mvp/Core.Mvp.csproj" />
+  </ItemGroup>
+</Project>
