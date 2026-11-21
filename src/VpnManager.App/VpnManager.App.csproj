@@ -35,7 +35,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <AvaloniaResource Include="Assets\tray-icon.png" />
     <AvaloniaResource Include="Assets\app-icon.png" />
   </ItemGroup>
 </Project>

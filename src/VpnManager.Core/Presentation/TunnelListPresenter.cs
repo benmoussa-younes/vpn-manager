@@ -98,6 +98,9 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
         view.RenameRequested += BeginRename;
         view.RenameSubmitted += input => RunGuarded(() => RenameAsync(input));
         view.RenameCancelRequested += CancelRename;
+        view.PolicyEditRequested += BeginPolicy;
+        view.PolicySubmitted += input => RunGuarded(() => SavePolicyAsync(input));
+        view.PolicyCancelRequested += CancelPolicy;
     }
 
     /// <summary>Gets the selected tunnel name, or <see langword="null"/>.</summary>
@@ -575,7 +578,7 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
     {
         ArgumentNullException.ThrowIfNull(input);
 
-        var renamed = await Task.Run(() => _service.SetDisplayName(input.Name, input.DisplayName)).ConfigureAwait(true);
+        var renamed = await _service.SetDisplayName(input.Name, input.DisplayName).ConfigureAwait(true);
         if (!renamed.TryGetValue(out var shown))
         {
             View.SetError(renamed.Error.Message);
@@ -589,6 +592,50 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
             : $"Tunnel '{input.Name}' is shown as '{shown}'.");
         Journal($"renamed {input.Name}");
         await RefreshAsync().ConfigureAwait(true);
+    }
+
+    /// <summary>Opens the policy editor for a tunnel.</summary>
+    /// <param name="name">The real tunnel name.</param>
+    public void BeginPolicy(string name)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+
+        var policy = _service.GetPolicy(name);
+        View.SetError(null);
+        View.ShowPolicy(new TunnelPolicySnapshot(name, policy.AutoReconnect, policy.DnsMode, policy.SearchDomains));
+    }
+
+    /// <summary>
+    /// Stores the policy the operator chose. A live connection is updated by the
+    /// service without a reconnect.
+    /// </summary>
+    /// <param name="input">The values read from the page.</param>
+    /// <returns>A task that completes when the view has been updated.</returns>
+    public async Task SavePolicyAsync(TunnelPolicyInput input)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+
+        var saved = await _service
+            .SetPolicyAsync(input.Name, new TunnelPolicy(input.AutoReconnect, input.DnsMode, input.SearchDomains))
+            .ConfigureAwait(true);
+        if (!saved.TryGetValue(out var policy))
+        {
+            View.SetError(saved.Error.Message);
+            return;
+        }
+
+        View.HidePolicy();
+        View.SetError(null);
+        View.ShowToast($"Policy saved for '{input.Name}'.");
+        Journal($"policy {input.Name}");
+        await RefreshAsync().ConfigureAwait(true);
+    }
+
+    /// <summary>Closes the policy page without saving.</summary>
+    public void CancelPolicy()
+    {
+        View.HidePolicy();
+        View.SetStatus("Policy edit cancelled.");
     }
 
     /// <summary>Closes the rename page without changing the name.</summary>

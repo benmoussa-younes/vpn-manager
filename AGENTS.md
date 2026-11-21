@@ -63,6 +63,12 @@ in the same commit as the API adaptation.
   `CC-BY-SA-4.0`.
 - Core pin `v0.2.2`; the desktop id is `vpn-manager`; the XDG namespace is
   `benmoussa/vpn-manager`.
+- There is no tray icon. Closing the window quits, asking before disconnecting a
+  connected profile; a logout or shutdown closes without the dialog.
+- The display name is the NetworkManager connection id; the file stem, the
+  interface and the real tunnel name never change. The policy (reconnection, DNS
+  mode, routing domains) is edited from the Policy page and stored in
+  `state.json`, not in the `.conf`.
 - A release is a signed tag `v<version>` and the `.deb`, the source archive and
   `SHA256SUMS`.
 

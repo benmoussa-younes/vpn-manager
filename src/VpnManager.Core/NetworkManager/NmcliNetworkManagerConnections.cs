@@ -148,7 +148,11 @@ public sealed class NmcliNetworkManagerConnections : INetworkManagerConnections
             return Result<string>.Failure(listed.Error);
         }
 
-        var existing = connections.FirstOrDefault(connection => string.Equals(connection.Name, connectionName, StringComparison.Ordinal));
+        // The id follows the display name, so the stable identity is the
+        // interface; a renamed connection must still be found here.
+        var existing = connections.FirstOrDefault(connection =>
+            string.Equals(connection.Name, connectionName, StringComparison.Ordinal) ||
+            string.Equals(connection.InterfaceName, interfaceName, StringComparison.Ordinal));
         if (existing is not null && !existing.IsOwnedBy(owner))
         {
             return Result<string>.Failure(WireGuardErrors.NetworkManagerInvalidConnection(connectionName));
@@ -156,7 +160,7 @@ public sealed class NmcliNetworkManagerConnections : INetworkManagerConnections
 
         if (existing is not null)
         {
-            var deleted = await DeleteAsync(connectionName, cancellationToken).ConfigureAwait(false);
+            var deleted = await DeleteAsync(existing.Name, cancellationToken).ConfigureAwait(false);
             if (!deleted.IsSuccess)
             {
                 return deleted;
@@ -345,6 +349,31 @@ public sealed class NmcliNetworkManagerConnections : INetworkManagerConnections
         var result = await RunAsync(["device", "reapply", deviceName], cancellationToken).ConfigureAwait(false);
         return result.TryGetValue(out _)
             ? Result<string>.Success(deviceName)
+            : Result<string>.Failure(result.Error);
+    }
+
+    /// <inheritdoc />
+    public async Task<Result<string>> SetConnectionIdAsync(
+        string connectionName,
+        string newConnectionName,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newConnectionName);
+
+        if (!IsSafeConnectionName(connectionName) || !IsSafeConnectionName(newConnectionName))
+        {
+            return Result<string>.Failure(WireGuardErrors.NetworkManagerInvalidConnection(connectionName));
+        }
+
+        Invalidate(connectionName);
+        Invalidate(newConnectionName);
+
+        var result = await RunAsync(
+            ["connection", "modify", connectionName, "connection.id", newConnectionName],
+            cancellationToken).ConfigureAwait(false);
+        return result.TryGetValue(out _)
+            ? Result<string>.Success(newConnectionName)
             : Result<string>.Failure(result.Error);
     }
 

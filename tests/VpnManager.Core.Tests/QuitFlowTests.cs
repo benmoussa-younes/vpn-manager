@@ -4,54 +4,9 @@ using VpnManager.Core.Tests.Fakes;
 
 namespace VpnManager.Core.Tests;
 
-/// <summary>The system-tray menu model and the quit flow.</summary>
-public sealed class TrayTests
+/// <summary>The quit and close confirmations: what is asked, and when the VPN is disconnected.</summary>
+public sealed class QuitFlowTests
 {
-    private static TunnelListItem Row(string name, string state) => new(name, state, "no peers", "configured", null);
-
-    [Fact]
-    public void The_menu_toggles_the_window_and_quits()
-    {
-        Assert.Equal("Show window", TrayMenuBuilder.Build([], windowVisible: false)[0].Header);
-        Assert.Equal(TrayMenuAction.ToggleWindow, TrayMenuBuilder.Build([], windowVisible: false)[0].Action);
-        Assert.Equal("Hide window", TrayMenuBuilder.Build([], windowVisible: true)[0].Header);
-        Assert.Equal(TrayMenuAction.Quit, TrayMenuBuilder.Build([], windowVisible: true)[^1].Action);
-    }
-
-    [Fact]
-    public void At_most_three_tunnels_are_shown_with_their_verb()
-    {
-        var items = TrayMenuBuilder.Build(
-            [Row("a", "Down"), Row("b", "Up"), Row("c", "Down"), Row("d", "Down")],
-            windowVisible: true);
-
-        var tunnels = items
-            .Where(item => item.Action is TrayMenuAction.Connect or TrayMenuAction.Disconnect)
-            .ToArray();
-
-        Assert.Equal(TrayMenuBuilder.MaximumTunnels, tunnels.Length);
-        Assert.Contains(tunnels, item => item.TunnelName == "b" && item.Action == TrayMenuAction.Disconnect);
-        Assert.DoesNotContain(tunnels, item => item.TunnelName == "d");
-    }
-
-    [Fact]
-    public void The_connected_tunnels_come_first()
-    {
-        var items = TrayMenuBuilder.Build([Row("a", "Down"), Row("b", "Up")], windowVisible: true);
-
-        Assert.Equal("b", items.First(item => item.TunnelName is not null).TunnelName);
-    }
-
-    [Fact]
-    public void A_tunnel_is_listed_under_its_display_name()
-    {
-        var row = new TunnelListItem("wg0", "Up", "no peers", "configured", null, DisplayName: "Work VPN");
-
-        var items = TrayMenuBuilder.Build([row], windowVisible: true);
-
-        Assert.Contains(items, item => item.Header == "Disconnect Work VPN" && item.TunnelName == "wg0");
-    }
-
     [Fact]
     public async Task Quitting_with_a_connected_tunnel_asks_and_can_cancel()
     {

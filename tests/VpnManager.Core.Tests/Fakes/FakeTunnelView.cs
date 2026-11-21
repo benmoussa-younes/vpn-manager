@@ -64,6 +64,20 @@ internal sealed class FakeTunnelView : ITunnelListView
     /// <summary>The answer <see cref="ConfirmQuitAsync"/> returns.</summary>
     internal QuitChoice QuitAnswer { get; set; } = QuitChoice.DisconnectAndQuit;
 
+    /// <summary>The last policy snapshot shown.</summary>
+    internal TunnelPolicySnapshot? Policy { get; private set; }
+
+    /// <summary>Whether the policy page is open.</summary>
+    internal bool PolicyVisible { get; private set; }
+
+    public void ShowPolicy(TunnelPolicySnapshot snapshot)
+    {
+        Policy = snapshot;
+        PolicyVisible = true;
+    }
+
+    public void HidePolicy() => PolicyVisible = false;
+
     public Task<QuitChoice> ConfirmQuitAsync(IReadOnlyList<string> connectedNames, CancellationToken cancellationToken = default)
     {
         QuitConfirmations.Add(connectedNames);
@@ -89,6 +103,18 @@ internal sealed class FakeTunnelView : ITunnelListView
     public void ShowWindow() => WindowShown = true;
 
     public event Action? RefreshRequested;
+
+    public event Action<string>? PolicyEditRequested;
+
+    public event Action<TunnelPolicyInput>? PolicySubmitted;
+
+    public event Action? PolicyCancelRequested;
+
+    internal void RaisePolicyEdit(string name) => PolicyEditRequested?.Invoke(name);
+
+    internal void RaisePolicySubmitted(TunnelPolicyInput input) => PolicySubmitted?.Invoke(input);
+
+    internal void RaisePolicyCancel() => PolicyCancelRequested?.Invoke();
 
     public event Action<string>? TunnelSelected;
 

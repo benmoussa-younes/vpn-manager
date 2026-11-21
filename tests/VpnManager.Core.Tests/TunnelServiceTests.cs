@@ -428,14 +428,14 @@ public sealed class TunnelServiceTests
         store.Files["wg0"] = TestData.SampleConfigText;
         var service = new TunnelService(store, new FakeWireGuardRuntimeInspector(), stateStore: new FakeApplicationStateStore());
 
-        var renamed = service.SetDisplayName("wg0", "Work VPN");
+        var renamed = await service.SetDisplayName("wg0", "Work VPN");
         Assert.True(renamed.IsSuccess);
 
         var listed = await service.ListTunnelsAsync();
         Assert.True(listed.IsSuccess);
         Assert.Equal("Work VPN", Assert.Single(listed.Value).DisplayName);
 
-        var cleared = service.SetDisplayName("wg0", "   ");
+        var cleared = await service.SetDisplayName("wg0", "   ");
         Assert.True(cleared.IsSuccess);
         Assert.Equal("wg0", cleared.Value);
 
@@ -451,7 +451,7 @@ public sealed class TunnelServiceTests
         store.Files["zeta"] = TestData.SampleConfigText;
         store.Files["Alpha"] = TestData.SampleConfigText;
         var service = new TunnelService(store, new FakeWireGuardRuntimeInspector(), stateStore: new FakeApplicationStateStore());
-        Assert.True(service.SetDisplayName("zeta", "Aardvark").IsSuccess);
+        Assert.True((await service.SetDisplayName("zeta", "Aardvark")).IsSuccess);
 
         var result = await service.ListTunnelsAsync();
 
@@ -467,7 +467,7 @@ public sealed class TunnelServiceTests
             new FakeWireGuardRuntimeInspector(),
             stateStore: new FakeApplicationStateStore());
 
-        var result = service.SetDisplayName("wg0", new string('x', 65));
+        var result = await service.SetDisplayName("wg0", new string('x', 65));
 
         Assert.True(result.IsFailure);
         Assert.Equal(WireGuardErrorCodes.DisplayNameInvalid, result.Error.Code);

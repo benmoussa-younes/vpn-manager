@@ -5,6 +5,7 @@ using Avalonia.Interactivity;
 using Core.Mvp.Services;
 using VpnManager.App.Tests.Fakes;
 using VpnManager.App.Views;
+using VpnManager.Core.NetworkManager;
 using VpnManager.Core.Presentation;
 using ProductQuitChoice = VpnManager.Core.Presentation.QuitChoice;
 
@@ -223,41 +224,45 @@ public sealed class TunnelListViewTests
     }
 
     [Fact]
-    public async Task TheTrayMenuIsOnlyPublishedWhenAHostIsRegistered()
+    public async Task ThePolicyCommandOpensThePolicyPage()
     {
         await HeadlessTestSession.RunAsync(() =>
         {
             var host = new FakeApplicationHost();
             var view = new TunnelListView();
             view.AttachHost(host);
+            view.ShowTunnels([Row("wg0", "Up")], "wg0");
+            var requested = new List<string>();
+            view.PolicyEditRequested += name => requested.Add(name);
 
-            Assert.Null(host.TrayService.Menu);
-            Assert.True(host.TrayService.HideCount >= 1);
+            view.HandleCommand("policy");
 
-            view.TrayAvailable = true;
-            view.Publish();
+            Assert.Equal(["wg0"], requested);
+            view.ShowPolicy(new TunnelPolicySnapshot("wg0", true, NetworkManagerDnsMode.Profile, []));
+            Assert.NotNull(view.OpenPolicyPage);
+            Assert.Contains(host.Snapshot!.Commands.Commands, command => command.Id == "policy.save");
 
-            Assert.NotNull(host.TrayService.Menu);
+            view.HidePolicy();
+            Assert.Null(view.OpenPolicyPage);
         });
     }
 
     [Fact]
-    public void TheTrayCommandsKeepTheWindowAndTunnelVerbs()
+    public async Task AReadOnlySessionRefusesThePolicyCommand()
     {
-        var items = new[]
+        await HeadlessTestSession.RunAsync(() =>
         {
-            new TrayMenuItem("Show window", TrayMenuAction.ToggleWindow),
-            TrayMenuItem.Separator,
-            new TrayMenuItem("Connect wg0", TrayMenuAction.Connect, "wg0"),
-            TrayMenuItem.Separator,
-            new TrayMenuItem("Quit", TrayMenuAction.Quit),
-        };
+            var host = new FakeApplicationHost();
+            var view = new TunnelListView();
+            view.AttachHost(host);
+            view.SetReadOnly(true);
+            view.ShowTunnels([Row("wg0", "Up")], "wg0");
 
-        var commands = TunnelListView.BuildTrayCommands(items);
+            view.HandleCommand("policy");
 
-        Assert.Contains(commands.Commands, command => command.Id == "tray.show");
-        Assert.Contains(commands.Commands, command => command.Id == "connect:wg0");
-        Assert.Contains(commands.Commands, command => command.Id == "tray.quit");
+            Assert.Null(view.OpenPolicyPage);
+            Assert.Contains(host.NotificationsService.Toasts, toast => toast.Message.Contains("Read-only", StringComparison.Ordinal));
+        });
     }
 
     private static TunnelListItem Row(string name, string state) =>

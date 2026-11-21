@@ -351,6 +351,56 @@ public sealed class NmcliNetworkManagerConnectionsTests
     }
 
     [Fact]
+    public async Task A_renamed_connection_is_found_by_its_interface_and_deleted_by_id()
+    {
+        var runner = new FakeProcessRunner(request =>
+        {
+            var arguments = string.Join(' ', request.Arguments);
+            if (arguments.Contains("connection show", StringComparison.Ordinal) &&
+                !arguments.Contains("connection show Home", StringComparison.Ordinal))
+            {
+                return ProcessResult.Completed(0, "Home:wireguard:no\n", string.Empty);
+            }
+
+            if (arguments.Contains("connection show Home", StringComparison.Ordinal))
+            {
+                return ProcessResult.Completed(
+                    0,
+                    "connection.permissions:user:alice\nconnection.interface-name:wg0\n",
+                    string.Empty);
+            }
+
+            return ProcessResult.Completed(0, string.Empty, string.Empty);
+        });
+        var connections = new NmcliNetworkManagerConnections(runner);
+
+        var result = await connections.EnsureAsync("Home", "wg0", "/tmp/wg0.conf", "alice");
+
+        Assert.True(result.IsSuccess);
+        var commands = runner.Requests.Select(request => string.Join(' ', request.Arguments)).ToArray();
+        Assert.Contains("connection delete Home", commands);
+        Assert.Contains(commands, command => command.Contains("connection modify wg0 connection.id Home", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Renaming_a_connection_sets_its_id_and_refuses_an_option_shaped_id()
+    {
+        var runner = new FakeProcessRunner(_ => ProcessResult.Completed(0, string.Empty, string.Empty));
+        var connections = new NmcliNetworkManagerConnections(runner);
+
+        var renamed = await connections.SetConnectionIdAsync("wg0", "Home");
+
+        Assert.True(renamed.IsSuccess);
+        Assert.Equal(["connection", "modify", "wg0", "connection.id", "Home"], Assert.Single(runner.Requests).Arguments);
+
+        var refused = await connections.SetConnectionIdAsync("Home", "-evil");
+
+        Assert.True(refused.IsFailure);
+        Assert.Equal(WireGuardErrorCodes.NetworkManagerInvalidConnection, refused.Error.Code);
+        Assert.Single(runner.Requests);
+    }
+
+    [Fact]
     public async Task Ipv4_only_profiles_do_not_set_ipv6_dns_properties()
     {
         var runner = new FakeProcessRunner(_ => ProcessResult.Completed(0, string.Empty, string.Empty));

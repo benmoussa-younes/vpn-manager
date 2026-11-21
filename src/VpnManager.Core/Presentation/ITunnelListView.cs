@@ -41,6 +41,15 @@ public interface ITunnelListView : IView
     /// <summary>The operator dismissed the rename page.</summary>
     event Action RenameCancelRequested;
 
+    /// <summary>The operator asked to edit a tunnel's reconnection and DNS policy.</summary>
+    event Action<string> PolicyEditRequested;
+
+    /// <summary>The operator submitted a policy from the policy page.</summary>
+    event Action<TunnelPolicyInput> PolicySubmitted;
+
+    /// <summary>The operator dismissed the policy page.</summary>
+    event Action PolicyCancelRequested;
+
     /// <summary>The operator asked to connect a tunnel.</summary>
     event Action<string> StartRequested;
 
@@ -140,6 +149,13 @@ public interface ITunnelListView : IView
     /// <param name="connectedNames">The connected tunnel names.</param>
     /// <param name="cancellationToken">Cancels the wait.</param>
     /// <returns>The operator's answer.</returns>
+    /// <summary>Shows the policy page for one tunnel.</summary>
+    /// <param name="snapshot">The policy currently stored.</param>
+    void ShowPolicy(TunnelPolicySnapshot snapshot);
+
+    /// <summary>Closes the policy page.</summary>
+    void HidePolicy();
+
     Task<QuitChoice> ConfirmQuitAsync(IReadOnlyList<string> connectedNames, CancellationToken cancellationToken = default);
 
     /// <summary>

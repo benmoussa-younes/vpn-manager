@@ -68,6 +68,16 @@ public interface INetworkManagerConnections
     /// <param name="connectionName">The connection id.</param>
     /// <param name="cancellationToken">Cancels the wait.</param>
     /// <returns>The connection id, or a failure.</returns>
+    /// <summary>Renames a connection id without touching its interface.</summary>
+    /// <param name="connectionName">The current connection id.</param>
+    /// <param name="newConnectionName">The new connection id.</param>
+    /// <param name="cancellationToken">Cancels the wait.</param>
+    /// <returns>The new id, or a failure.</returns>
+    Task<Result<string>> SetConnectionIdAsync(
+        string connectionName,
+        string newConnectionName,
+        CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Reapplies the IP configuration of an active device, so a profile change
     /// takes effect without dropping the connection. <c>nmcli connection modify</c>

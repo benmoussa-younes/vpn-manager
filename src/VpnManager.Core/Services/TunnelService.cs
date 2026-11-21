@@ -288,7 +288,10 @@ public sealed class TunnelService
 
         var connections = await ListNetworkManagerAsync(cancellationToken).ConfigureAwait(false);
         CacheNetworkManager(connections);
-        return connections.FirstOrDefault(connection => string.Equals(connection.Name, name, StringComparison.Ordinal));
+        // The id follows the display name; the interface is the stable identity.
+        return connections.FirstOrDefault(connection =>
+            string.Equals(connection.Name, name, StringComparison.Ordinal) ||
+            string.Equals(connection.InterfaceName, name, StringComparison.Ordinal));
     }
 
     /// <summary>Caches the connection names and the interface each one creates.</summary>
@@ -452,7 +455,10 @@ public sealed class TunnelService
     /// <param name="name">The real tunnel name.</param>
     /// <param name="displayName">The display name, or empty to show the real name.</param>
     /// <returns>The name now shown (the real name when cleared), or a failure.</returns>
-    public Result<string> SetDisplayName(string name, string? displayName)
+    public async Task<Result<string>> SetDisplayName(
+        string name,
+        string? displayName,
+        CancellationToken cancellationToken = default)
     {
         if (_readOnly)
         {
@@ -474,25 +480,87 @@ public sealed class TunnelService
                 "A display name is at most 64 characters."));
         }
 
+        // The display name becomes the NetworkManager connection id: it is one
+        // command argument, so an option-shaped or control-bearing value is refused.
+        if (trimmed.StartsWith('-') || trimmed.Any(char.IsControl))
+        {
+            return Result<string>.Failure(WireGuardErrors.Validation(
+                WireGuardErrorCodes.DisplayNameInvalid,
+                "A display name must not start with '-' or contain control characters."));
+        }
+
         if (_stateStore is null || !_stateStore.Load().TryGetValue(out var state))
         {
             return Result<string>.Failure(WireGuardErrors.StateUnavailable());
         }
 
+        var effectiveId = trimmed.Length == 0 || string.Equals(trimmed, name, StringComparison.Ordinal)
+            ? name
+            : trimmed;
         var names = new Dictionary<string, string>(state.DisplayNames, StringComparer.Ordinal);
-        if (trimmed.Length == 0 || string.Equals(trimmed, name, StringComparison.Ordinal))
+
+        var configured = _store.ListTunnelNames();
+        var others = (configured.IsSuccess ? configured.Value : [])
+            .Concat(state.Tunnels.Where(entry => entry.Scope == _scope).Select(entry => entry.Name))
+            .Where(other => !string.Equals(other, name, StringComparison.Ordinal))
+            .Distinct(StringComparer.Ordinal);
+        foreach (var other in others)
+        {
+            var otherId = names.TryGetValue(other, out var alias) && alias.Length > 0 ? alias : other;
+            if (string.Equals(otherId, effectiveId, StringComparison.Ordinal))
+            {
+                return Result<string>.Failure(WireGuardErrors.Validation(
+                    WireGuardErrorCodes.DisplayNameInvalid,
+                    $"The display name '{effectiveId}' is already used by '{other}'."));
+            }
+        }
+
+        if (_networkManager is not null)
+        {
+            var connection = await FindNetworkManagerConnectionAsync(name, cancellationToken).ConfigureAwait(false);
+            if (connection is not null)
+            {
+                if (_networkManagerOwner is { } owner && !connection.IsOwnedBy(owner))
+                {
+                    return Result<string>.Failure(WireGuardErrors.NetworkManagerManaged(name));
+                }
+
+                var listed = await _networkManager.ListWireGuardConnectionsAsync(cancellationToken).ConfigureAwait(false);
+                if (listed.TryGetValue(out var connections) &&
+                    connections.Any(other =>
+                        string.Equals(other.Name, effectiveId, StringComparison.Ordinal) &&
+                        !string.Equals(other.InterfaceName, name, StringComparison.Ordinal)))
+                {
+                    return Result<string>.Failure(WireGuardErrors.Validation(
+                        WireGuardErrorCodes.DisplayNameInvalid,
+                        $"A NetworkManager connection is already named '{effectiveId}'."));
+                }
+
+                if (!string.Equals(connection.Name, effectiveId, StringComparison.Ordinal))
+                {
+                    var renamed = await _networkManager
+                        .SetConnectionIdAsync(connection.Name, effectiveId, cancellationToken)
+                        .ConfigureAwait(false);
+                    if (!renamed.IsSuccess)
+                    {
+                        return Result<string>.Failure(renamed.Error);
+                    }
+                }
+            }
+        }
+
+        if (effectiveId == name)
         {
             names.Remove(name);
-            trimmed = name;
         }
         else
         {
-            names[name] = trimmed;
+            names[name] = effectiveId;
         }
 
         var saved = _stateStore.Save(state with { DisplayNames = names });
         return saved.IsSuccess
-            ? Result<string>.Success(trimmed)
+            ? Result<string>.Success(effectiveId)
             : Result<string>.Failure(saved.Error);
     }
 
@@ -614,7 +682,7 @@ public sealed class TunnelService
                 var owned = await FindNetworkManagerConnectionAsync(name, cancellationToken).ConfigureAwait(false);
                 if (owned is not null)
                 {
-                    _ = await _networkManager.DeleteAsync(name, cancellationToken).ConfigureAwait(false);
+                    _ = await _networkManager.DeleteAsync(owned.Name, cancellationToken).ConfigureAwait(false);
                 }
             }
 
@@ -657,9 +725,15 @@ public sealed class TunnelService
         // NetworkManager is the machine's engine: the profile file is imported as
         // the operator's own connection and activated, without root.
         var ensured = await EnsureNetworkManagerAsync(name, cancellationToken).ConfigureAwait(false);
-        return ensured.IsSuccess
-            ? await _networkManager.ActivateAsync(name, cancellationToken).ConfigureAwait(false)
-            : Result<string>.Failure(ensured.Error);
+        if (!ensured.IsSuccess)
+        {
+            return Result<string>.Failure(ensured.Error);
+        }
+
+        var connection = await FindNetworkManagerConnectionAsync(name, cancellationToken).ConfigureAwait(false);
+        return await _networkManager
+            .ActivateAsync(connection?.Name ?? name, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     /// <summary>Takes a tunnel down through NetworkManager.</summary>
@@ -678,16 +752,18 @@ public sealed class TunnelService
             return Result<string>.Failure(WireGuardErrors.NetworkManagerUnavailable());
         }
 
-        var down = await _networkManager.DeactivateAsync(name, cancellationToken).ConfigureAwait(false);
+        var connection = await FindNetworkManagerConnectionAsync(name, cancellationToken).ConfigureAwait(false);
+        var connectionId = connection?.Name ?? name;
+        var down = await _networkManager.DeactivateAsync(connectionId, cancellationToken).ConfigureAwait(false);
         if (down.IsSuccess &&
+            connection is not null &&
             _store.Exists(name).TryGetValue(out var hasFile) &&
-            hasFile &&
-            await FindNetworkManagerConnectionAsync(name, cancellationToken).ConfigureAwait(false) is not null)
+            hasFile)
         {
             // A manual disconnect is authoritative: NetworkManager must not bring
             // the profile back until the operator connects again.
             _ = await _networkManager
-                .SetAutoConnectAsync(name, autoConnect: false, priority: 0, cancellationToken)
+                .SetAutoConnectAsync(connectionId, autoConnect: false, priority: 0, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -803,13 +879,12 @@ public sealed class TunnelService
         }
 
         var read = _store.Read(name);
-        if (read.TryGetValue(out var text) &&
-            await FindNetworkManagerConnectionAsync(name, cancellationToken).ConfigureAwait(false) is not null)
+        if (connection is not null && read.TryGetValue(out var text))
         {
             var parsed = WireGuardConfigParser.Parse(name, text);
             if (parsed.TryGetValue(out var configuration))
             {
-                var applied = await ApplyPolicyAsync(name, configuration, reapplyWhenActive: true, cancellationToken).ConfigureAwait(false);
+                var applied = await ApplyPolicyAsync(name, connection.Name, configuration, reapplyWhenActive: true, cancellationToken).ConfigureAwait(false);
                 if (!applied.IsSuccess)
                 {
                     return Result<TunnelPolicy>.Failure(applied.Error);
@@ -822,6 +897,7 @@ public sealed class TunnelService
 
     private async Task<Result<string>> ApplyPolicyAsync(
         string name,
+        string connectionId,
         TunnelConfiguration configuration,
         bool reapplyWhenActive,
         CancellationToken cancellationToken)
@@ -833,7 +909,7 @@ public sealed class TunnelService
 
         var policy = GetPolicy(name);
         var auto = await _networkManager
-            .SetAutoConnectAsync(name, policy.AutoReconnect, priority: 0, cancellationToken)
+            .SetAutoConnectAsync(connectionId, policy.AutoReconnect, priority: 0, cancellationToken)
             .ConfigureAwait(false);
         if (!auto.IsSuccess)
         {
@@ -847,7 +923,7 @@ public sealed class TunnelService
 
         var applied = await _networkManager
             .ApplyDnsAsync(
-                name,
+                connectionId,
                 configuration.Interface.Dns,
                 policy.SearchDomains,
                 policy.DnsMode,
@@ -872,7 +948,7 @@ public sealed class TunnelService
         // An explicit policy change on a live connection must hold at once:
         // `nmcli connection modify` updated the stored profile only, so reapply
         // the IP configuration of the active device.
-        var connection = await FindNetworkManagerConnectionAsync(name, cancellationToken).ConfigureAwait(false);
+        var connection = await FindNetworkManagerConnectionAsync(connectionId, cancellationToken).ConfigureAwait(false);
         return connection is { IsActive: true }
             ? await _networkManager.ReapplyAsync(connection.InterfaceName, cancellationToken).ConfigureAwait(false)
             : applied;
@@ -995,9 +1071,13 @@ public sealed class TunnelService
 
         try
         {
-            var ensured = await _networkManager!.EnsureAsync(name, name, temp, _networkManagerOwner, cancellationToken).ConfigureAwait(false);
+            var displayNames = DisplayNames();
+            var connectionId = displayNames.TryGetValue(name, out var displayName) && displayName.Length > 0
+                ? displayName
+                : name;
+            var ensured = await _networkManager!.EnsureAsync(connectionId, name, temp, _networkManagerOwner, cancellationToken).ConfigureAwait(false);
             return ensured.IsSuccess
-                ? await ApplyPolicyAsync(name, validConfiguration, reapplyWhenActive: false, cancellationToken).ConfigureAwait(false)
+                ? await ApplyPolicyAsync(name, connectionId, validConfiguration, reapplyWhenActive: false, cancellationToken).ConfigureAwait(false)
                 : Result<string>.Failure(ensured.Error);
         }
         finally

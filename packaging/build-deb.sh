@@ -67,7 +67,7 @@ Architecture: amd64
 Maintainer: Younes Benmoussa <younes.benmoussa@pm.me>
 Installed-Size: $installed_size
 Depends: network-manager, wireguard-tools, procps, pkexec
-Recommends: libnotify-bin, gnome-shell-extension-appindicator
+Recommends: libnotify-bin
 Suggests: wireguard
 Section: net
 Priority: optional

@@ -12,6 +12,9 @@ internal sealed class FakeNetworkManagerConnections : INetworkManagerConnections
     /// <summary>The connections <c>nmcli</c> would report.</summary>
     internal List<NetworkManagerConnection> Connections { get; } = [];
 
+    /// <summary>The connection id changes, in order.</summary>
+    internal List<(string Old, string New)> IdChanges { get; } = [];
+
     /// <summary>The active devices reapplied, in order.</summary>
     internal List<string> Reapplied { get; } = [];
 
@@ -87,6 +90,15 @@ internal sealed class FakeNetworkManagerConnections : INetworkManagerConnections
         return Task.FromResult(PolicyError is null
             ? Result<string>.Success(connectionName)
             : Result<string>.Failure(PolicyError));
+    }
+
+    public Task<Result<string>> SetConnectionIdAsync(
+        string connectionName,
+        string newConnectionName,
+        CancellationToken cancellationToken = default)
+    {
+        IdChanges.Add((connectionName, newConnectionName));
+        return Task.FromResult(Result<string>.Success(newConnectionName));
     }
 
     public Task<Result<string>> ReapplyAsync(string deviceName, CancellationToken cancellationToken = default)

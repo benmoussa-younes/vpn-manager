@@ -17,13 +17,18 @@ action goes through the fixed polkit helper.
 - Connects and disconnects through `nmcli`, as the operator, one tunnel at a time.
 - Shows the kernel transfer counters, the tunnel state, the IPv6 classification
   and the DNS containment of the selected tunnel.
-- Offers the same connect/disconnect actions from the tray and a GNOME
+- Offers the same connect/disconnect actions from the application menu and a
   notification on every state change.
 - Keeps one instance per user and surfaces the running window on a second launch.
 - Supports a `--read-only` session that browses and exports without changing
   anything.
 - Applies a per-profile NetworkManager policy: automatic reconnection, and the
-  `Profile`, `System`, `Split` or `FullTunnel` DNS mode.
+  `Profile`, `System`, `Split` or `FullTunnel` DNS mode. A **Policy** page edits
+  those three settings; a live connection is updated without reconnecting.
+- Uses the display name as the NetworkManager connection name (id), while the
+  configuration file, the interface and the real tunnel name stay unchanged.
+- Has no tray icon: closing the window quits, and asks before disconnecting a
+  profile that is still up. A logout or shutdown closes without that dialog.
 - Offers a headless CLI: `--status [--json]`, `--connect`, `--disconnect`,
   `--policy` and `--fix-sysctl`.
 - Exposes the same operations on the user session bus as
@@ -63,13 +68,28 @@ A manual `--disconnect` is authoritative: the profile is marked
 `autoconnect no` until the next `--connect`, so NetworkManager does not bring it
 back behind the operator's back.
 
+## Policy
+
+Each profile carries three settings beside its `.conf`, edited from the detail
+page's **Policy** command or from `--policy`:
+
+| Setting | Effect |
+|---|---|
+| Reconnect automatically | `connection.autoconnect` in NetworkManager. A manual disconnect sets it to `no` until the next connect. |
+| DNS mode | `Profile` uses the `DNS =` servers of the configuration; `System` leaves the resolver alone; `Split` sends only the listed routing domains to the VPN; `Full tunnel` sends every name to the VPN while it is up. Applied through `ipv4.dns`, `ipv4.dns-search`, `ipv4.dns-priority` and `ipv4.ignore-auto-dns`, never by editing `/etc/resolv.conf`. |
+| Search domains | The routing domains for split DNS (`corp.example, lab.example`). An empty value clears them. |
+
+The policy lives in `state.json` under the XDG state directory, not in the
+`.conf`. The display name is the NetworkManager connection id: renaming a profile
+renames the connection too, while the file stem, the interface and the tunnel
+name stay the same.
+
 ## Requirements
 
 - Debian 13 (trixie) amd64 with GNOME, on Wayland or X11.
 - **NetworkManager** (`nmcli`) to connect and disconnect.
 - **wireguard-tools** (`wg`) for key generation and runtime inspection.
 - **libnotify-bin** (`notify-send`) for desktop notifications (recommended).
-- The GNOME **AppIndicator** extension for the tray icon.
 
 ## Install
 

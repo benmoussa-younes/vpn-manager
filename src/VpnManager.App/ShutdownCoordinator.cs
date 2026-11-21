@@ -4,7 +4,7 @@ namespace VpnManager.App;
 /// Runs the application shutdown exactly once, whichever path asks for it first:
 /// the explicit quit command or the window being closed. Without this, a close
 /// with the quit behaviour only closed the window and left the process running
-/// with no window and no tray icon.
+/// with no window left to reach it.
 /// </summary>
 internal sealed class ShutdownCoordinator
 {

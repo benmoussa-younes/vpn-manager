@@ -169,6 +169,7 @@ VpnManager.Core.NetworkManager.INetworkManagerConnections.EnsureAsync(string! co
 VpnManager.Core.NetworkManager.INetworkManagerConnections.ListWireGuardConnectionsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<System.Collections.Generic.IReadOnlyList<VpnManager.Core.NetworkManager.NetworkManagerConnection!>!>>!
 VpnManager.Core.NetworkManager.INetworkManagerConnections.ReapplyAsync(string! deviceName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
 VpnManager.Core.NetworkManager.INetworkManagerConnections.SetAutoConnectAsync(string! connectionName, bool autoConnect, int priority, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
+VpnManager.Core.NetworkManager.INetworkManagerConnections.SetConnectionIdAsync(string! connectionName, string! newConnectionName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
 VpnManager.Core.NetworkManager.NetworkManagerConnection
 VpnManager.Core.NetworkManager.NetworkManagerConnection.<Clone>$() -> VpnManager.Core.NetworkManager.NetworkManagerConnection!
 VpnManager.Core.NetworkManager.NetworkManagerConnection.Deconstruct(out string! Name, out string! InterfaceName, out bool IsActive, out System.Collections.Generic.IReadOnlyList<string!>! Permissions) -> void
@@ -210,6 +211,7 @@ VpnManager.Core.NetworkManager.NmcliNetworkManagerConnections.ListWireGuardConne
 VpnManager.Core.NetworkManager.NmcliNetworkManagerConnections.NmcliNetworkManagerConnections(VpnManager.Core.Process.IProcessRunner! runner) -> void
 VpnManager.Core.NetworkManager.NmcliNetworkManagerConnections.ReapplyAsync(string! deviceName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
 VpnManager.Core.NetworkManager.NmcliNetworkManagerConnections.SetAutoConnectAsync(string! connectionName, bool autoConnect, int priority, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
+VpnManager.Core.NetworkManager.NmcliNetworkManagerConnections.SetConnectionIdAsync(string! connectionName, string! newConnectionName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
 VpnManager.Core.Notifications.INotifier
 VpnManager.Core.Notifications.INotifier.NotifyAsync(string! title, string! body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 VpnManager.Core.Notifications.NotifySendNotifier
@@ -301,8 +303,12 @@ VpnManager.Core.Presentation.ITunnelListView.EditorPeerAddRequested -> System.Ac
 VpnManager.Core.Presentation.ITunnelListView.EditorPeerRemoveRequested -> System.Action<int>!
 VpnManager.Core.Presentation.ITunnelListView.ExportRequested -> System.Action<string!>!
 VpnManager.Core.Presentation.ITunnelListView.HideEditor() -> void
+VpnManager.Core.Presentation.ITunnelListView.HidePolicy() -> void
 VpnManager.Core.Presentation.ITunnelListView.HideRename() -> void
 VpnManager.Core.Presentation.ITunnelListView.ImportRequested -> System.Action<string!>!
+VpnManager.Core.Presentation.ITunnelListView.PolicyCancelRequested -> System.Action!
+VpnManager.Core.Presentation.ITunnelListView.PolicyEditRequested -> System.Action<string!>!
+VpnManager.Core.Presentation.ITunnelListView.PolicySubmitted -> System.Action<VpnManager.Core.Presentation.TunnelPolicyInput!>!
 VpnManager.Core.Presentation.ITunnelListView.ProfileTextPasted -> System.Action<string!>!
 VpnManager.Core.Presentation.ITunnelListView.RefreshRequested -> System.Action!
 VpnManager.Core.Presentation.ITunnelListView.RemoveEditorPeerRow(int index) -> void
@@ -314,6 +320,7 @@ VpnManager.Core.Presentation.ITunnelListView.SetEditorError(string! fieldKey, st
 VpnManager.Core.Presentation.ITunnelListView.SetError(string? message) -> void
 VpnManager.Core.Presentation.ITunnelListView.SetStatus(string! message) -> void
 VpnManager.Core.Presentation.ITunnelListView.ShowEditor(VpnManager.Core.Presentation.EditorSnapshot! editor) -> void
+VpnManager.Core.Presentation.ITunnelListView.ShowPolicy(VpnManager.Core.Presentation.TunnelPolicySnapshot! snapshot) -> void
 VpnManager.Core.Presentation.ITunnelListView.ShowRename(VpnManager.Core.Presentation.TunnelRenameSnapshot! snapshot) -> void
 VpnManager.Core.Presentation.ITunnelListView.ShowToast(string! message) -> void
 VpnManager.Core.Presentation.ITunnelListView.ShowTransfer(VpnManager.Core.Presentation.TransferView! transfer) -> void
@@ -349,24 +356,6 @@ VpnManager.Core.Presentation.TransferView.UploadRate.get -> string!
 VpnManager.Core.Presentation.TransferView.UploadRate.init -> void
 VpnManager.Core.Presentation.TransferView.UploadTotal.get -> string!
 VpnManager.Core.Presentation.TransferView.UploadTotal.init -> void
-VpnManager.Core.Presentation.TrayMenuAction
-VpnManager.Core.Presentation.TrayMenuAction.Connect = 1 -> VpnManager.Core.Presentation.TrayMenuAction
-VpnManager.Core.Presentation.TrayMenuAction.Disconnect = 2 -> VpnManager.Core.Presentation.TrayMenuAction
-VpnManager.Core.Presentation.TrayMenuAction.Quit = 3 -> VpnManager.Core.Presentation.TrayMenuAction
-VpnManager.Core.Presentation.TrayMenuAction.ToggleWindow = 0 -> VpnManager.Core.Presentation.TrayMenuAction
-VpnManager.Core.Presentation.TrayMenuBuilder
-VpnManager.Core.Presentation.TrayMenuItem
-VpnManager.Core.Presentation.TrayMenuItem.<Clone>$() -> VpnManager.Core.Presentation.TrayMenuItem!
-VpnManager.Core.Presentation.TrayMenuItem.Action.get -> VpnManager.Core.Presentation.TrayMenuAction?
-VpnManager.Core.Presentation.TrayMenuItem.Action.init -> void
-VpnManager.Core.Presentation.TrayMenuItem.Deconstruct(out string! Header, out VpnManager.Core.Presentation.TrayMenuAction? Action, out string? TunnelName) -> void
-VpnManager.Core.Presentation.TrayMenuItem.Equals(VpnManager.Core.Presentation.TrayMenuItem? other) -> bool
-VpnManager.Core.Presentation.TrayMenuItem.Header.get -> string!
-VpnManager.Core.Presentation.TrayMenuItem.Header.init -> void
-VpnManager.Core.Presentation.TrayMenuItem.IsSeparator.get -> bool
-VpnManager.Core.Presentation.TrayMenuItem.TrayMenuItem(string! Header, VpnManager.Core.Presentation.TrayMenuAction? Action, string? TunnelName = null) -> void
-VpnManager.Core.Presentation.TrayMenuItem.TunnelName.get -> string?
-VpnManager.Core.Presentation.TrayMenuItem.TunnelName.init -> void
 VpnManager.Core.Presentation.TunnelListItem
 VpnManager.Core.Presentation.TunnelListItem.<Clone>$() -> VpnManager.Core.Presentation.TunnelListItem!
 VpnManager.Core.Presentation.TunnelListItem.Configuration.get -> string!
@@ -393,8 +382,10 @@ VpnManager.Core.Presentation.TunnelListPresenter.AddPeer(VpnManager.Core.Present
 VpnManager.Core.Presentation.TunnelListPresenter.BeginCreate() -> void
 VpnManager.Core.Presentation.TunnelListPresenter.BeginCreateFromTextAsync(string! profileText) -> System.Threading.Tasks.Task!
 VpnManager.Core.Presentation.TunnelListPresenter.BeginEditAsync(string! name) -> System.Threading.Tasks.Task!
+VpnManager.Core.Presentation.TunnelListPresenter.BeginPolicy(string! name) -> void
 VpnManager.Core.Presentation.TunnelListPresenter.BeginRename(string! name) -> void
 VpnManager.Core.Presentation.TunnelListPresenter.CancelEditor() -> void
+VpnManager.Core.Presentation.TunnelListPresenter.CancelPolicy() -> void
 VpnManager.Core.Presentation.TunnelListPresenter.CancelRename() -> void
 VpnManager.Core.Presentation.TunnelListPresenter.ConfirmCloseAsync() -> System.Threading.Tasks.Task<bool>!
 VpnManager.Core.Presentation.TunnelListPresenter.ConfirmQuitAsync() -> System.Threading.Tasks.Task<bool>!
@@ -410,11 +401,38 @@ VpnManager.Core.Presentation.TunnelListPresenter.RefreshAsync() -> System.Thread
 VpnManager.Core.Presentation.TunnelListPresenter.RemovePeer(int index) -> void
 VpnManager.Core.Presentation.TunnelListPresenter.RenameAsync(VpnManager.Core.Presentation.TunnelRenameInput! input) -> System.Threading.Tasks.Task!
 VpnManager.Core.Presentation.TunnelListPresenter.SaveAsync(VpnManager.Core.Presentation.EditorInput! input) -> System.Threading.Tasks.Task!
+VpnManager.Core.Presentation.TunnelListPresenter.SavePolicyAsync(VpnManager.Core.Presentation.TunnelPolicyInput! input) -> System.Threading.Tasks.Task!
 VpnManager.Core.Presentation.TunnelListPresenter.SelectAsync(string! name) -> System.Threading.Tasks.Task!
 VpnManager.Core.Presentation.TunnelListPresenter.SelectedTunnel.get -> string?
 VpnManager.Core.Presentation.TunnelListPresenter.StartAsync(string! name) -> System.Threading.Tasks.Task!
 VpnManager.Core.Presentation.TunnelListPresenter.StopAsync(string! name) -> System.Threading.Tasks.Task!
 VpnManager.Core.Presentation.TunnelListPresenter.TunnelListPresenter(VpnManager.Core.Presentation.ITunnelListView! view, VpnManager.Core.Services.TunnelService! service, System.TimeProvider? timeProvider = null, VpnManager.Core.Runtime.INetworkCounterReader? counterReader = null, VpnManager.Core.Runtime.IPhysicalLinkReader? physicalLink = null, VpnManager.Core.Runtime.IRoutingPrerequisiteReader? routingPrerequisite = null, VpnManager.Core.Notifications.INotifier? notifier = null, VpnManager.Core.State.IOperationJournal? journal = null) -> void
+VpnManager.Core.Presentation.TunnelPolicyInput
+VpnManager.Core.Presentation.TunnelPolicyInput.<Clone>$() -> VpnManager.Core.Presentation.TunnelPolicyInput!
+VpnManager.Core.Presentation.TunnelPolicyInput.AutoReconnect.get -> bool
+VpnManager.Core.Presentation.TunnelPolicyInput.AutoReconnect.init -> void
+VpnManager.Core.Presentation.TunnelPolicyInput.Deconstruct(out string! Name, out bool AutoReconnect, out VpnManager.Core.NetworkManager.NetworkManagerDnsMode DnsMode, out System.Collections.Generic.IReadOnlyList<string!>! SearchDomains) -> void
+VpnManager.Core.Presentation.TunnelPolicyInput.DnsMode.get -> VpnManager.Core.NetworkManager.NetworkManagerDnsMode
+VpnManager.Core.Presentation.TunnelPolicyInput.DnsMode.init -> void
+VpnManager.Core.Presentation.TunnelPolicyInput.Equals(VpnManager.Core.Presentation.TunnelPolicyInput? other) -> bool
+VpnManager.Core.Presentation.TunnelPolicyInput.Name.get -> string!
+VpnManager.Core.Presentation.TunnelPolicyInput.Name.init -> void
+VpnManager.Core.Presentation.TunnelPolicyInput.SearchDomains.get -> System.Collections.Generic.IReadOnlyList<string!>!
+VpnManager.Core.Presentation.TunnelPolicyInput.SearchDomains.init -> void
+VpnManager.Core.Presentation.TunnelPolicyInput.TunnelPolicyInput(string! Name, bool AutoReconnect, VpnManager.Core.NetworkManager.NetworkManagerDnsMode DnsMode, System.Collections.Generic.IReadOnlyList<string!>! SearchDomains) -> void
+VpnManager.Core.Presentation.TunnelPolicySnapshot
+VpnManager.Core.Presentation.TunnelPolicySnapshot.<Clone>$() -> VpnManager.Core.Presentation.TunnelPolicySnapshot!
+VpnManager.Core.Presentation.TunnelPolicySnapshot.AutoReconnect.get -> bool
+VpnManager.Core.Presentation.TunnelPolicySnapshot.AutoReconnect.init -> void
+VpnManager.Core.Presentation.TunnelPolicySnapshot.Deconstruct(out string! Name, out bool AutoReconnect, out VpnManager.Core.NetworkManager.NetworkManagerDnsMode DnsMode, out System.Collections.Generic.IReadOnlyList<string!>! SearchDomains) -> void
+VpnManager.Core.Presentation.TunnelPolicySnapshot.DnsMode.get -> VpnManager.Core.NetworkManager.NetworkManagerDnsMode
+VpnManager.Core.Presentation.TunnelPolicySnapshot.DnsMode.init -> void
+VpnManager.Core.Presentation.TunnelPolicySnapshot.Equals(VpnManager.Core.Presentation.TunnelPolicySnapshot? other) -> bool
+VpnManager.Core.Presentation.TunnelPolicySnapshot.Name.get -> string!
+VpnManager.Core.Presentation.TunnelPolicySnapshot.Name.init -> void
+VpnManager.Core.Presentation.TunnelPolicySnapshot.SearchDomains.get -> System.Collections.Generic.IReadOnlyList<string!>!
+VpnManager.Core.Presentation.TunnelPolicySnapshot.SearchDomains.init -> void
+VpnManager.Core.Presentation.TunnelPolicySnapshot.TunnelPolicySnapshot(string! Name, bool AutoReconnect, VpnManager.Core.NetworkManager.NetworkManagerDnsMode DnsMode, System.Collections.Generic.IReadOnlyList<string!>! SearchDomains) -> void
 VpnManager.Core.Presentation.TunnelRenameInput
 VpnManager.Core.Presentation.TunnelRenameInput.<Clone>$() -> VpnManager.Core.Presentation.TunnelRenameInput!
 VpnManager.Core.Presentation.TunnelRenameInput.Deconstruct(out string! Name, out string! DisplayName) -> void
@@ -591,7 +609,7 @@ VpnManager.Core.Services.TunnelService.Import(string! name, string! sourcePath) 
 VpnManager.Core.Services.TunnelService.ListTunnelsAsync(bool reconcile = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<System.Collections.Generic.IReadOnlyList<VpnManager.Core.Model.TunnelSummary!>!>>!
 VpnManager.Core.Services.TunnelService.LoadConfiguration(string! name) -> Core.Results.Result<VpnManager.Core.Model.TunnelConfiguration!>
 VpnManager.Core.Services.TunnelService.ResolveInterfaceName(string! tunnelName) -> string!
-VpnManager.Core.Services.TunnelService.SetDisplayName(string! name, string? displayName) -> Core.Results.Result<string!>
+VpnManager.Core.Services.TunnelService.SetDisplayName(string! name, string? displayName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
 VpnManager.Core.Services.TunnelService.SetPolicyAsync(string! name, VpnManager.Core.State.TunnelPolicy! policy, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<VpnManager.Core.State.TunnelPolicy!>>!
 VpnManager.Core.Services.TunnelService.StartAsync(string! name, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
 VpnManager.Core.Services.TunnelService.StopAsync(string! name, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
@@ -779,7 +797,6 @@ const VpnManager.Core.Presentation.EditorField.PeerPublicKey = "editor.peer.publ
 const VpnManager.Core.Presentation.EditorField.PrivateKey = "editor.privateKey" -> string!
 const VpnManager.Core.Presentation.EditorField.RoutingMode = "editor.routingMode" -> string!
 const VpnManager.Core.Presentation.EditorField.Table = "editor.table" -> string!
-const VpnManager.Core.Presentation.TrayMenuBuilder.MaximumTunnels = 3 -> int
 const VpnManager.Core.Runtime.WireGuardCommand.WireGuardExecutable = "wg" -> string!
 const VpnManager.Core.State.ApplicationState.CurrentVersion = 2 -> int
 const VpnManager.Core.Storage.SystemConfigFileSystem.MaximumConfigurationBytes = 1048576 -> long
@@ -833,12 +850,15 @@ override VpnManager.Core.Presentation.PresenterSession.ToString() -> string!
 override VpnManager.Core.Presentation.TransferView.Equals(object? obj) -> bool
 override VpnManager.Core.Presentation.TransferView.GetHashCode() -> int
 override VpnManager.Core.Presentation.TransferView.ToString() -> string!
-override VpnManager.Core.Presentation.TrayMenuItem.Equals(object? obj) -> bool
-override VpnManager.Core.Presentation.TrayMenuItem.GetHashCode() -> int
-override VpnManager.Core.Presentation.TrayMenuItem.ToString() -> string!
 override VpnManager.Core.Presentation.TunnelListItem.Equals(object? obj) -> bool
 override VpnManager.Core.Presentation.TunnelListItem.GetHashCode() -> int
 override VpnManager.Core.Presentation.TunnelListItem.ToString() -> string!
+override VpnManager.Core.Presentation.TunnelPolicyInput.Equals(object? obj) -> bool
+override VpnManager.Core.Presentation.TunnelPolicyInput.GetHashCode() -> int
+override VpnManager.Core.Presentation.TunnelPolicyInput.ToString() -> string!
+override VpnManager.Core.Presentation.TunnelPolicySnapshot.Equals(object? obj) -> bool
+override VpnManager.Core.Presentation.TunnelPolicySnapshot.GetHashCode() -> int
+override VpnManager.Core.Presentation.TunnelPolicySnapshot.ToString() -> string!
 override VpnManager.Core.Presentation.TunnelRenameInput.Equals(object? obj) -> bool
 override VpnManager.Core.Presentation.TunnelRenameInput.GetHashCode() -> int
 override VpnManager.Core.Presentation.TunnelRenameInput.ToString() -> string!
@@ -946,12 +966,12 @@ static VpnManager.Core.Presentation.PresenterSession.operator ==(VpnManager.Core
 static VpnManager.Core.Presentation.ReconnectPolicy.ShouldReconnect(string? previousKey, string? currentKey, bool ownedTunnelUp) -> bool
 static VpnManager.Core.Presentation.TransferView.operator !=(VpnManager.Core.Presentation.TransferView? left, VpnManager.Core.Presentation.TransferView? right) -> bool
 static VpnManager.Core.Presentation.TransferView.operator ==(VpnManager.Core.Presentation.TransferView? left, VpnManager.Core.Presentation.TransferView? right) -> bool
-static VpnManager.Core.Presentation.TrayMenuBuilder.Build(System.Collections.Generic.IReadOnlyList<VpnManager.Core.Presentation.TunnelListItem!>! tunnels, bool windowVisible) -> System.Collections.Generic.IReadOnlyList<VpnManager.Core.Presentation.TrayMenuItem!>!
-static VpnManager.Core.Presentation.TrayMenuItem.Separator.get -> VpnManager.Core.Presentation.TrayMenuItem!
-static VpnManager.Core.Presentation.TrayMenuItem.operator !=(VpnManager.Core.Presentation.TrayMenuItem? left, VpnManager.Core.Presentation.TrayMenuItem? right) -> bool
-static VpnManager.Core.Presentation.TrayMenuItem.operator ==(VpnManager.Core.Presentation.TrayMenuItem? left, VpnManager.Core.Presentation.TrayMenuItem? right) -> bool
 static VpnManager.Core.Presentation.TunnelListItem.operator !=(VpnManager.Core.Presentation.TunnelListItem? left, VpnManager.Core.Presentation.TunnelListItem? right) -> bool
 static VpnManager.Core.Presentation.TunnelListItem.operator ==(VpnManager.Core.Presentation.TunnelListItem? left, VpnManager.Core.Presentation.TunnelListItem? right) -> bool
+static VpnManager.Core.Presentation.TunnelPolicyInput.operator !=(VpnManager.Core.Presentation.TunnelPolicyInput? left, VpnManager.Core.Presentation.TunnelPolicyInput? right) -> bool
+static VpnManager.Core.Presentation.TunnelPolicyInput.operator ==(VpnManager.Core.Presentation.TunnelPolicyInput? left, VpnManager.Core.Presentation.TunnelPolicyInput? right) -> bool
+static VpnManager.Core.Presentation.TunnelPolicySnapshot.operator !=(VpnManager.Core.Presentation.TunnelPolicySnapshot? left, VpnManager.Core.Presentation.TunnelPolicySnapshot? right) -> bool
+static VpnManager.Core.Presentation.TunnelPolicySnapshot.operator ==(VpnManager.Core.Presentation.TunnelPolicySnapshot? left, VpnManager.Core.Presentation.TunnelPolicySnapshot? right) -> bool
 static VpnManager.Core.Presentation.TunnelRenameInput.operator !=(VpnManager.Core.Presentation.TunnelRenameInput? left, VpnManager.Core.Presentation.TunnelRenameInput? right) -> bool
 static VpnManager.Core.Presentation.TunnelRenameInput.operator ==(VpnManager.Core.Presentation.TunnelRenameInput? left, VpnManager.Core.Presentation.TunnelRenameInput? right) -> bool
 static VpnManager.Core.Presentation.TunnelRenameSnapshot.operator !=(VpnManager.Core.Presentation.TunnelRenameSnapshot? left, VpnManager.Core.Presentation.TunnelRenameSnapshot? right) -> bool

@@ -94,6 +94,7 @@ public sealed class ViewTests
             Assert.Equal("Disconnect", Command(host, "toggle").Label);
             Assert.True(Command(host, "toggle").IsEnabled);
             Assert.True(Command(host, "delete").IsEnabled);
+            Assert.True(Command(host, "policy").IsEnabled);
 
             host = new FakeApplicationHost();
             var foreign = new TunnelDetailView(Item("wg1", "Down", TunnelSource.NetworkManager), Transfer(), readOnly: false);
@@ -102,6 +103,7 @@ public sealed class ViewTests
             Assert.Equal("Connect", Command(host, "toggle").Label);
             Assert.False(Command(host, "delete").IsEnabled);
             Assert.True(Command(host, "export").IsEnabled);
+            Assert.True(Command(host, "policy").IsEnabled);
 
             host = new FakeApplicationHost();
             var readOnly = new TunnelDetailView(Item("wg0", "Up", TunnelSource.Configuration), Transfer(), readOnly: true);
@@ -110,6 +112,7 @@ public sealed class ViewTests
             Assert.False(Command(host, "toggle").IsEnabled);
             Assert.False(Command(host, "rename").IsEnabled);
             Assert.False(Command(host, "delete").IsEnabled);
+            Assert.False(Command(host, "policy").IsEnabled);
         });
     }
 

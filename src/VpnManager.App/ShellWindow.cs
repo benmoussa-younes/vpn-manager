@@ -11,7 +11,6 @@ using Core.UI.Dialogs;
 using Core.UI.Hosting;
 using Core.UI.Preferences;
 using Avalonia.Threading;
-using VpnManager.App.Tray;
 using VpnManager.App.Views;
 using VpnManager.Core.Presentation;
 
@@ -19,9 +18,8 @@ namespace VpnManager.App;
 
 /// <summary>
 /// The product shell over the shared <see cref="CoreWindow"/>: it owns the
-/// presenter, the profile list, the primary menu, the tray commands and the
-/// polling loops. The shared shell owns the chrome, dialogs, notifications and
-/// the tray icon.
+/// presenter, the profile list, the primary menu and the polling loops. The
+/// shared shell owns the chrome, dialogs and notifications.
 /// </summary>
 internal sealed class ShellWindow : IAsyncDisposable
 {
@@ -33,7 +31,6 @@ internal sealed class ShellWindow : IAsyncDisposable
     private readonly TunnelListView _content;
     private readonly TunnelListPresenter _presenter;
     private readonly AppearanceService _appearance;
-    private readonly Func<CancellationToken, Task<bool>> _trayHostProbe;
     private readonly SessionEndWatcher _sessionEnd;
     private readonly WindowPlacementService _placement;
     private readonly NmcliNetworkManagerMonitor _monitor = new();
@@ -46,7 +43,6 @@ internal sealed class ShellWindow : IAsyncDisposable
         CoreHost host,
         CompositionRoot root,
         bool readOnly,
-        Func<CancellationToken, Task<bool>>? trayHostProbe = null,
         SessionEndWatcher? sessionEnd = null)
     {
         ArgumentNullException.ThrowIfNull(host);
@@ -55,7 +51,6 @@ internal sealed class ShellWindow : IAsyncDisposable
         _host = host;
         _root = root;
         _readOnly = readOnly;
-        _trayHostProbe = trayHostProbe ?? StatusNotifierHostProbe.IsHostRegisteredAsync;
         _sessionEnd = sessionEnd ?? new SessionEndWatcher();
 
         var atomicFiles = new LinuxAtomicFileWriterFactory();
@@ -65,15 +60,15 @@ internal sealed class ShellWindow : IAsyncDisposable
             atomicFiles,
             fileSystem));
 
-        Window = host.CreateWindow(LoadIcon("avares://vpn-manager/Assets/tray-icon.png"));
+        Window = host.CreateWindow();
         Window.Title = TunnelListView.ProductTitle;
         Window.Icon = LoadIcon("avares://vpn-manager/Assets/app-icon.png");
         Window.Width = 1100;
         Window.Height = 720;
         Window.MinWidth = 720;
         Window.MinHeight = 520;
-        // No tray host means no way back: the fallback is a real quit, with the
-        // operator's confirmation when a tunnel is still connected.
+        // There is no tray: closing really quits, and asks before disconnecting a
+        // tunnel that is still up.
         Window.CloseBehavior = CloseBehavior.Quit;
 
         var placementPath = host.Paths.StateFile("window.json");
@@ -90,7 +85,6 @@ internal sealed class ShellWindow : IAsyncDisposable
         _content.Logger = _root.Logger;
         _content.AttachHost(Window);
         _content.SetReadOnly(readOnly);
-        _content.WindowVisible = () => Window.IsVisible;
 
         _presenter = new TunnelListPresenter(
             _content,
@@ -101,9 +95,8 @@ internal sealed class ShellWindow : IAsyncDisposable
             notifier: root.Notifier,
             journal: root.Journal);
 
-        // Until a tray host answers, the safe behaviour is the one that leaves
-        // nothing running in the background: quit and disconnect the VPN. A
-        // session that is ending never shows that dialog.
+        // Closing or quitting disconnects the VPN; a session that is ending never
+        // shows that dialog.
         Window.ConfirmQuit = ConfirmCloseAsync;
         Window.ConfirmClose = ConfirmCloseAsync;
 
@@ -114,13 +107,11 @@ internal sealed class ShellWindow : IAsyncDisposable
         Window.SetAbout(BuildAbout());
         Window.SetAppearance(_appearance);
         Window.CommandInvoked += (_, id) => _content.HandleCommand(id);
-        _host.TrayCommandInvoked += id => _content.HandleCommand(id);
 
         Window.Navigation.Push(TunnelListView.ProductTitle, string.Empty, _content);
         _content.Publish();
 
         Window.Opened += OnOpened;
-        _ = ApplyTrayAvailabilityAsync();
         _ = _sessionEnd.StartAsync();
     }
 
@@ -159,33 +150,6 @@ internal sealed class ShellWindow : IAsyncDisposable
         _monitor.Dispose();
         await _presenter.DisposeAsync().ConfigureAwait(true);
         _lifetime.Dispose();
-    }
-
-    /// <summary>
-    /// Flips the close behaviour to hide only when a tray host is registered;
-    /// otherwise the window keeps the quit fallback and no tray menu is published.
-    /// </summary>
-    private async Task ApplyTrayAvailabilityAsync()
-    {
-        bool available;
-        try
-        {
-            available = await _trayHostProbe(_lifetime.Token).ConfigureAwait(true);
-        }
-        catch (Exception)
-        {
-            available = false;
-        }
-
-        if (!available || _disposed)
-        {
-            return;
-        }
-
-        Window.CloseBehavior = CloseBehavior.HideToTray;
-        Window.ConfirmQuit = () => new ValueTask<bool>(_presenter.ConfirmQuitAsync());
-        _content.TrayAvailable = true;
-        _content.Publish();
     }
 
     private async ValueTask<bool> ConfirmCloseAsync() =>

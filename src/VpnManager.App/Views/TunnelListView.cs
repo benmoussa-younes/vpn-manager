@@ -48,6 +48,7 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     private TunnelEditorView? _editor;
     private TunnelDetailView? _detail;
     private TunnelRenameView? _rename;
+    private TunnelPolicyView? _policy;
     private IReadOnlyList<TunnelListItem> _lastTunnels = [];
     private IReadOnlyDictionary<string, TransferView> _transfers = new Dictionary<string, TransferView>(StringComparer.Ordinal);
     private string _status = string.Empty;
@@ -107,6 +108,15 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     public event Action? RenameCancelRequested;
 
     /// <inheritdoc />
+    public event Action<string>? PolicyEditRequested;
+
+    /// <inheritdoc />
+    public event Action<TunnelPolicyInput>? PolicySubmitted;
+
+    /// <inheritdoc />
+    public event Action? PolicyCancelRequested;
+
+    /// <inheritdoc />
     public event Action<string>? StartRequested;
 
     /// <inheritdoc />
@@ -157,6 +167,9 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     /// <summary>Gets the rename page currently open on the shell stack, or <see langword="null"/>.</summary>
     internal TunnelRenameView? OpenRenamePage => _rename;
 
+    /// <summary>Gets the policy page currently open on the shell stack, or <see langword="null"/>.</summary>
+    internal TunnelPolicyView? OpenPolicyPage => _policy;
+
     /// <summary>Gets the status line published as the shell subtitle.</summary>
     internal string Status => _status;
 
@@ -189,16 +202,7 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     internal IApplicationLogger? Logger { get; set; }
 
     /// <summary>
-    /// Gets or sets whether a tray host is registered. Without one, publishing a
-    /// menu would leave an invisible icon and a hidden window.
-    /// </summary>
-    internal bool TrayAvailable { get; set; }
-
-    /// <summary>Gets or sets the window-visibility provider the tray menu and the tray command use.</summary>
-    internal Func<bool> WindowVisible { get; set; } = static () => true;
-
-    /// <summary>
-    /// Routes a shell command id (toolbar, primary menu or tray) to the intent it
+    /// Routes a shell command id (toolbar or primary menu) to the intent it
     /// names. The shell raises ids; the content maps them to the semantic events.
     /// </summary>
     /// <param name="id">The command id.</param>
@@ -207,7 +211,7 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         ArgumentNullException.ThrowIfNull(id);
 
         if (_readOnly &&
-            id is "toggle" or "new" or "edit" or "rename" or "delete" or "paste" or "import" or "restore")
+            id is "toggle" or "new" or "edit" or "rename" or "policy" or "delete" or "paste" or "import" or "restore")
         {
             SetError(ReadOnlyMessage);
             return;
@@ -223,6 +227,12 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         if (id.StartsWith("rename.", StringComparison.Ordinal))
         {
             _rename?.HandleCommand(id);
+            return;
+        }
+
+        if (id.StartsWith("policy.", StringComparison.Ordinal))
+        {
+            _policy?.HandleCommand(id);
             return;
         }
 
@@ -243,6 +253,9 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
             case "rename":
                 WithSelection(name => RenameRequested?.Invoke(name));
                 break;
+            case "policy":
+                WithSelection(name => PolicyEditRequested?.Invoke(name));
+                break;
             case "delete":
                 _ = ConfirmDeleteAsync();
                 break;
@@ -260,21 +273,6 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
                 break;
             case "restore":
                 _ = PickRestorePathAsync();
-                break;
-            case "tray.show":
-                if (WindowVisible())
-                {
-                    _host?.HideWindow();
-                }
-                else
-                {
-                    _host?.ShowWindow();
-                }
-
-                Publish();
-                break;
-            case "tray.quit":
-                _host?.Quit();
                 break;
             default:
                 if (id.StartsWith("connect:", StringComparison.Ordinal))
@@ -317,7 +315,7 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         }
     }
 
-    /// <summary>Republishes the chrome and the tray from the current state.</summary>
+    /// <summary>Republishes the chrome from the current state.</summary>
     public void Publish()
     {
         if (_host is null)
@@ -335,7 +333,7 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
 
         // A pushed page owns the header and the toolbar. Republishing the list
         // chrome while a detail or an editor is active would replace them on the
-        // next refresh and show the old page title; only the tray follows the list.
+        // next refresh and show the old page title.
         var active = _host.Navigation.Active;
         if (active is null || ReferenceEquals(active, this))
         {
@@ -345,8 +343,6 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
             var subtitle = _readOnly ? ReadOnlyMessage : string.Empty;
             _host.SetSnapshot(new ShellSnapshot(ProductTitle, subtitle, BuildCommands(), _busy));
         }
-
-        PublishTray();
     }
 
     /// <inheritdoc />
@@ -484,6 +480,43 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     }
 
     /// <inheritdoc />
+    public void ShowPolicy(TunnelPolicySnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+
+        var view = new TunnelPolicyView();
+        view.SaveRequested += input => PolicySubmitted?.Invoke(input);
+        view.CancelRequested += () => PolicyCancelRequested?.Invoke();
+        view.DetachedFromVisualTree += (_, _) =>
+        {
+            if (ReferenceEquals(_policy, view))
+            {
+                _policy = null;
+            }
+        };
+
+        _policy = view;
+        view.Load(snapshot);
+        _host?.Navigation.Push(ProductTitle, "Reconnection and DNS policy", view);
+        if (_host is not null)
+        {
+            view.PublishSnapshot(_host);
+        }
+    }
+
+    /// <inheritdoc />
+    public void HidePolicy()
+    {
+        if (_policy is null)
+        {
+            return;
+        }
+
+        _policy = null;
+        _host?.Navigation.Pop();
+    }
+
+    /// <inheritdoc />
     public void SetEditorError(string fieldKey, string message) =>
         _editor?.SetEditorError(fieldKey, message);
 
@@ -606,49 +639,8 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
             new AppCommand("refresh", "Refresh", IconKey: "WgmRefresh", ToolTip: "Re-read the tunnel list", Shortcut: "Ctrl+R", IsEnabled: !_busy, Group: "view"),
             new AppCommand("toggle", up ? "Disconnect" : "Connect", IconKey: up ? "WgmDisconnect" : "WgmConnect", ToolTip: up ? "Disconnect the selected tunnel" : "Connect the selected tunnel", IsEnabled: canMutate && selected is not null, IsChecked: up, Group: "selected"),
             new AppCommand("rename", "Rename", IconKey: "WgmRename", ToolTip: "Change the tunnel's display name", IsEnabled: canMutate && selected is not null, Group: "selected"),
+            new AppCommand("policy", "Policy", IconKey: "WgmPolicy", ToolTip: "Reconnection and DNS policy", IsEnabled: canMutate && selected is not null, Group: "selected"),
         ]);
-    }
-
-    private void PublishTray()
-    {
-        // Only reached from Publish, which already returned when there is no host.
-        if (!TrayAvailable)
-        {
-            _host!.Tray.Hide();
-            return;
-        }
-
-        IReadOnlyList<TunnelListItem> tunnels = _readOnly ? [] : _lastTunnels;
-        _host!.Tray.Show(ProductTitle, BuildTrayCommands(TrayMenuBuilder.Build(tunnels, WindowVisible())));
-    }
-
-    /// <summary>Maps the tray menu entries onto the shell's command model.</summary>
-    /// <param name="items">The tray entries.</param>
-    /// <returns>The tray command set.</returns>
-    internal static CommandSet BuildTrayCommands(IReadOnlyList<TrayMenuItem> items)
-    {
-        ArgumentNullException.ThrowIfNull(items);
-
-        var commands = new List<AppCommand>();
-
-        foreach (var item in items)
-        {
-            if (item.IsSeparator)
-            {
-                continue;
-            }
-
-            commands.Add(item.Action switch
-            {
-                TrayMenuAction.ToggleWindow => new AppCommand("tray.show", item.Header, Group: "window"),
-                TrayMenuAction.Connect => new AppCommand(string.Concat("connect:", item.TunnelName), item.Header, Group: "tunnels"),
-                TrayMenuAction.Disconnect => new AppCommand(string.Concat("disconnect:", item.TunnelName), item.Header, Group: "tunnels"),
-                TrayMenuAction.Quit => new AppCommand("tray.quit", item.Header, Group: "quit"),
-                _ => new AppCommand("tray.noop", item.Header, IsEnabled: false, Group: "window"),
-            });
-        }
-
-        return new CommandSet(commands);
     }
 
     private Grid BuildTunnelRow(TunnelListItem tunnel)

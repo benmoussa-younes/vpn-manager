@@ -176,6 +176,7 @@ public sealed class TunnelDetailView : UserControl, IView
             [
                 new AppCommand("toggle", isUp ? "Disconnect" : "Connect", IconKey: isUp ? "WgmDisconnect" : "WgmConnect", ToolTip: isUp ? "Disconnect this tunnel" : "Connect this tunnel", IsChecked: isUp, IsEnabled: canMutate, Group: "connect"),
                 new AppCommand("rename", "Rename", IconKey: "WgmRename", ToolTip: "Change this tunnel's display name", IsEnabled: canMutate, Group: "manage"),
+                new AppCommand("policy", "Policy", IconKey: "WgmPolicy", ToolTip: "Reconnection and DNS policy", IsEnabled: canMutate, Group: "manage"),
                 new AppCommand("delete", "Delete", IconKey: "WgmDelete", ToolTip: "Delete this tunnel", IsEnabled: canMutate && !isForeign, Group: "manage"),
                 new AppCommand("export", "Export", IconKey: "WgmExport", ToolTip: "Export this tunnel", Group: "io"),
             ])));
