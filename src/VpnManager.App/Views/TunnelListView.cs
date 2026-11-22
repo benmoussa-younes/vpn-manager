@@ -38,8 +38,6 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     /// <summary>The product name shown in the header bar and the window title.</summary>
     internal const string ProductTitle = "VPN Manager";
 
-    private static readonly TransferView ZeroTransfer = new("0 B/s", "0 B", "0 B/s", "0 B");
-
     private readonly ListBox _tunnelList = new() { SelectionMode = SelectionMode.Single, Background = Brushes.Transparent };
     private readonly EmptyState _emptyState;
     private readonly TunnelEditorView _editor = new();
@@ -48,8 +46,6 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     private readonly TextBlock _paneName = new() { Classes = { "heading" } };
     private readonly TextBlock _paneSource = new() { Classes = { "muted" } };
     private readonly TextBlock _paneState = new();
-    private readonly TextBlock _paneDown = new() { Classes = { "muted" } };
-    private readonly TextBlock _paneUp = new() { Classes = { "muted" } };
     private readonly Button _connect = new() { Classes = { "primary" }, Content = "Connect" };
     private readonly Button _save = new() { Classes = { "primary" }, Content = "Save" };
     private readonly Button _cancel = new() { Content = "Cancel" };
@@ -169,12 +165,6 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
                     Spacing = 10,
                     Children = { _paneState, _paneSource },
                 },
-                new StackPanel
-                {
-                    Orientation = Orientation.Horizontal,
-                    Spacing = 12,
-                    Children = { _paneDown, _paneUp },
-                },
             },
         };
         _connect.VerticalAlignment = VerticalAlignment.Top;
@@ -212,9 +202,9 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         _pane = new ScrollViewer { Content = paneContent, IsVisible = false };
         _pane.SizeChanged += (_, _) => UpdateColumns(_pane.Bounds.Width);
 
-        var newButton = new Button { Content = "New", Classes = { "flat" } };
+        var newButton = new Button { Content = "New" };
         newButton.Click += (_, _) => CreateRequested?.Invoke();
-        var refreshButton = new Button { Content = "Refresh", Classes = { "flat" } };
+        var refreshButton = new Button { Content = "Refresh" };
         refreshButton.Click += (_, _) => RefreshRequested?.Invoke();
 
         var sidebarActions = new StackPanel
@@ -344,6 +334,9 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
 
     /// <summary>Gets the pane heading, for tests.</summary>
     internal TextBlock PaneNameText => _paneName;
+
+    /// <summary>Gets the scrolling pane, for tests.</summary>
+    internal ScrollViewer DetailPane => _pane;
 
     /// <summary>Gets the status line published as the shell subtitle.</summary>
     internal string Status => _status;
@@ -540,23 +533,6 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     }
 
     /// <inheritdoc />
-    public void ShowTransfer(TransferView transfer)
-    {
-        ArgumentNullException.ThrowIfNull(transfer);
-
-        if (_selectedName is not null)
-        {
-            var updated = new Dictionary<string, TransferView>(_transfers, StringComparer.Ordinal)
-            {
-                [_selectedName] = transfer,
-            };
-            _transfers = updated;
-        }
-
-        UpdatePaneHeader();
-    }
-
-    /// <inheritdoc />
     public void ShowTunnelTransfers(IReadOnlyDictionary<string, TransferView> transfers)
     {
         ArgumentNullException.ThrowIfNull(transfers);
@@ -581,6 +557,14 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         ArgumentNullException.ThrowIfNull(editor);
 
         _editorIsNew = editor.IsNew;
+        if (editor.IsNew)
+        {
+            _selectedName = null;
+            _suspendSelection = true;
+            _tunnelList.SelectedIndex = -1;
+            _suspendSelection = false;
+        }
+
         _editor.Load(editor);
         _editor.IsVisible = true;
         _pane.IsVisible = true;
@@ -941,25 +925,20 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     /// <param name="name">The tunnel name.</param>
     private void UpdatePaneHeader()
     {
-        var item = _selectedName is null
+        var item = _selectedName is null || _editorIsNew
             ? null
             : _lastTunnels.FirstOrDefault(tunnel => string.Equals(tunnel.Name, _selectedName, StringComparison.Ordinal));
         var hasSelection = item is not null;
         var up = string.Equals(item?.State, "Up", StringComparison.Ordinal);
 
-        _paneName.Text = item?.ShownName ?? (_editorIsNew ? "New tunnel" : string.Empty);
+        _paneName.Text = _editorIsNew ? "New tunnel" : item?.ShownName ?? string.Empty;
         _paneState.Text = item?.State ?? string.Empty;
         _paneSource.Text = item is null
             ? string.Empty
             : item.Source == TunnelSource.NetworkManager ? "NetworkManager" : "wg-quick configuration";
         _connect.Content = up ? "Disconnect" : "Connect";
+        _connect.IsVisible = hasSelection;
         _connect.IsEnabled = hasSelection && !_readOnly && !_busy;
-
-        var transfer = _selectedName is not null && _transfers.TryGetValue(_selectedName, out var current)
-            ? current
-            : ZeroTransfer;
-        _paneDown.Text = string.Concat("\u2193 ", transfer.DownloadRate);
-        _paneUp.Text = string.Concat("\u2191 ", transfer.UploadRate);
 
         var visible = hasSelection || _editorIsNew;
         _pane.IsVisible = visible;
@@ -993,9 +972,6 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         _tunnelList.SelectedIndex = index;
         _suspendSelection = false;
     }
-
-    private TransferView TransferFor(string name) =>
-        _transfers.TryGetValue(name, out var transfer) ? transfer : ZeroTransfer;
 
     private void ToggleSelectedTunnel()
     {

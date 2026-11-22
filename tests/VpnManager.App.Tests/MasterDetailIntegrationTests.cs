@@ -1,3 +1,4 @@
+using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Core.Mvp.Services;
@@ -208,6 +209,80 @@ public sealed class MasterDetailIntegrationTests
 
             Assert.Equal(0, view.TunnelList.SelectedIndex);
         });
+    }
+
+    [Fact]
+    public async Task CreatingAProfileDropsTheConnectedSelectionAndItsConnectButton()
+    {
+        await HeadlessTestSession.RunAsync(() =>
+        {
+            var (view, presenter, _, _, _) = Build();
+            view.ShowTunnels([Row("wg0", "Up")], "wg0");
+
+            Assert.Equal("wg0", view.PaneNameText.Text);
+            Assert.True(view.ConnectButton.IsVisible);
+            Assert.Equal("Disconnect", view.ConnectButton.Content);
+
+            presenter.BeginCreate();
+
+            Assert.Equal("New tunnel", view.PaneNameText.Text);
+            Assert.False(view.ConnectButton.IsVisible);
+            Assert.Equal(-1, view.TunnelList.SelectedIndex);
+            Assert.True(view.OpenEditor!.IsVisible);
+            return Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public async Task TheEditPaneDoesNotRepeatTheTransferRates()
+    {
+        await HeadlessTestSession.RunAsync(() =>
+        {
+            var (view, _, _, _, _) = Build();
+            view.ShowTunnels([Row("wg0", "Up")], "wg0");
+            view.ShowTunnelTransfers(new Dictionary<string, TransferView>(StringComparer.Ordinal)
+            {
+                ["wg0"] = new TransferView("1.5 MB/s", "40 MB", "120 kB/s", "3 MB"),
+            });
+
+            var labels = Texts(view.DetailPane);
+            Assert.DoesNotContain(labels, text => text.StartsWith("\u2193", StringComparison.Ordinal));
+            Assert.DoesNotContain(labels, text => text.StartsWith("\u2191", StringComparison.Ordinal));
+            Assert.Equal("\u2193 1.5 MB/s|\u2191 120 kB/s", view.RowTransferText("wg0"));
+            return Task.CompletedTask;
+        });
+    }
+
+    private static List<string> Texts(Control root)
+    {
+        var texts = new List<string>();
+        Walk(root, texts);
+        return texts;
+    }
+
+    private static void Walk(Control control, List<string> texts)
+    {
+        if (control is TextBlock { Text: { } text })
+        {
+            texts.Add(text);
+        }
+
+        switch (control)
+        {
+            case Panel panel:
+                foreach (var child in panel.Children)
+                {
+                    Walk(child, texts);
+                }
+
+                break;
+            case Decorator { Child: { } decorated }:
+                Walk(decorated, texts);
+                break;
+            case ContentControl { Content: Control content }:
+                Walk(content, texts);
+                break;
+        }
     }
 
     private static void Select(TunnelListView view, int index)

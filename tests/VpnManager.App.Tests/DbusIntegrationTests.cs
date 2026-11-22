@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Tmds.DBus.Protocol;
 using VpnManager.App.DBus;
+using VpnManager.App.Notifications;
 using VpnManager.App.Tests.Fakes;
 using VpnManager.Core.Model;
 using VpnManager.Core.NetworkManager;
@@ -299,6 +300,85 @@ public sealed class DbusIntegrationTests
                     context.ReplyUnknownMethodError();
                     return ValueTask.CompletedTask;
             }
+        }
+
+        /// <inheritdoc />
+        public void Dispose() => _connection.Dispose();
+    }
+
+    [Fact]
+    public async Task TheDesktopNotifierSendsTheAppNameTheSummaryAndTheBody()
+    {
+        Assert.SkipUnless(
+            Environment.GetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS") is { Length: > 0 },
+            "No session D-Bus address; run under dbus-run-session.");
+
+        using var daemon = await FakeNotifications.StartAsync();
+        var notifier = new DesktopNotifier(FakeNotifications.ServiceName);
+
+        await notifier.NotifyAsync("VPN connection lost", "'wg0' went down.");
+
+        var call = await daemon.Call.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal("VPN Manager", call.AppName);
+        Assert.Equal("VPN connection lost", call.Summary);
+        Assert.Equal("'wg0' went down.", call.Body);
+    }
+
+    /// <summary>
+    /// A minimal notification daemon: it owns the name, records the summary and
+    /// the body, and answers with an id.
+    /// </summary>
+    private sealed class FakeNotifications : IPathMethodHandler, IDisposable
+    {
+        internal const string ServiceName = "org.example.VpnManagerNotificationsTest";
+        private const string ObjectPath = "/org/freedesktop/Notifications";
+
+        private readonly DBusConnection _connection;
+        private readonly TaskCompletionSource<(string AppName, string Summary, string Body)> _call =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        private FakeNotifications(DBusConnection connection) => _connection = connection;
+
+        internal Task<(string AppName, string Summary, string Body)> Call => _call.Task;
+
+        internal static async Task<FakeNotifications> StartAsync()
+        {
+            var address = DBusAddress.Session ?? throw new InvalidOperationException("No session bus is configured.");
+            var connection = new DBusConnection(address);
+            await connection.ConnectAsync().ConfigureAwait(false);
+            Assert.True(await connection.TryRequestNameAsync(ServiceName, RequestNameOptions.None).ConfigureAwait(false));
+            var daemon = new FakeNotifications(connection);
+            connection.AddMethodHandler(daemon);
+            return daemon;
+        }
+
+        /// <inheritdoc />
+        public string Path => ObjectPath;
+
+        /// <inheritdoc />
+        public bool HandlesChildPaths => false;
+
+        /// <inheritdoc />
+        public ValueTask HandleMethodAsync(MethodContext context)
+        {
+            if (context.Request.MemberAsString != "Notify")
+            {
+                context.ReplyUnknownMethodError();
+                return ValueTask.CompletedTask;
+            }
+
+            var reader = context.Request.GetBodyReader();
+            var appName = reader.ReadString();
+            _ = reader.ReadUInt32();
+            _ = reader.ReadString();
+            var summary = reader.ReadString();
+            var body = reader.ReadString();
+            _call.TrySetResult((appName, summary, body));
+
+            using var writer = context.CreateReplyWriter("u");
+            writer.WriteUInt32(1);
+            context.Reply(writer.CreateMessage());
+            return ValueTask.CompletedTask;
         }
 
         /// <inheritdoc />

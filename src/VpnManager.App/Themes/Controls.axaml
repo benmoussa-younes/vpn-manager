@@ -44,6 +44,41 @@
         <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}" />
     </Style>
 
+    <!--
+        One button language: every action sits in the same box, and only its role
+        changes the fill. Normal is the raised surface, accent marks Save, Connect
+        and the other creating actions, destructive marks Delete and Remove peer.
+        A disabled button keeps the box and fades, so the size never jumps.
+    -->
+    <Style Selector="Button">
+        <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{DynamicResource ControlCornerRadius}" />
+        <Setter Property="Padding" Value="12,5" />
+        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button:pointerover">
+        <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+    </Style>
+    <Style Selector="Button:disabled">
+        <Setter Property="Opacity" Value="0.5" />
+    </Style>
+    <Style Selector="Button.primary">
+        <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Button.destructive">
+        <Setter Property="BorderBrush" Value="{DynamicResource DestructiveBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Button.destructive:pointerover">
+        <Setter Property="Background" Value="{DynamicResource DestructiveBrush}" />
+        <Setter Property="Opacity" Value="0.9" />
+    </Style>
+
     <!-- A field the presenter marked invalid: error border, thicker stroke. -->
     <Style Selector="TextBox.invalid /template/ Border#PART_BorderElement">
         <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />

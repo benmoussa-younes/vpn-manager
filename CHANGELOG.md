@@ -8,6 +8,30 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- A GNOME logout or shutdown no longer hangs: the session watcher answers the
+  `QueryEndSession` request on the client object, closes on `EndSession` and
+  `Stop`, and the process exits even when a disposal wedges.
+- A second launch can no longer re-show a closed window and leave an
+  unreachable process behind.
+- Opening a new profile while a connected one was selected shows "New tunnel"
+  and no Connect button instead of the previous profile and "Disconnect".
+- The edit pane no longer repeats the bandwidth the sidebar already shows.
+
+### Changed
+
+- One button language: normal, accent (Save, Connect) and destructive (Delete,
+  Remove peer) share the same box, border and disabled state.
+- The DNS policy offers Profile, System and Split; the full-tunnel mode was the
+  profile mode with an explicit root routing domain and is retired (a stored
+  value reads as Profile). Split now routes only the listed domains to the
+  profile DNS, and the search-domains field is enabled only there.
+- The application menu keeps the file actions only (paste, import, export,
+  backup, restore); New, Delete and Refresh live in the sidebar and the pane.
+- Network loss and automatic reconnection are desktop notifications, not
+  toasts; success toasts no longer print a filesystem path.
+
 ## [0.1.0] - 2026-11-21
 
 The first release of VPN Manager: a per-user WireGuard client for Debian GNOME,

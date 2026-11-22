@@ -92,7 +92,7 @@ public sealed class TunnelEditorView : UserControl, IView
         options.Children.Add(_mtu);
         options.Children.Add(_table);
 
-        var generate = new Button { Content = "Generate", Classes = { "flat" }, VerticalAlignment = VerticalAlignment.Center };
+        var generate = new Button { Content = "Generate", VerticalAlignment = VerticalAlignment.Center };
         generate.Click += (_, _) => KeyPairRequested?.Invoke();
         ToolTip.SetTip(generate, "Generate a key pair and show its public key");
         var keyRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8 };
@@ -113,7 +113,7 @@ public sealed class TunnelEditorView : UserControl, IView
 
         // The peers card is hosted in the pane's second column; its action sits in
         // the card header, where the peers are.
-        var addPeer = new Button { Content = "Add peer", Classes = { "flat" }, VerticalAlignment = VerticalAlignment.Center };
+        var addPeer = new Button { Content = "Add peer", VerticalAlignment = VerticalAlignment.Center };
         addPeer.Click += (_, _) => PeerAddRequested?.Invoke();
         var peersHeading = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
         var peersTitle = new TextBlock { Text = "Peers", Classes = { "heading" }, VerticalAlignment = VerticalAlignment.Center };

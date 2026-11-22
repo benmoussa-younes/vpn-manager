@@ -174,7 +174,15 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
 
     private void ApplySummaries(IReadOnlyList<TunnelSummary> summaries)
     {
+        var previous = _lastSummaries;
         _lastSummaries = summaries;
+
+        // A state change seen outside an operation is the operator's link moving:
+        // the window is not the place to announce it.
+        if (previous is not null && _operationsInFlight == 0)
+        {
+            NotifyTransitions(previous, summaries);
+        }
 
         if (_selectedName is not null && !summaries.Any(summary => string.Equals(summary.Name, _selectedName, StringComparison.Ordinal)))
         {
@@ -319,11 +327,6 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
         }
 
         View.ShowTunnelTransfers(transfers);
-
-        if (_selectedName is not null && transfers.TryGetValue(_selectedName, out var selected))
-        {
-            View.ShowTransfer(selected);
-        }
     }
 
     private IEnumerable<string> TunnelNames()
@@ -546,7 +549,7 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
         }
 
         var saved = await Task.Run(() => session.IsNew ? _service.Create(configuration) : _service.Update(configuration)).ConfigureAwait(true);
-        if (!saved.TryGetValue(out var writtenPath))
+        if (!saved.TryGetValue(out _))
         {
             View.SetEditorError(EditorField.FromErrorCode(saved.Error.Code), saved.Error.Message);
             return;
@@ -556,7 +559,7 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
         _selectedName = configuration.Name;
         View.HideEditor();
         View.SetError(null);
-        View.ShowToast($"Saved {writtenPath}.");
+        View.ShowToast("Profile saved.");
         Journal($"saved {configuration.Name}");
         await RefreshAsync().ConfigureAwait(true);
         await SelectAsync(configuration.Name).ConfigureAwait(true);
@@ -622,7 +625,7 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
         }
 
         View.SetError(null);
-        Journal($"policy {input.Name}");
+        Journal($"policy {input.Name} dns={input.DnsMode} reconnect={input.AutoReconnect}");
     }
 
     /// <summary>Adds an empty peer row to the open editor.</summary>
@@ -701,14 +704,14 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
     public async Task DeleteAsync(string name)
     {
         var deleted = await Task.Run(() => _service.DeleteAsync(name)).ConfigureAwait(true);
-        if (!deleted.TryGetValue(out var path))
+        if (!deleted.TryGetValue(out _))
         {
             View.SetError(deleted.Error.Message);
             return;
         }
 
         View.SetError(null);
-        View.ShowToast($"Deleted {path}.");
+        View.ShowToast("Profile deleted.");
         Journal($"deleted {name}");
         await RefreshAsync().ConfigureAwait(true);
     }
@@ -734,7 +737,6 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
         View.SetError(null);
         View.ShowToast(string.Concat("Tunnel '", value, "' is connected.", dnsNote, warning));
         Journal($"connected {value}");
-        await NotifyAsync("VPN connected", string.Concat("'", value, "' is connected.", dnsNote, warning)).ConfigureAwait(true);
         await RefreshAsync().ConfigureAwait(true);
     }
 
@@ -772,15 +774,51 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
         View.SetError(null);
         View.ShowToast($"Tunnel '{value}' is disconnected.");
         Journal($"disconnected {value}");
-        await NotifyAsync("VPN disconnected", $"'{value}' is disconnected.").ConfigureAwait(true);
         await RefreshAsync().ConfigureAwait(true);
+    }
+
+    private void NotifyTransitions(IReadOnlyList<TunnelSummary> previous, IReadOnlyList<TunnelSummary> current)
+    {
+        foreach (var row in current)
+        {
+            if (row.Source != TunnelSource.Configuration)
+            {
+                continue;
+            }
+
+            var before = previous.FirstOrDefault(candidate => string.Equals(candidate.Name, row.Name, StringComparison.Ordinal));
+            if (before is null || before.Source != TunnelSource.Configuration || before.State == row.State)
+            {
+                continue;
+            }
+
+            if (before.State == TunnelState.Up && row.State == TunnelState.Down)
+            {
+                Journal($"noticed {row.Name} went down");
+                _ = NotifyAsync("VPN connection lost", $"'{row.Name}' went down.");
+            }
+            else if (before.State == TunnelState.Down && row.State == TunnelState.Up)
+            {
+                Journal($"noticed {row.Name} is back up");
+                _ = NotifyAsync("VPN reconnected", $"'{row.Name}' is back up.");
+            }
+        }
     }
 
     private async Task NotifyAsync(string title, string body)
     {
-        if (_notifier is not null)
+        if (_notifier is null)
+        {
+            return;
+        }
+
+        try
         {
             await _notifier.NotifyAsync(title, body).ConfigureAwait(true);
+        }
+        catch (Exception)
+        {
+            // A desktop notification is best effort; the list already shows the state.
         }
     }
 
@@ -825,7 +863,7 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
 
         var name = Path.GetFileNameWithoutExtension(sourcePath);
         var imported = await Task.Run(() => _service.Import(name, sourcePath)).ConfigureAwait(true);
-        if (!imported.TryGetValue(out var written))
+        if (!imported.TryGetValue(out _))
         {
             View.SetError(imported.Error.Message);
             return;
@@ -833,7 +871,7 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
 
         _selectedName = name;
         View.SetError(null);
-        View.ShowToast($"Imported '{sourcePath}' as {written}.");
+        View.ShowToast($"Imported as '{name}'.");
         Journal($"imported {name}");
         await RefreshAsync().ConfigureAwait(true);
     }
@@ -852,14 +890,14 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
         }
 
         var exported = await Task.Run(() => _service.Export(_selectedName, destinationPath)).ConfigureAwait(true);
-        if (!exported.TryGetValue(out var written))
+        if (!exported.TryGetValue(out _))
         {
             View.SetError(exported.Error.Message);
             return;
         }
 
         View.SetError(null);
-        View.ShowToast($"Exported '{_selectedName}' to {written}.");
+        View.ShowToast($"Exported '{_selectedName}'.");
         Journal($"exported {_selectedName}");
     }
 

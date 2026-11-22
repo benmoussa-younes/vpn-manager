@@ -61,7 +61,7 @@ public sealed class CoreAuditTests
     }
 
     [Fact]
-    public async Task A_successful_delete_is_reported_as_a_toast()
+    public async Task A_successful_delete_is_reported_as_a_toast_without_a_path()
     {
         var store = new FakeWireGuardConfigStore();
         store.Files["wg0"] = TestData.SampleConfigText;
@@ -71,7 +71,9 @@ public sealed class CoreAuditTests
 
         await presenter.DeleteAsync("wg0");
 
-        Assert.Contains(view.Toasts, toast => toast.StartsWith("Deleted", StringComparison.Ordinal));
+        var toast = Assert.Single(view.Toasts);
+        Assert.Equal("Profile deleted.", toast);
+        Assert.DoesNotContain("/", toast, StringComparison.Ordinal);
     }
 
     [Fact]

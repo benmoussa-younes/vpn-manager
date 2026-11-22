@@ -70,10 +70,6 @@ public interface ITunnelListView : IView
     /// <param name="selectedName">The tunnel to keep selected, or <see langword="null"/>.</param>
     void ShowTunnels(IReadOnlyList<TunnelListItem> tunnels, string? selectedName);
 
-    /// <summary>Replaces the real-time transfer of the selected tunnel (the detail page).</summary>
-    /// <param name="transfer">The formatted rates and totals.</param>
-    void ShowTransfer(TransferView transfer);
-
     /// <summary>
     /// Replaces the real-time rate shown on each tunnel row of the master list.
     /// </summary>

@@ -3,7 +3,6 @@ using VpnManager.Core.Model;
 using VpnManager.Core.NetworkManager;
 using VpnManager.Core.Notifications;
 using VpnManager.Core.Presentation;
-using VpnManager.Core.Process;
 using VpnManager.Core.Runtime;
 using VpnManager.Core.Services;
 using VpnManager.Core.State;
@@ -231,7 +230,7 @@ public sealed class ConnectAndNotifyTests
     }
 
     [Fact]
-    public async Task The_presenter_notifies_the_desktop_when_connecting()
+    public async Task An_operator_connect_shows_a_toast_only()
     {
         var view = new FakeTunnelView();
         var store = new FakeWireGuardConfigStore();
@@ -245,12 +244,12 @@ public sealed class ConnectAndNotifyTests
         await (presenter.PendingOperation ?? Task.CompletedTask);
 
         Assert.Null(view.Error);
-        var notification = Assert.Single(notifier.Notifications);
-        Assert.Contains("connected", notification.Title, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(notifier.Notifications);
+        Assert.Contains(view.Toasts, toast => toast.Contains("connected", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
-    public async Task The_presenter_notifies_the_desktop_when_disconnecting()
+    public async Task An_operator_disconnect_shows_a_toast_only()
     {
         var view = new FakeTunnelView();
         var store = new FakeWireGuardConfigStore();
@@ -266,31 +265,8 @@ public sealed class ConnectAndNotifyTests
         await (presenter.PendingOperation ?? Task.CompletedTask);
 
         Assert.Null(view.Error);
-        var notification = Assert.Single(notifier.Notifications);
-        Assert.Contains("disconnected", notification.Title, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task The_notify_send_notifier_labels_the_notification()
-    {
-        var runner = new FakeProcessRunner(_ => ProcessResult.Completed(0, string.Empty, string.Empty));
-        var notifier = new NotifySendNotifier(runner);
-
-        await notifier.NotifyAsync("VPN connected", "'wg0' is connected.");
-
-        var request = Assert.Single(runner.Requests);
-        Assert.Equal("notify-send", request.FileName);
-        Assert.Contains("VPN Manager", request.Arguments);
-        Assert.Contains("VPN connected", request.Arguments);
-        Assert.Contains("'wg0' is connected.", request.Arguments);
-    }
-
-    [Fact]
-    public async Task A_missing_notify_send_is_swallowed()
-    {
-        var notifier = new NotifySendNotifier(FakeProcessRunner.NotStarted());
-
-        await notifier.NotifyAsync("VPN connected", "'wg0' is connected.");
+        Assert.Empty(notifier.Notifications);
+        Assert.Contains(view.Toasts, toast => toast.Contains("disconnected", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -319,15 +295,14 @@ public sealed class ConnectAndNotifyTests
         await presenter.SelectAsync("wg0");
         presenter.PollTransfer();
 
-        Assert.NotNull(view.Transfer);
-        Assert.Equal("0 B/s", view.Transfer!.DownloadRate);
+        Assert.Equal("0 B/s", view.TunnelTransfers["wg0"].DownloadRate);
 
         clock.Advance(TimeSpan.FromSeconds(2));
         reader.Counters["wg0"] = new NetworkCounters(3_000_000, 2_000_000);
         presenter.PollTransfer();
 
-        Assert.NotEqual("0 B/s", view.Transfer!.DownloadRate);
-        Assert.Equal("0 B/s", view.Transfer.UploadRate);
+        Assert.NotEqual("0 B/s", view.TunnelTransfers["wg0"].DownloadRate);
+        Assert.Equal("0 B/s", view.TunnelTransfers["wg0"].UploadRate);
     }
 
     private static TunnelService Build(

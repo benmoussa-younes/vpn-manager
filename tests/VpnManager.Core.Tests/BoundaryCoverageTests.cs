@@ -1,6 +1,5 @@
 using VpnManager.Core.Logging;
 using VpnManager.Core.NetworkManager;
-using VpnManager.Core.Notifications;
 using VpnManager.Core.Process;
 using VpnManager.Core.Tests.Fakes;
 
@@ -20,14 +19,6 @@ public sealed class BoundaryCoverageTests
             .RunAsync(new ProcessRequest("/nonexistent/wgm-no-such-binary", []));
 
         Assert.False(result.Started);
-    }
-
-    [Fact]
-    public async Task A_notifier_swallows_a_process_that_throws()
-    {
-        var notifier = new NotifySendNotifier(new FakeProcessRunner(_ => throw new IOException("no notification daemon")));
-
-        await notifier.NotifyAsync("VPN connected", "'wg0' is connected.");
     }
 
     [Fact]

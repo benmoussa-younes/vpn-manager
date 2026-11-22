@@ -58,6 +58,14 @@ public sealed class ShellWindowTests
     }
 
     [Fact]
+    public void TheApplicationMenuKeepsOnlyTheFileActions()
+    {
+        var ids = ShellWindow.ApplicationMenu(readOnly: false).Commands.Select(command => command.Id).ToArray();
+
+        Assert.Equal(["paste", "import", "export", "backup", "restore"], ids);
+    }
+
+    [Fact]
     public void ASessionEndMarksTheWatcherWithoutABus()
     {
         using var watcher = new SessionEndWatcher();

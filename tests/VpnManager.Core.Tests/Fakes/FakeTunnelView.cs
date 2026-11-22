@@ -26,8 +26,6 @@ internal sealed class FakeTunnelView : ITunnelListView
     internal string? SelectedName { get; private set; }
 
     /// <summary>The last real-time transfer shown.</summary>
-    internal TransferView? Transfer { get; private set; }
-
     /// <summary>The last editor snapshot shown.</summary>
     internal EditorSnapshot? Editor { get; private set; }
 
@@ -215,8 +213,6 @@ internal sealed class FakeTunnelView : ITunnelListView
             }
         }
     }
-
-    public void ShowTransfer(TransferView transfer) => Transfer = transfer;
 
     public void ShowTunnelTransfers(IReadOnlyDictionary<string, TransferView> transfers) => TunnelTransfers = transfers;
 

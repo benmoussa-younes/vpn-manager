@@ -103,7 +103,7 @@ internal sealed class ShellWindow : IAsyncDisposable
         _content.StateBackupRequested += path => Report(root.StateStore.Export(path));
         _content.StateRestoreRequested += RestoreState;
 
-        Window.SetApplicationMenu(BuildApplicationMenu(readOnly));
+        Window.SetApplicationMenu(ApplicationMenu(readOnly));
         Window.SetAbout(BuildAbout());
         Window.SetAppearance(_appearance);
         Window.CommandInvoked += (_, id) => _content.HandleCommand(id);
@@ -283,7 +283,7 @@ internal sealed class ShellWindow : IAsyncDisposable
     {
         if (result.IsSuccess)
         {
-            _content.ShowToast($"State written to {result.Value}.");
+            _content.ShowToast("State backed up.");
             return;
         }
 
@@ -315,11 +315,8 @@ internal sealed class ShellWindow : IAsyncDisposable
         _content.SetError(saved.Error.Message);
     }
 
-    private static CommandSet BuildApplicationMenu(bool readOnly) => new(
+    internal static CommandSet ApplicationMenu(bool readOnly) => new(
     [
-        new AppCommand("new", "New tunnel\u2026", Shortcut: "Ctrl+N", IsEnabled: !readOnly, Group: "tunnel"),
-        new AppCommand("delete", "Delete tunnel", Shortcut: "Delete", IsEnabled: !readOnly, Group: "tunnel"),
-        new AppCommand("refresh", "Refresh", Shortcut: "Ctrl+R", Group: "view"),
         new AppCommand("paste", "Paste profile\u2026", IsEnabled: !readOnly, Group: "import"),
         new AppCommand("import", "Import\u2026", IsEnabled: !readOnly, Group: "import"),
         new AppCommand("export", "Export\u2026", Group: "import"),

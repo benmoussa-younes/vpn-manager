@@ -7,6 +7,7 @@ using VpnManager.Core.Runtime;
 using VpnManager.Core.Services;
 using VpnManager.Core.State;
 using VpnManager.Core.Process;
+using VpnManager.App.Notifications;
 using VpnManager.Core.Notifications;
 using VpnManager.App.State;
 using ProductOperationJournal = VpnManager.Core.State.IOperationJournal;
@@ -60,7 +61,9 @@ public sealed class CompositionRoot
         RoutingPrerequisite = new ProcRoutingPrerequisiteReader(FileSystem);
         NetworkManager = new NmcliNetworkManagerConnections(ProcessRunner);
         DnsState = new ResolvectlDnsStateReader(ProcessRunner);
-        Notifier = new CoreNotifierAdapter(host.Notifier);
+        // The network loss and reconnection feedback is a desktop notification:
+        // the operator is not looking at the window when the link moves.
+        Notifier = new DesktopNotifier(logger: Logger);
         Service = new TunnelService(
             Store,
             Runtime,

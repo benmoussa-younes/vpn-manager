@@ -43,6 +43,7 @@ public sealed class PeerEditorRow : UserControl
         _remove = new Button
         {
             Content = "Remove peer",
+            Classes = { "destructive" },
             HorizontalAlignment = HorizontalAlignment.Right,
         };
         _remove.Click += (_, _) => RemoveRequested?.Invoke();

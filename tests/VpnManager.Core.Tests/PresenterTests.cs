@@ -521,7 +521,7 @@ public sealed class EditorInputMapperTests
         Assert.Equal("0 B", transfer.DownloadTotal);
         Assert.Equal("0 B/s", transfer.UploadRate);
         Assert.Equal("0 B", transfer.UploadTotal);
-        Assert.Equal("0 B/s", view.Transfer!.DownloadRate);
+        Assert.Equal("0 B/s", view.TunnelTransfers["wg0"].DownloadRate);
     }
 
     [Fact]

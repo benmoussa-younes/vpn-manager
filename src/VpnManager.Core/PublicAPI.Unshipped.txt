@@ -213,9 +213,6 @@ VpnManager.Core.NetworkManager.NmcliNetworkManagerConnections.SetAutoConnectAsyn
 VpnManager.Core.NetworkManager.NmcliNetworkManagerConnections.SetConnectionIdAsync(string! connectionName, string! newConnectionName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Core.Results.Result<string!>>!
 VpnManager.Core.Notifications.INotifier
 VpnManager.Core.Notifications.INotifier.NotifyAsync(string! title, string! body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
-VpnManager.Core.Notifications.NotifySendNotifier
-VpnManager.Core.Notifications.NotifySendNotifier.NotifyAsync(string! title, string! body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
-VpnManager.Core.Notifications.NotifySendNotifier.NotifySendNotifier(VpnManager.Core.Process.IProcessRunner! runner) -> void
 VpnManager.Core.Presentation.EditorField
 VpnManager.Core.Presentation.EditorInput
 VpnManager.Core.Presentation.EditorInput.<Clone>$() -> VpnManager.Core.Presentation.EditorInput!
@@ -316,7 +313,6 @@ VpnManager.Core.Presentation.ITunnelListView.ShowEditor(VpnManager.Core.Presenta
 VpnManager.Core.Presentation.ITunnelListView.ShowPolicy(VpnManager.Core.Presentation.TunnelPolicySnapshot! snapshot) -> void
 VpnManager.Core.Presentation.ITunnelListView.ShowRename(VpnManager.Core.Presentation.TunnelRenameSnapshot! snapshot) -> void
 VpnManager.Core.Presentation.ITunnelListView.ShowToast(string! message) -> void
-VpnManager.Core.Presentation.ITunnelListView.ShowTransfer(VpnManager.Core.Presentation.TransferView! transfer) -> void
 VpnManager.Core.Presentation.ITunnelListView.ShowTunnelTransfers(System.Collections.Generic.IReadOnlyDictionary<string!, VpnManager.Core.Presentation.TransferView!>! transfers) -> void
 VpnManager.Core.Presentation.ITunnelListView.ShowTunnels(System.Collections.Generic.IReadOnlyList<VpnManager.Core.Presentation.TunnelListItem!>! tunnels, string? selectedName) -> void
 VpnManager.Core.Presentation.ITunnelListView.ShowWindow() -> void
