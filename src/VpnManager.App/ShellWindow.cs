@@ -63,8 +63,8 @@ internal sealed class ShellWindow : IAsyncDisposable
         Window = host.CreateWindow();
         Window.Title = TunnelListView.ProductTitle;
         Window.Icon = LoadIcon("avares://vpn-manager/Assets/app-icon.png");
-        Window.Width = 1100;
-        Window.Height = 720;
+        Window.Width = 1200;
+        Window.Height = 800;
         Window.MinWidth = 720;
         Window.MinHeight = 520;
         // There is no tray: closing really quits, and asks before disconnecting a
@@ -78,7 +78,7 @@ internal sealed class ShellWindow : IAsyncDisposable
             // First launch: let the shared placement code clamp the default size
             // to the work area instead of overflowing a small screen.
             Window.Opened += (_, _) =>
-                Window.ApplyPlacement(new WindowPlacement(0, 0, 1100, 720, false));
+                Window.ApplyPlacement(new WindowPlacement(0, 0, 1200, 800, false));
         }
 
         _content = new TunnelListView();

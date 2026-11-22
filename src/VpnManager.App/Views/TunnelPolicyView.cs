@@ -60,7 +60,6 @@ public sealed class TunnelPolicyView : UserControl, IView
         var column = new StackPanel
         {
             Spacing = 16,
-            Margin = new Thickness(24),
             Children =
             {
                 Card(
@@ -78,8 +77,7 @@ public sealed class TunnelPolicyView : UserControl, IView
             },
         };
 
-        column.MaxWidth = 720;
-        column.HorizontalAlignment = HorizontalAlignment.Center;
+        column.HorizontalAlignment = HorizontalAlignment.Stretch;
         Content = column;
 
         _reconnect.IsCheckedChanged += (_, _) => OnChanged();

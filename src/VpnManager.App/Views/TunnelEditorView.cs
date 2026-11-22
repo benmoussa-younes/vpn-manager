@@ -92,9 +92,17 @@ public sealed class TunnelEditorView : UserControl, IView
         options.Children.Add(_mtu);
         options.Children.Add(_table);
 
+        var generate = new Button { Content = "Generate", Classes = { "flat" }, VerticalAlignment = VerticalAlignment.Center };
+        generate.Click += (_, _) => KeyPairRequested?.Invoke();
+        ToolTip.SetTip(generate, "Generate a key pair and show its public key");
+        var keyRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8 };
+        keyRow.Children.Add(_privateKey);
+        Grid.SetColumn(generate, 1);
+        keyRow.Children.Add(generate);
+
         var identity = Card("Identity & keys",
             Row("Name", _name),
-            Row("Private key", _privateKey),
+            Row("Private key", keyRow),
             Row("Public key", _publicKey));
 
         var routing = Card("Interface & routing",
@@ -103,19 +111,28 @@ public sealed class TunnelEditorView : UserControl, IView
             Row("Options", options),
             Row("Routing", _routingMode));
 
-        var peers = Card("Peers", _peers);
+        // The peers card is hosted in the pane's second column; its action sits in
+        // the card header, where the peers are.
+        var addPeer = new Button { Content = "Add peer", Classes = { "flat" }, VerticalAlignment = VerticalAlignment.Center };
+        addPeer.Click += (_, _) => PeerAddRequested?.Invoke();
+        var peersHeading = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+        var peersTitle = new TextBlock { Text = "Peers", Classes = { "heading" }, VerticalAlignment = VerticalAlignment.Center };
+        Grid.SetColumn(peersTitle, 0);
+        Grid.SetColumn(addPeer, 1);
+        peersHeading.Children.Add(peersTitle);
+        peersHeading.Children.Add(addPeer);
+        PeersSection = Card(peersHeading, _peers);
 
         _column = new StackPanel
         {
             Spacing = 16,
-            Margin = new Thickness(24),
-            Children = { _error, identity, routing, peers },
+            Margin = new Thickness(0),
+            Children = { _error, identity, routing },
         };
 
-        // Embedded in the master-detail pane: the pane owns the scroll view, and
-        // the form keeps the same maximum width.
-        _column.MaxWidth = 720;
-        _column.HorizontalAlignment = HorizontalAlignment.Center;
+        // Embedded in the master-detail pane: the pane owns the scroll view and
+        // the column width, so the form must not re-centre itself.
+        _column.HorizontalAlignment = HorizontalAlignment.Stretch;
         Content = _column;
 
         _name.TextChanged += (_, _) => OnChanged();
@@ -139,6 +156,9 @@ public sealed class TunnelEditorView : UserControl, IView
 
     /// <summary>Raised when the operator asked to remove the peer row at the index.</summary>
     public event Action<int>? PeerRemoveRequested;
+
+    /// <summary>Gets the peers card, hosted in the pane's second column.</summary>
+    internal Control PeersSection { get; }
 
     /// <summary>Raised when a field changed, so the pane can mark the form dirty.</summary>
     public event Action? Changed;
@@ -393,19 +413,21 @@ public sealed class TunnelEditorView : UserControl, IView
         return box;
     }
 
-    private static Border Card(string heading, params Control[] rows)
+    private static Border Card(string heading, params Control[] rows) =>
+        Card(
+            new TextBlock
+            {
+                Text = heading,
+                Classes = { "heading" },
+            },
+            rows);
+
+    private static Border Card(Control heading, params Control[] rows)
     {
         var stack = new StackPanel
         {
             Spacing = 12,
-            Children =
-            {
-                new TextBlock
-                {
-                    Text = heading,
-                    Classes = { "heading" },
-                },
-            },
+            Children = { heading },
         };
 
         foreach (var row in rows)

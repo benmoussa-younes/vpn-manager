@@ -53,13 +53,14 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     private readonly Button _connect = new() { Classes = { "primary" }, Content = "Connect" };
     private readonly Button _save = new() { Classes = { "primary" }, Content = "Save" };
     private readonly Button _cancel = new() { Content = "Cancel" };
-    private readonly Button _addPeer = new() { Content = "Add peer" };
-    private readonly Button _generate = new() { Content = "Generate key pair" };
     private readonly Button _export = new() { Content = "Export" };
     private readonly Button _delete = new() { Classes = { "destructive" }, Content = "Delete" };
     private readonly Border _displayCard;
     private readonly ScrollViewer _pane;
     private readonly StackPanel _editActions;
+    private readonly Grid _columns;
+    private readonly StackPanel _rightColumn;
+    private bool _wideLayout = true;
     private readonly List<string> _rowNames = [];
     private readonly Dictionary<string, string> _tunnelStates = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (TextBlock Down, TextBlock Up)> _rowTransfers = new(StringComparer.Ordinal);
@@ -121,27 +122,42 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         _connect.Click += (_, _) => ToggleSelectedTunnel();
         _save.Click += (_, _) => _editor.HandleCommand("editor.save");
         _cancel.Click += (_, _) => _editor.HandleCommand("editor.cancel");
-        _addPeer.Click += (_, _) => _editor.HandleCommand("editor.addPeer");
-        _generate.Click += (_, _) => _editor.HandleCommand("editor.generate");
         _export.Click += (_, _) => HandleCommand("export");
         _delete.Click += (_, _) => HandleCommand("delete");
 
-        _editActions = new StackPanel
+        var footerLeft = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             Spacing = 6,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            Children = { _addPeer, _generate, _cancel, _save },
-        };
-        var ioActions = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 6,
-            HorizontalAlignment = HorizontalAlignment.Right,
             Children = { _export, _delete },
         };
+        var footerRight = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 6,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Children = { _cancel, _save },
+        };
+        var footer = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+        Grid.SetColumn(footerRight, 1);
+        footer.Children.Add(footerLeft);
+        footer.Children.Add(footerRight);
 
-        var header = new StackPanel
+        var footerRule = new Border
+        {
+            BorderThickness = new Thickness(0, 1, 0, 0),
+            Padding = new Thickness(0, 12, 0, 0),
+            Child = footer,
+        };
+        ThemeResources.Bind(footerRule, Border.BorderBrushProperty, "BorderBrush");
+        _editActions = new StackPanel { Children = { footerRule } };
+
+        var paneHeader = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
+            ColumnSpacing = 12,
+        };
+        var headerLeft = new StackPanel
         {
             Spacing = 6,
             Children =
@@ -156,50 +172,79 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
                 new StackPanel
                 {
                     Orientation = Orientation.Horizontal,
-                    Spacing = 10,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Children = { _paneDown, _paneUp, _connect },
+                    Spacing = 12,
+                    Children = { _paneDown, _paneUp },
                 },
             },
         };
+        _connect.VerticalAlignment = VerticalAlignment.Top;
+        Grid.SetColumn(_connect, 1);
+        paneHeader.Children.Add(headerLeft);
+        paneHeader.Children.Add(_connect);
+
+        // Column 0 edits the profile, column 1 manages its peers. The peer card is
+        // owned by the editor but hosted here, so each column keeps its own width.
+        var leftColumn = new StackPanel
+        {
+            Spacing = 16,
+            Children = { _displayCard, _editor, _policyView },
+        };
+        _rightColumn = new StackPanel
+        {
+            Spacing = 16,
+            Children = { _editor.PeersSection },
+        };
+        _columns = new Grid();
+        Grid.SetColumn(leftColumn, 0);
+        Grid.SetColumn(_rightColumn, 1);
+        _columns.Children.Add(leftColumn);
+        _columns.Children.Add(_rightColumn);
+        ApplyColumns(wide: true);
 
         var paneContent = new StackPanel
         {
             Spacing = 16,
             Margin = new Thickness(24),
-            Children = { header, _displayCard, _editor, _policyView, _editActions, ioActions },
+            Children = { paneHeader, _columns, _editActions },
         };
-        paneContent.MaxWidth = 760;
+        paneContent.MaxWidth = 1200;
         paneContent.HorizontalAlignment = HorizontalAlignment.Center;
         _pane = new ScrollViewer { Content = paneContent, IsVisible = false };
+        _pane.SizeChanged += (_, _) => UpdateColumns(_pane.Bounds.Width);
 
         var newButton = new Button { Content = "New", Classes = { "flat" } };
         newButton.Click += (_, _) => CreateRequested?.Invoke();
-        var importButton = new Button { Content = "Import\u2026", Classes = { "flat" } };
-        importButton.Click += (_, _) => HandleCommand("import");
         var refreshButton = new Button { Content = "Refresh", Classes = { "flat" } };
         refreshButton.Click += (_, _) => RefreshRequested?.Invoke();
 
         var sidebarActions = new StackPanel
         {
             Orientation = Orientation.Horizontal,
-            Spacing = 6,
-            Children = { newButton, importButton },
+            Spacing = 4,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Children = { newButton, refreshButton },
         };
-        var sidebarHeading = new TextBlock { Text = "Profiles", Classes = { "heading" } };
+        var sidebarHeading = new TextBlock
+        {
+            Text = "Profiles",
+            Classes = { "heading" },
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        var sidebarHeader = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+        Grid.SetColumn(sidebarHeading, 0);
+        Grid.SetColumn(sidebarActions, 1);
+        sidebarHeader.Children.Add(sidebarHeading);
+        sidebarHeader.Children.Add(sidebarActions);
+
         var sidebar = new Grid
         {
-            RowDefinitions = new RowDefinitions("Auto,Auto,*,Auto"),
+            RowDefinitions = new RowDefinitions("Auto,*"),
             RowSpacing = 8,
         };
-        Grid.SetRow(sidebarActions, 0);
-        Grid.SetRow(sidebarHeading, 1);
-        Grid.SetRow(_tunnelList, 2);
-        Grid.SetRow(refreshButton, 3);
-        sidebar.Children.Add(sidebarActions);
-        sidebar.Children.Add(sidebarHeading);
+        Grid.SetRow(sidebarHeader, 0);
+        Grid.SetRow(_tunnelList, 1);
+        sidebar.Children.Add(sidebarHeader);
         sidebar.Children.Add(_tunnelList);
-        sidebar.Children.Add(refreshButton);
 
         var separator = new Border { Width = 1 };
         ThemeResources.Bind(separator, Border.BackgroundProperty, "BorderBrush");
@@ -208,7 +253,7 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         paneHost.Children.Add(_pane);
         paneHost.Children.Add(_emptyState);
 
-        var root = new Grid { ColumnDefinitions = new ColumnDefinitions("264,1,*") };
+        var root = new Grid { ColumnDefinitions = new ColumnDefinitions("300,1,*") };
         Grid.SetColumn(sidebar, 0);
         Grid.SetColumn(separator, 1);
         Grid.SetColumn(paneHost, 2);
@@ -417,8 +462,7 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         _displayName.IsEnabled = !readOnly;
         _save.IsEnabled = !readOnly;
         _cancel.IsEnabled = !readOnly;
-        _addPeer.IsEnabled = !readOnly;
-        _generate.IsEnabled = !readOnly;
+        _editor.PeersSection.IsEnabled = !readOnly;
         _delete.IsEnabled = !readOnly;
         UpdatePaneHeader();
         Publish();
@@ -486,6 +530,7 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
             _displayCard.IsVisible = false;
             _policyView.IsVisible = false;
             _editActions.IsVisible = false;
+            _editor.PeersSection.IsVisible = false;
             _pane.IsVisible = false;
             _emptyState.IsVisible = true;
         }
@@ -543,6 +588,7 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         _displayCard.IsVisible = !editor.IsNew;
         _policyView.IsVisible = !editor.IsNew;
         _editActions.IsVisible = true;
+        _editor.PeersSection.IsVisible = true;
         MarkDirty(false);
         UpdatePaneHeader();
     }
@@ -565,6 +611,7 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         _displayCard.IsVisible = false;
         _policyView.IsVisible = false;
         _editActions.IsVisible = false;
+        _editor.PeersSection.IsVisible = false;
         MarkDirty(false);
 
         if (_selectedName is null)
@@ -711,19 +758,90 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         return border;
     }
 
+    private void UpdateColumns(double width)
+    {
+        var wide = width >= 720;
+        if (wide == _wideLayout)
+        {
+            return;
+        }
+
+        _wideLayout = wide;
+        ApplyColumns(wide);
+    }
+
+    private void ApplyColumns(bool wide)
+    {
+        if (wide)
+        {
+            _columns.ColumnDefinitions = new ColumnDefinitions("6*,5*");
+            _columns.RowDefinitions = new RowDefinitions("Auto");
+            _columns.ColumnSpacing = 24;
+            _columns.RowSpacing = 0;
+            Grid.SetColumn(_rightColumn, 1);
+            Grid.SetRow(_rightColumn, 0);
+            return;
+        }
+
+        _columns.ColumnDefinitions = new ColumnDefinitions("1*");
+        _columns.RowDefinitions = new RowDefinitions("Auto,Auto");
+        _columns.ColumnSpacing = 0;
+        _columns.RowSpacing = 16;
+        Grid.SetColumn(_rightColumn, 0);
+        Grid.SetRow(_rightColumn, 1);
+    }
+
     private Grid BuildTunnelRow(TunnelListItem tunnel)
     {
-        var identity = new StackPanel { Spacing = 2 };
-        identity.Children.Add(new TextBlock { Text = tunnel.ShownName, FontWeight = FontWeight.SemiBold });
-        identity.Children.Add(new TextBlock
+        var name = new TextBlock
+        {
+            Text = tunnel.ShownName,
+            FontWeight = FontWeight.SemiBold,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        var chip = new StatusChip();
+        chip.Show(tunnel.State);
+
+        var top = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+        Grid.SetColumn(name, 0);
+        Grid.SetColumn(chip, 1);
+        top.Children.Add(name);
+        top.Children.Add(chip);
+
+        var detail = new TextBlock
         {
             Text = string.Concat(tunnel.Configuration, " \u00b7 ", tunnel.Peers),
             Classes = { "muted" },
-        });
+            TextTrimming = TextTrimming.CharacterEllipsis,
+        };
 
+        var hasTransfer = _transfers.TryGetValue(tunnel.Name, out var transfer);
+        var down = new TextBlock
+        {
+            Text = string.Concat("\u2193 ", hasTransfer ? transfer!.DownloadRate : "0 B/s"),
+            Classes = { "muted" },
+            TextTrimming = TextTrimming.CharacterEllipsis,
+        };
+        var up = new TextBlock
+        {
+            Text = string.Concat("\u2191 ", hasTransfer ? transfer!.UploadRate : "0 B/s"),
+            Classes = { "muted" },
+            HorizontalAlignment = HorizontalAlignment.Right,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+        };
+        _rowTransfers[tunnel.Name] = (down, up);
+
+        var rates = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), ColumnSpacing = 8 };
+        Grid.SetColumn(down, 0);
+        Grid.SetColumn(up, 1);
+        rates.Children.Add(down);
+        rates.Children.Add(up);
+
+        var stack = new StackPanel { Spacing = 4, Children = { top, detail } };
         if (tunnel.Note is not null)
         {
-            identity.Children.Add(new TextBlock
+            stack.Children.Add(new TextBlock
             {
                 Text = tunnel.Note,
                 Classes = { "error" },
@@ -731,43 +849,12 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
             });
         }
 
-        var hasTransfer = _transfers.TryGetValue(tunnel.Name, out var transfer);
-        var down = new TextBlock
-        {
-            Text = string.Concat("\u2193 ", hasTransfer ? transfer!.DownloadRate : "0 B/s"),
-            Classes = { "muted" },
-        };
-        var up = new TextBlock
-        {
-            Text = string.Concat("\u2191 ", hasTransfer ? transfer!.UploadRate : "0 B/s"),
-            Classes = { "muted" },
-        };
-        _rowTransfers[tunnel.Name] = (down, up);
+        stack.Children.Add(rates);
 
-        var chip = new StatusChip();
-        chip.Show(tunnel.State);
-
-        // The state and the live rate sit together on the right; the identity stays on
-        // the left.
-        var state = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 12,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Center,
-            Children = { down, up, chip },
-        };
-
-        var row = new Grid
-        {
-            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-            VerticalAlignment = VerticalAlignment.Center,
-        };
+        // The outage note is part of the identity, above the rates: the two rate
+        // labels sit on the last line, so a changing value never reflows the row.
+        var row = new Grid { Children = { stack } };
         AutomationProperties.SetName(row, string.Concat(tunnel.ShownName, ", ", tunnel.State));
-        Grid.SetColumn(identity, 0);
-        Grid.SetColumn(state, 1);
-        row.Children.Add(identity);
-        row.Children.Add(state);
         return row;
     }
 

@@ -46,8 +46,8 @@ public sealed class ShellWindowTests
                 Assert.Equal("VPN Manager", shell.Window.Title);
                 Assert.Equal(CloseBehavior.Quit, shell.Window.CloseBehavior);
                 Assert.NotNull(shell.Window.Navigation.Active);
-                Assert.Equal(1100, shell.Window.Width);
-                Assert.Equal(720, shell.Window.Height);
+                Assert.Equal(1200, shell.Window.Width);
+                Assert.Equal(800, shell.Window.Height);
             });
         }
         finally
