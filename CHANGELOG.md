@@ -10,6 +10,12 @@ and this project adheres to
 
 ### Fixed
 
+- A state file written before the full-tunnel DNS mode was retired still loads:
+  the retired value reads as Profile instead of failing the document, which made
+  a policy change report "The state file exists but could not be read."
+- The new-tunnel pane uses the same wide surface as a selected profile (the
+  content cap was 1200 px, now 1600), so the fields are no longer short.
+- The destructive buttons keep a white label on the red fill in both themes.
 - A GNOME logout or shutdown no longer hangs: the session watcher answers the
   `QueryEndSession` request on the client object, closes on `EndSession` and
   `Stop`, and the process exits even when a disposal wedges.
@@ -30,7 +36,9 @@ and this project adheres to
 - The application menu keeps the file actions only (paste, import, export,
   backup, restore); New, Delete and Refresh live in the sidebar and the pane.
 - Network loss and automatic reconnection are desktop notifications, not
-  toasts; success toasts no longer print a filesystem path.
+  toasts; success toasts no longer print a filesystem path. A connectivity
+  change reported by NetworkManager while a tunnel is up also notifies, so a
+  network that goes down is visible even when the tunnel interface stays up.
 
 ## [0.1.0] - 2026-11-21
 

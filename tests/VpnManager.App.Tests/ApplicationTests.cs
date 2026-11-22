@@ -233,6 +233,51 @@ public sealed class ApplicationTests
     }
 
     [Fact]
+    public void AStateFileWithTheRetiredDnsModeStillLoads()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "vpn-manager-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        File.SetUnixFileMode(directory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        try
+        {
+            var path = Path.Combine(directory, "state.json");
+            File.WriteAllText(path, """
+                {
+                  "version": 2,
+                  "lastScope": null,
+                  "tunnels": [
+                    {
+                      "name": "wg0",
+                      "scope": "User",
+                      "source": "imported",
+                      "peerCount": 1,
+                      "listenPort": null,
+                      "updatedAt": "2026-11-22T14:22:31.9617714+00:00",
+                      "verified": false,
+                      "autoReconnect": true,
+                      "dnsMode": "FullTunnel",
+                      "dnsSearchDomains": []
+                    }
+                  ],
+                  "displayNames": { "wg0": "Proton" }
+                }
+                """);
+            File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+
+            var store = new JsonApplicationStateStore(path, new LinuxAtomicFileWriterFactory(), new LinuxFileSystemAdapter());
+            var loaded = store.Load();
+
+            Assert.True(loaded.IsSuccess, loaded.TryGetError(out var error) ? error.Message : string.Empty);
+            Assert.Equal(NetworkManagerDnsMode.Profile, loaded.Value.Tunnels[0].DnsMode);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task CompositionRootUsesTheHostPathsAndTheOperatorConfigDirectory()
     {
         var root = Path.Combine(Path.GetTempPath(), "vpn-manager-tests", Guid.NewGuid().ToString("N"));

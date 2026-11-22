@@ -197,7 +197,7 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
             Margin = new Thickness(24),
             Children = { paneHeader, _columns, _editActions },
         };
-        paneContent.MaxWidth = 1200;
+        paneContent.MaxWidth = 1600;
         paneContent.HorizontalAlignment = HorizontalAlignment.Center;
         _pane = new ScrollViewer { Content = paneContent, IsVisible = false };
         _pane.SizeChanged += (_, _) => UpdateColumns(_pane.Bounds.Width);

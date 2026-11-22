@@ -127,6 +127,73 @@ public sealed class TunnelStatePollingTests
         Assert.Empty(notifier.Notifications);
     }
 
+    [Fact]
+    public async Task The_poll_notifies_the_desktop_when_the_network_goes_down()
+    {
+        var (presenter, notifier, connectivity) = ConnectivityPresenter(connected: true);
+        await presenter.RefreshAsync();
+
+        connectivity.Connectivity = NetworkConnectivity.Full;
+        await presenter.PollStateAsync();
+        connectivity.Connectivity = NetworkConnectivity.None;
+        await presenter.PollStateAsync();
+
+        var notification = Assert.Single(notifier.Notifications);
+        Assert.Contains("lost", notification.Title, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task The_poll_notifies_the_desktop_when_the_network_comes_back()
+    {
+        var (presenter, notifier, connectivity) = ConnectivityPresenter(connected: true);
+        await presenter.RefreshAsync();
+
+        connectivity.Connectivity = NetworkConnectivity.Full;
+        await presenter.PollStateAsync();
+        connectivity.Connectivity = NetworkConnectivity.None;
+        await presenter.PollStateAsync();
+        connectivity.Connectivity = NetworkConnectivity.Full;
+        await presenter.PollStateAsync();
+
+        Assert.Equal(2, notifier.Notifications.Count);
+        Assert.Contains("restored", notifier.Notifications[1].Title, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task A_network_loss_without_a_connected_tunnel_does_not_notify()
+    {
+        var (presenter, notifier, connectivity) = ConnectivityPresenter(connected: false);
+        await presenter.RefreshAsync();
+
+        connectivity.Connectivity = NetworkConnectivity.Full;
+        await presenter.PollStateAsync();
+        connectivity.Connectivity = NetworkConnectivity.None;
+        await presenter.PollStateAsync();
+
+        Assert.Empty(notifier.Notifications);
+    }
+
+    private static (TunnelListPresenter Presenter, FakeNotifier Notifier, FakeConnectivityReader Connectivity) ConnectivityPresenter(bool connected)
+    {
+        var store = new FakeWireGuardConfigStore("/config");
+        store.Files["wg0"] = TestData.SampleConfigText;
+        var runtime = new FakeWireGuardRuntimeInspector();
+        if (connected)
+        {
+            runtime.InterfaceNames.Add("wg0");
+        }
+
+        var service = new TunnelService(store, runtime, TunnelScope.User, networkManager: new FakeNetworkManagerConnections(), networkManagerOwner: "alice");
+        var notifier = new FakeNotifier();
+        var connectivity = new FakeConnectivityReader();
+        var presenter = new TunnelListPresenter(
+            new FakeTunnelView(),
+            service,
+            notifier: notifier,
+            connectivity: connectivity);
+        return (presenter, notifier, connectivity);
+    }
+
     private static async Task<TunnelListPresenter> PresenterAsync(
         FakeTunnelView view,
         FakeNetworkManagerConnections networkManager,

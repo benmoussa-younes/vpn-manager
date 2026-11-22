@@ -93,7 +93,8 @@ internal sealed class ShellWindow : IAsyncDisposable
             physicalLink: root.PhysicalLink,
             routingPrerequisite: root.RoutingPrerequisite,
             notifier: root.Notifier,
-            journal: root.Journal);
+            journal: root.Journal,
+            connectivity: root.Connectivity);
 
         // Closing or quitting disconnects the VPN; a session that is ending never
         // shows that dialog.

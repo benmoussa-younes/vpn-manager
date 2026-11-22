@@ -3,6 +3,7 @@ using Core.Mvp.Presenters;
 using Core.Primitives;
 using VpnManager.Core.Configuration;
 using VpnManager.Core.Model;
+using VpnManager.Core.NetworkManager;
 using VpnManager.Core.Notifications;
 using VpnManager.Core.Runtime;
 using VpnManager.Core.Services;
@@ -49,6 +50,9 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
     private bool _linkKnown;
     private DateTimeOffset? _lastReconnectAt;
     private readonly Dictionary<string, TransferSample> _transferSamples = new(StringComparer.Ordinal);
+    private IConnectivityReader? _connectivity;
+    private NetworkConnectivity _lastConnectivity = NetworkConnectivity.Unknown;
+    private bool _connectivityKnown;
 
     /// <summary>Initializes the presenter and subscribes it to the view.</summary>
     /// <param name="view">The passive view.</param>
@@ -67,7 +71,8 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
         IPhysicalLinkReader? physicalLink = null,
         IRoutingPrerequisiteReader? routingPrerequisite = null,
         INotifier? notifier = null,
-        IOperationJournal? journal = null)
+        IOperationJournal? journal = null,
+        IConnectivityReader? connectivity = null)
         : base(view)
     {
         ArgumentNullException.ThrowIfNull(service);
@@ -78,6 +83,7 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
         _physicalLink = physicalLink;
         _routingPrerequisite = routingPrerequisite;
         _notifier = notifier;
+        _connectivity = connectivity;
         _journal = journal;
 
         view.RefreshRequested += () => RunGuarded(RefreshAsync);
@@ -162,6 +168,10 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
             // A quiet poll stays quiet: keep the screen and the last error.
             return false;
         }
+
+        // Connectivity can change while the tunnel rows do not (a full tunnel keeps
+        // its interface when the link is gone), so it is checked on every poll.
+        await CheckConnectivityAsync(CancellationToken.None).ConfigureAwait(true);
 
         if (_lastSummaries is not null && _lastSummaries.SequenceEqual(summaries))
         {
@@ -775,6 +785,51 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
         View.ShowToast($"Tunnel '{value}' is disconnected.");
         Journal($"disconnected {value}");
         await RefreshAsync().ConfigureAwait(true);
+    }
+
+    private async Task CheckConnectivityAsync(CancellationToken cancellationToken)
+    {
+        if (_connectivity is null || _operationsInFlight > 0)
+        {
+            return;
+        }
+
+        var current = await _connectivity.ReadAsync(cancellationToken).ConfigureAwait(true);
+        if (current == NetworkConnectivity.Unknown)
+        {
+            return;
+        }
+
+        var previous = _lastConnectivity;
+        if (!_connectivityKnown)
+        {
+            _connectivityKnown = true;
+            _lastConnectivity = current;
+            return;
+        }
+
+        if (current == previous)
+        {
+            return;
+        }
+
+        _lastConnectivity = current;
+        var tunnelUp = _lastSummaries?.Any(row => row.Source == TunnelSource.Configuration && row.State == TunnelState.Up) ?? false;
+        if (!tunnelUp)
+        {
+            return;
+        }
+
+        if (current == NetworkConnectivity.None)
+        {
+            Journal("noticed the network went down");
+            _ = NotifyAsync("Network connection lost", "The machine has no network connectivity.");
+        }
+        else if (previous == NetworkConnectivity.None && current == NetworkConnectivity.Full)
+        {
+            Journal("noticed the network is back");
+            _ = NotifyAsync("Network connection restored", "The machine is online again.");
+        }
     }
 
     private void NotifyTransitions(IReadOnlyList<TunnelSummary> previous, IReadOnlyList<TunnelSummary> current)

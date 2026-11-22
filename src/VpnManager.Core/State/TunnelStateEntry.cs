@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using VpnManager.Core.Model;
 using VpnManager.Core.NetworkManager;
 
@@ -45,6 +46,7 @@ public sealed record TunnelStateEntry
     /// was <c>3</c>) reads as <see cref="NetworkManagerDnsMode.Profile"/>, its
     /// historical behaviour, instead of failing the whole state load.
     /// </remarks>
+    [JsonConverter(typeof(NetworkManagerDnsModeJsonConverter))]
     public NetworkManagerDnsMode DnsMode
     {
         get => _dnsMode;

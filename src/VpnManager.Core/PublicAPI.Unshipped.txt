@@ -386,7 +386,7 @@ VpnManager.Core.Presentation.TunnelListPresenter.SelectAsync(string! name) -> Sy
 VpnManager.Core.Presentation.TunnelListPresenter.SelectedTunnel.get -> string?
 VpnManager.Core.Presentation.TunnelListPresenter.StartAsync(string! name) -> System.Threading.Tasks.Task!
 VpnManager.Core.Presentation.TunnelListPresenter.StopAsync(string! name) -> System.Threading.Tasks.Task!
-VpnManager.Core.Presentation.TunnelListPresenter.TunnelListPresenter(VpnManager.Core.Presentation.ITunnelListView! view, VpnManager.Core.Services.TunnelService! service, System.TimeProvider? timeProvider = null, VpnManager.Core.Runtime.INetworkCounterReader? counterReader = null, VpnManager.Core.Runtime.IPhysicalLinkReader? physicalLink = null, VpnManager.Core.Runtime.IRoutingPrerequisiteReader? routingPrerequisite = null, VpnManager.Core.Notifications.INotifier? notifier = null, VpnManager.Core.State.IOperationJournal? journal = null) -> void
+VpnManager.Core.Presentation.TunnelListPresenter.TunnelListPresenter(VpnManager.Core.Presentation.ITunnelListView! view, VpnManager.Core.Services.TunnelService! service, System.TimeProvider? timeProvider = null, VpnManager.Core.Runtime.INetworkCounterReader? counterReader = null, VpnManager.Core.Runtime.IPhysicalLinkReader? physicalLink = null, VpnManager.Core.Runtime.IRoutingPrerequisiteReader? routingPrerequisite = null, VpnManager.Core.Notifications.INotifier? notifier = null, VpnManager.Core.State.IOperationJournal? journal = null, VpnManager.Core.NetworkManager.IConnectivityReader? connectivity = null) -> void
 VpnManager.Core.Presentation.TunnelPolicyInput
 VpnManager.Core.Presentation.TunnelPolicyInput.<Clone>$() -> VpnManager.Core.Presentation.TunnelPolicyInput!
 VpnManager.Core.Presentation.TunnelPolicyInput.AutoReconnect.get -> bool
@@ -1010,3 +1010,19 @@ static VpnManager.Core.Validation.TunnelNameRules.IsValid(string? name) -> bool
 static VpnManager.Core.Validation.TunnelValidator.Validate(VpnManager.Core.Model.TunnelConfiguration! configuration) -> Core.Results.Result<VpnManager.Core.Model.TunnelConfiguration!>
 static VpnManager.Core.Validation.WireGuardKey.IsValid(string? value) -> bool
 static readonly VpnManager.Core.Model.SecretKey.Empty -> VpnManager.Core.Model.SecretKey!
+VpnManager.Core.State.NetworkManagerDnsModeJsonConverter
+VpnManager.Core.State.NetworkManagerDnsModeJsonConverter.NetworkManagerDnsModeJsonConverter() -> void
+override VpnManager.Core.State.NetworkManagerDnsModeJsonConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> VpnManager.Core.NetworkManager.NetworkManagerDnsMode
+override VpnManager.Core.State.NetworkManagerDnsModeJsonConverter.Write(System.Text.Json.Utf8JsonWriter! writer, VpnManager.Core.NetworkManager.NetworkManagerDnsMode value, System.Text.Json.JsonSerializerOptions! options) -> void
+VpnManager.Core.NetworkManager.IConnectivityReader
+VpnManager.Core.NetworkManager.IConnectivityReader.ReadAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<VpnManager.Core.NetworkManager.NetworkConnectivity>!
+VpnManager.Core.NetworkManager.NmcliConnectivityReader
+VpnManager.Core.NetworkManager.NmcliConnectivityReader.NmcliConnectivityReader(VpnManager.Core.Process.IProcessRunner! runner) -> void
+static VpnManager.Core.NetworkManager.NmcliConnectivityReader.Parse(string? output) -> VpnManager.Core.NetworkManager.NetworkConnectivity
+VpnManager.Core.NetworkManager.NmcliConnectivityReader.ReadAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<VpnManager.Core.NetworkManager.NetworkConnectivity>!
+VpnManager.Core.NetworkManager.NetworkConnectivity
+VpnManager.Core.NetworkManager.NetworkConnectivity.Full = 4 -> VpnManager.Core.NetworkManager.NetworkConnectivity
+VpnManager.Core.NetworkManager.NetworkConnectivity.Limited = 2 -> VpnManager.Core.NetworkManager.NetworkConnectivity
+VpnManager.Core.NetworkManager.NetworkConnectivity.None = 1 -> VpnManager.Core.NetworkManager.NetworkConnectivity
+VpnManager.Core.NetworkManager.NetworkConnectivity.Portal = 3 -> VpnManager.Core.NetworkManager.NetworkConnectivity
+VpnManager.Core.NetworkManager.NetworkConnectivity.Unknown = 0 -> VpnManager.Core.NetworkManager.NetworkConnectivity

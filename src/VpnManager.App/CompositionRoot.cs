@@ -61,6 +61,7 @@ public sealed class CompositionRoot
         RoutingPrerequisite = new ProcRoutingPrerequisiteReader(FileSystem);
         NetworkManager = new NmcliNetworkManagerConnections(ProcessRunner);
         DnsState = new ResolvectlDnsStateReader(ProcessRunner);
+        Connectivity = new NmcliConnectivityReader(ProcessRunner);
         // The network loss and reconnection feedback is a desktop notification:
         // the operator is not looking at the window when the link moves.
         Notifier = new DesktopNotifier(logger: Logger);
@@ -109,6 +110,9 @@ public sealed class CompositionRoot
 
     /// <summary>Gets the resolver-state reader.</summary>
     public IDnsStateReader DnsState { get; }
+
+    /// <summary>Gets the connectivity reader.</summary>
+    public IConnectivityReader Connectivity { get; }
 
     /// <summary>Gets the desktop notifier.</summary>
     public INotifier Notifier { get; }
