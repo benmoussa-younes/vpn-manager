@@ -69,7 +69,7 @@ public sealed class TunnelPolicyView : UserControl, IView
                     Row("Search domains", _search)),
                 new TextBlock
                 {
-                    Text = "Profile DNS uses the DNS servers written in the configuration. System DNS leaves the resolver untouched. Split DNS sends only the listed domains to the VPN. Full tunnel DNS sends every name to the VPN while it is up.",
+                    Text = "Profile DNS uses the DNS servers written in the configuration for every name. System DNS leaves the resolver untouched. Split DNS sends only the listed domains to the VPN.",
                     Classes = { "muted" },
                     TextWrapping = TextWrapping.Wrap,
                 },

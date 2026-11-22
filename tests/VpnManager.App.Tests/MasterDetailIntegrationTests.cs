@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
@@ -283,6 +284,34 @@ public sealed class MasterDetailIntegrationTests
                 Walk(content, texts);
                 break;
         }
+    }
+
+    [Fact]
+    public async Task ThePaneFillsTheWindowAndTheNewTunnelFormIsWide()
+    {
+        await HeadlessTestSession.RunAsync(() =>
+        {
+            var (view, presenter, _, _, _) = Build();
+            var window = new Window { Width = 1600, Height = 900, Content = view };
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+
+            presenter.BeginCreate();
+            Dispatcher.UIThread.RunJobs();
+            window.Measure(new Size(1600, 900));
+            window.Arrange(new Rect(0, 0, 1600, 900));
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.True(
+                view.OpenEditor!.Bounds.Width >= 620,
+                $"the form column is {view.OpenEditor.Bounds.Width} px wide");
+            Assert.True(
+                view.OpenEditor.PeersSection.Bounds.Width >= 500,
+                $"the peers column is {view.OpenEditor.PeersSection.Bounds.Width} px wide");
+
+            window.Close();
+            return Task.CompletedTask;
+        });
     }
 
     private static void Select(TunnelListView view, int index)

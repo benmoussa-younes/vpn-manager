@@ -70,15 +70,19 @@
         <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
         <Setter Property="BorderThickness" Value="1" />
     </Style>
+    <!--
+        The theme's DestructiveBrush is a pale salmon for text on a dark surface,
+        too light for a fill. A destructive action is a strong red with a white
+        label in both themes.
+    -->
     <Style Selector="Button.destructive">
-        <Setter Property="BorderBrush" Value="{DynamicResource DestructiveBrush}" />
+        <Setter Property="Background" Value="#B3261E" />
+        <Setter Property="BorderBrush" Value="#B3261E" />
         <Setter Property="BorderThickness" Value="1" />
-        <!-- Red fill, white label: the destructive action must read the same in
-             the light and the dark theme. -->
         <Setter Property="Foreground" Value="White" />
     </Style>
     <Style Selector="Button.destructive:pointerover">
-        <Setter Property="Background" Value="{DynamicResource DestructiveBrush}" />
+        <Setter Property="Background" Value="#B3261E" />
         <Setter Property="Opacity" Value="0.9" />
     </Style>
 

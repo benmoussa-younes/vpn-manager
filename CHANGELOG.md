@@ -13,9 +13,11 @@ and this project adheres to
 - A state file written before the full-tunnel DNS mode was retired still loads:
   the retired value reads as Profile instead of failing the document, which made
   a policy change report "The state file exists but could not be read."
-- The new-tunnel pane uses the same wide surface as a selected profile (the
-  content cap was 1200 px, now 1600), so the fields are no longer short.
-- The destructive buttons keep a white label on the red fill in both themes.
+- The pane fills the window instead of shrinking to its cards: the content
+  panel was centred, so the two columns collapsed to their desired width on a
+  new profile. The cap is 1600 px and the available width is used.
+- A destructive button is a strong red fill with a white label in both themes;
+  the theme token is a pale text colour, too light to fill a button.
 - A GNOME logout or shutdown no longer hangs: the session watcher answers the
   `QueryEndSession` request on the client object, closes on `EndSession` and
   `Stop`, and the process exits even when a disposal wedges.

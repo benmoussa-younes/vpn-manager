@@ -197,8 +197,11 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
             Margin = new Thickness(24),
             Children = { paneHeader, _columns, _editActions },
         };
+        // Stretch, not Centre: a centred panel measures with an infinite width,
+        // the star columns then collapse to the cards' desired width and the pane
+        // sits in the middle with empty sides. MaxWidth still caps a wide window.
         paneContent.MaxWidth = 1600;
-        paneContent.HorizontalAlignment = HorizontalAlignment.Center;
+        paneContent.HorizontalAlignment = HorizontalAlignment.Stretch;
         _pane = new ScrollViewer { Content = paneContent, IsVisible = false };
         _pane.SizeChanged += (_, _) => UpdateColumns(_pane.Bounds.Width);
 
