@@ -27,7 +27,7 @@ public sealed class NmcliConnectivityReader : IConnectivityReader
         try
         {
             var result = await _runner
-                .RunAsync(new ProcessRequest(Executable, ["-t", "-f", "CONNECTIVITY", "general"]), cancellationToken)
+                .RunAsync(new ProcessRequest(Executable, ["-t", "-f", "CONNECTIVITY,STATE", "general"]), cancellationToken)
                 .ConfigureAwait(false);
 
             return result.Started && result.ExitCode == 0 ? Parse(result.StandardOutput) : NetworkConnectivity.Unknown;
@@ -38,15 +38,35 @@ public sealed class NmcliConnectivityReader : IConnectivityReader
         }
     }
 
-    /// <summary>Parses the terse output of <c>nmcli general connectivity</c>.</summary>
-    /// <param name="output">The captured output.</param>
-    /// <returns>The state; an empty or unknown word reads as <see cref="NetworkConnectivity.Unknown"/>.</returns>
-    public static NetworkConnectivity Parse(string? output) => output?.Trim().ToLowerInvariant() switch
+    /// <summary>Parses the terse output of <c>nmcli -f CONNECTIVITY,STATE general</c>.</summary>
+    /// <param name="output">The captured output, for example <c>full:connected</c>.</param>
+    /// <returns>
+    /// The state. A daemon that is asleep, disconnecting or disconnected has no
+    /// network whatever the last connectivity check says; an empty or unknown word
+    /// reads as <see cref="NetworkConnectivity.Unknown"/>.
+    /// </returns>
+    public static NetworkConnectivity Parse(string? output)
     {
-        "full" => NetworkConnectivity.Full,
-        "limited" => NetworkConnectivity.Limited,
-        "portal" => NetworkConnectivity.Portal,
-        "none" => NetworkConnectivity.None,
-        _ => NetworkConnectivity.Unknown,
-    };
+        var text = output?.Trim();
+        if (string.IsNullOrEmpty(text))
+        {
+            return NetworkConnectivity.Unknown;
+        }
+
+        var fields = text.Split(':');
+        var connectivity = fields[0].Trim().ToLowerInvariant();
+        if (fields.Length > 1 && fields[1].Trim().ToLowerInvariant() is "asleep" or "disconnected" or "disconnecting")
+        {
+            return NetworkConnectivity.None;
+        }
+
+        return connectivity switch
+        {
+            "full" => NetworkConnectivity.Full,
+            "limited" => NetworkConnectivity.Limited,
+            "portal" => NetworkConnectivity.Portal,
+            "none" => NetworkConnectivity.None,
+            _ => NetworkConnectivity.Unknown,
+        };
+    }
 }

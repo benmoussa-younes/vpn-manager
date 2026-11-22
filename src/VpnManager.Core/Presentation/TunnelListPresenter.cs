@@ -814,21 +814,21 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
         }
 
         _lastConnectivity = current;
+        Journal($"network connectivity {previous} -> {current}");
+
         var tunnelUp = _lastSummaries?.Any(row => row.Source == TunnelSource.Configuration && row.State == TunnelState.Up) ?? false;
         if (!tunnelUp)
         {
             return;
         }
 
-        if (current == NetworkConnectivity.None)
+        if (current is NetworkConnectivity.None or NetworkConnectivity.Limited)
         {
-            Journal("noticed the network went down");
-            _ = NotifyAsync("Network connection lost", "The machine has no network connectivity.");
+            await NotifyAsync("Network connection lost", "The machine cannot reach the internet.").ConfigureAwait(true);
         }
-        else if (previous == NetworkConnectivity.None && current == NetworkConnectivity.Full)
+        else if (previous is NetworkConnectivity.None or NetworkConnectivity.Limited && current == NetworkConnectivity.Full)
         {
-            Journal("noticed the network is back");
-            _ = NotifyAsync("Network connection restored", "The machine is online again.");
+            await NotifyAsync("Network connection restored", "The machine is online again.").ConfigureAwait(true);
         }
     }
 

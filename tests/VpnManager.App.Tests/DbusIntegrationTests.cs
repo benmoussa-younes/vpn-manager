@@ -224,6 +224,24 @@ public sealed class DbusIntegrationTests
         Assert.Equal(1, Volatile.Read(ref endings));
     }
 
+    [Fact]
+    public async Task TheStopSignalClosesTheClient()
+    {
+        Assert.SkipUnless(
+            Environment.GetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS") is { Length: > 0 },
+            "No session D-Bus address; run under dbus-run-session.");
+
+        using var manager = await FakeSessionManager.StartAsync();
+        using var watcher = new SessionEndWatcher(FakeSessionManager.ServiceName);
+        var closed = new TaskCompletionSource();
+        watcher.Ending += () => closed.TrySetResult();
+        await watcher.StartAsync();
+
+        await EmitAsync("Stop");
+
+        await closed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
     /// <summary>
     /// A minimal session manager on the session bus: it owns the well-known name,
     /// answers <c>RegisterClient</c> with a client object path, records the

@@ -287,6 +287,62 @@ public sealed class MasterDetailIntegrationTests
     }
 
     [Fact]
+    public async Task SelectingThenSwitchingProfilesDoesNotAskToSave()
+    {
+        await HeadlessTestSession.RunAsync(async () =>
+        {
+            var (view, presenter, store, _, host) = Build();
+            store.Files["wg1"] = AppTestData.SampleConfig;
+            var window = new Window { Width = 1400, Height = 800, Content = view };
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            await presenter.RefreshAsync();
+
+            var changes = 0;
+            view.OpenEditor!.Changed += () => changes++;
+            Select(view, 0);
+            await presenter.PendingOperation!;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(0, changes);
+            Assert.False(host.Snapshot!.IsDirty, "a fresh selection must not be dirty");
+
+            Select(view, 1);
+            Dispatcher.UIThread.RunJobs();
+            await (presenter.PendingOperation ?? Task.CompletedTask);
+            Assert.Equal(0, host.DialogsService.SavePrompts);
+
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public async Task ANarrowWindowStacksThePeersUnderTheForm()
+    {
+        await HeadlessTestSession.RunAsync(async () =>
+        {
+            var (view, presenter, _, _, _) = Build();
+            var window = new Window { Width = 720, Height = 700, Content = view };
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            await presenter.RefreshAsync();
+            Select(view, 0);
+            await presenter.PendingOperation!;
+            window.Measure(new Size(720, 700));
+            window.Arrange(new Rect(0, 0, 720, 700));
+            Dispatcher.UIThread.RunJobs();
+
+            var editor = view.OpenEditor!;
+            var formTop = editor.TranslatePoint(new Point(0, 0), view.DetailPane)!.Value;
+            var formBottom = formTop.Y + editor.Bounds.Height;
+            var peers = editor.PeersSection.TranslatePoint(new Point(0, 0), view.DetailPane)!.Value;
+
+            Assert.True(peers.Y >= formBottom, $"peers start at {peers.Y}, the form ends at {formBottom}");
+
+            window.Close();
+        });
+    }
+
+    [Fact]
     public async Task ThePaneFillsTheWindowAndTheNewTunnelFormIsWide()
     {
         await HeadlessTestSession.RunAsync(() =>

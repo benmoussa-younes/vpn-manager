@@ -29,6 +29,8 @@ public sealed class TunnelPolicyView : UserControl, IView
     private readonly TextBox _search;
     private string _name = string.Empty;
     private bool _loading;
+    private bool _loadedReconnect;
+    private int _loadedMode = (int)NetworkManagerDnsMode.Profile;
 
     /// <summary>Initializes the policy page.</summary>
     public TunnelPolicyView()
@@ -79,10 +81,26 @@ public sealed class TunnelPolicyView : UserControl, IView
         column.HorizontalAlignment = HorizontalAlignment.Stretch;
         Content = column;
 
-        _reconnect.IsCheckedChanged += (_, _) => OnChanged();
+        _reconnect.IsCheckedChanged += (_, _) =>
+        {
+            if (_loading || _reconnect.IsChecked == _loadedReconnect)
+            {
+                return;
+            }
+
+            OnChanged();
+        };
         _mode.SelectionChanged += (_, _) =>
         {
             UpdateSearchEnabled();
+
+            // The selector can commit the value loaded from the snapshot after
+            // Load has returned; that must not look like a policy change.
+            if (_loading || _mode.SelectedIndex == _loadedMode)
+            {
+                return;
+            }
+
             OnChanged();
         };
         _search.LostFocus += (_, _) => OnChanged();
@@ -129,8 +147,10 @@ public sealed class TunnelPolicyView : UserControl, IView
         {
             _name = snapshot.Name;
             _tunnel.Text = snapshot.Name;
-            _reconnect.IsChecked = snapshot.AutoReconnect;
-            _mode.SelectedIndex = (int)snapshot.DnsMode;
+            _loadedReconnect = snapshot.AutoReconnect;
+            _reconnect.IsChecked = _loadedReconnect;
+            _loadedMode = (int)snapshot.DnsMode;
+            _mode.SelectedIndex = _loadedMode;
             _search.Text = string.Join(", ", snapshot.SearchDomains);
             UpdateSearchEnabled();
         }

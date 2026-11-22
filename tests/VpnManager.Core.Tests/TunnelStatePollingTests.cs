@@ -173,7 +173,39 @@ public sealed class TunnelStatePollingTests
         Assert.Empty(notifier.Notifications);
     }
 
-    private static (TunnelListPresenter Presenter, FakeNotifier Notifier, FakeConnectivityReader Connectivity) ConnectivityPresenter(bool connected)
+    [Fact]
+    public async Task The_poll_treats_a_limited_connection_as_lost()
+    {
+        var (presenter, notifier, connectivity) = ConnectivityPresenter(connected: true);
+        await presenter.RefreshAsync();
+
+        connectivity.Connectivity = NetworkConnectivity.Full;
+        await presenter.PollStateAsync();
+        connectivity.Connectivity = NetworkConnectivity.Limited;
+        await presenter.PollStateAsync();
+
+        Assert.Single(notifier.Notifications);
+        Assert.Contains("lost", notifier.Notifications[0].Title, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task The_poll_survives_a_failing_desktop_notifier()
+    {
+        var (presenter, _, connectivity) = ConnectivityPresenter(connected: true, notifier: new ThrowingNotifier());
+        await presenter.RefreshAsync();
+
+        connectivity.Connectivity = NetworkConnectivity.Full;
+        await presenter.PollStateAsync();
+        connectivity.Connectivity = NetworkConnectivity.None;
+
+        // NotifyAsync swallows a failing notifier; without the guard the poll
+        // would surface the failure to its caller.
+        await presenter.PollStateAsync();
+    }
+
+    private static (TunnelListPresenter Presenter, FakeNotifier Notifier, FakeConnectivityReader Connectivity) ConnectivityPresenter(
+        bool connected,
+        INotifier? notifier = null)
     {
         var store = new FakeWireGuardConfigStore("/config");
         store.Files["wg0"] = TestData.SampleConfigText;
@@ -184,14 +216,14 @@ public sealed class TunnelStatePollingTests
         }
 
         var service = new TunnelService(store, runtime, TunnelScope.User, networkManager: new FakeNetworkManagerConnections(), networkManagerOwner: "alice");
-        var notifier = new FakeNotifier();
+        var receiver = notifier as FakeNotifier ?? new FakeNotifier();
         var connectivity = new FakeConnectivityReader();
         var presenter = new TunnelListPresenter(
             new FakeTunnelView(),
             service,
-            notifier: notifier,
+            notifier: (INotifier?)notifier ?? receiver,
             connectivity: connectivity);
-        return (presenter, notifier, connectivity);
+        return (presenter, receiver, connectivity);
     }
 
     private static async Task<TunnelListPresenter> PresenterAsync(
@@ -210,4 +242,12 @@ public sealed class TunnelStatePollingTests
         await presenter.RefreshAsync();
         return presenter;
     }
+}
+
+/// <summary>A notifier that fails like a desktop with no notification daemon.</summary>
+internal sealed class ThrowingNotifier : INotifier
+{
+    /// <inheritdoc />
+    public Task NotifyAsync(string title, string body, CancellationToken cancellationToken = default) =>
+        throw new IOException("no notification daemon");
 }

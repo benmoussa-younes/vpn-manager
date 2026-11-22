@@ -10,6 +10,13 @@ and this project adheres to
 
 ### Fixed
 
+- Selecting a profile no longer marks it dirty: Avalonia raises `TextChanged`
+  through the dispatcher, after the presenter has loaded the fields, so the
+  filled values looked like operator edits and switching profile asked to save.
+  The editor compares a fingerprint of its values with the loaded one.
+- A network that goes down is reported even when NetworkManager says
+  `limited` or the daemon is asleep/disconnected, and every connectivity change
+  is journalled with its value so a missing notification can be diagnosed.
 - A state file written before the full-tunnel DNS mode was retired still loads:
   the retired value reads as Profile instead of failing the document, which made
   a policy change report "The state file exists but could not be read."

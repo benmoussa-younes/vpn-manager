@@ -1,6 +1,7 @@
 using Avalonia.Automation;
 using Core.Mvp.Presentation;
 using VpnManager.App.Tests.Fakes;
+using VpnManager.App.Controls;
 using VpnManager.App.Views;
 using VpnManager.Core.Model;
 using VpnManager.Core.Presentation;
@@ -9,6 +10,17 @@ namespace VpnManager.App.Tests;
 
 public sealed class ViewTests
 {
+    [Fact]
+    public async Task TheRemovePeerButtonIsDestructive()
+    {
+        await HeadlessTestSession.RunAsync(() =>
+        {
+            var row = new PeerEditorRow();
+
+            Assert.Contains("destructive", row.RemoveButton.Classes);
+        });
+    }
+
     [Fact]
     public async Task TheEditorNeverShowsAStoredPrivateKey()
     {

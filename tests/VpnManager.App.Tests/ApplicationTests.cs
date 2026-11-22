@@ -54,6 +54,15 @@ public sealed class ApplicationTests
     }
 
     [Fact]
+    public void TheRetiredDnsModeIsRefusedByTheCli()
+    {
+        var options = CliOptions.Parse(["--policy", "wg0", "--dns-mode", "full"]);
+
+        Assert.NotNull(options.Error);
+        Assert.Contains("profile, system or split", options.Error, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AnEmptyDnsSearchValueMeansClearTheStoredList()
     {
         var options = CliOptions.Parse(["--policy", "wg0", "--dns-search", string.Empty]);

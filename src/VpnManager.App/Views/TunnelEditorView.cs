@@ -41,6 +41,8 @@ public sealed class TunnelEditorView : UserControl, IView
     private TextBox? _invalid;
     private string _title = string.Empty;
     private bool _loading;
+    private int _loadedRoutingMode;
+    private string _loadedFingerprint = string.Empty;
 
     /// <summary>Initializes the editor page and wires its controls to semantic events.</summary>
     public TunnelEditorView()
@@ -142,7 +144,17 @@ public sealed class TunnelEditorView : UserControl, IView
         _listenPort.TextChanged += (_, _) => OnChanged();
         _mtu.TextChanged += (_, _) => OnChanged();
         _table.TextChanged += (_, _) => OnChanged();
-        _routingMode.SelectionChanged += (_, _) => OnChanged();
+        _routingMode.SelectionChanged += (_, _) =>
+        {
+            // The selector can commit the value loaded from the snapshot after
+            // Load has returned; that is not an operator edit.
+            if (_loading || _routingMode.SelectedIndex == _loadedRoutingMode)
+            {
+                return;
+            }
+
+            OnChanged();
+        };
     }
 
     /// <summary>Raised when the operator asked to save the editor.</summary>
@@ -220,7 +232,8 @@ public sealed class TunnelEditorView : UserControl, IView
             _listenPort.Text = editor.ListenPort;
             _mtu.Text = editor.Mtu;
             _table.Text = editor.Table;
-            _routingMode.SelectedIndex = editor.RoutingMode == TunnelRoutingMode.Full ? 1 : 0;
+            _loadedRoutingMode = editor.RoutingMode == TunnelRoutingMode.Full ? 1 : 0;
+            _routingMode.SelectedIndex = _loadedRoutingMode;
             _errorText.Text = string.Empty;
             _error.IsVisible = false;
             ClearInvalid();
@@ -239,16 +252,48 @@ public sealed class TunnelEditorView : UserControl, IView
             _loading = false;
         }
 
+        // Avalonia raises TextChanged through the dispatcher, after the load has
+        // returned: a field the presenter filled would otherwise look like an
+        // operator edit and turn the header dot on. The fingerprint is the guard.
+        _loadedFingerprint = Fingerprint(ReadInput());
         _name.Focus();
     }
 
     private void OnChanged()
     {
-        if (!_loading)
+        if (_loading)
         {
-            Changed?.Invoke();
+            return;
         }
+
+        if (string.Equals(Fingerprint(ReadInput()), _loadedFingerprint, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        Changed?.Invoke();
     }
+
+    private static string Fingerprint(EditorInput input) => string.Join(
+        '\u001f',
+        input.Name,
+        input.PrivateKey,
+        input.Addresses,
+        input.Dns,
+        input.ListenPort,
+        input.Mtu,
+        input.Table,
+        input.RoutingMode.ToString(),
+        string.Join(
+            '\u001e',
+            input.Peers.Select(peer => string.Join(
+                '\u001d',
+                peer.Label,
+                peer.PublicKey,
+                peer.PresharedKey,
+                peer.AllowedIps,
+                peer.Endpoint,
+                peer.PersistentKeepalive))));
 
     /// <summary>Updates only the key identity line, so a generation keeps the rest.</summary>
     /// <param name="hasPrivateKey">Whether the presenter now holds a private key.</param>
