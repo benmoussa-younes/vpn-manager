@@ -109,6 +109,27 @@ if not report("no local or vendored tree", forbidden_dirs.length() == 0, forbidd
     success = false
 }
 
+# A build output is never a tracked file: the release rebuilds it, and a tracked
+# copy enters the SPDX document, and the source archive unless it sits under the
+# export-ignored artifacts/.
+let mutable tracked_artifacts: string = ""
+let mutable artifact_scan_error: string = ""
+match process.run(process.request("git", ["ls-files", "--", "artifacts", "*.deb"]).with_working_directory(root)) {
+    ok(completed) => {
+        if completed.exit_code == 0 {
+            tracked_artifacts = completed.standard_output.trim_whitespace()
+        } else {
+            artifact_scan_error = "git exit {completed.exit_code}"
+        }
+    }
+    error(failure) => {
+        artifact_scan_error = failure.kind
+    }
+}
+if not report("no tracked build artifact", artifact_scan_error == "" and tracked_artifacts == "", "{artifact_scan_error}{tracked_artifacts}") {
+    success = false
+}
+
 let props = read_text(base, "Directory.Build.props")
 if not report("version 0.1.0", props.contains(">0.1.0</VersionPrefix>"), "Directory.Build.props") {
     success = false
