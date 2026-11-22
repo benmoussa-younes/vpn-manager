@@ -177,15 +177,20 @@ if not report("root LICENSE is the GPL-3.0 text", root_gpl != "" and root_gpl ==
 }
 
 # A code host reads the blob, not its target: a symlink would pass the text rule
-# and fail the detection it exists to get.
+# and fail the detection it exists to get. An executable regular file is still
+# read as text, so 100755 is accepted; an entry missing from the index is not.
 let mutable licence_mode: string = ""
 let mutable licence_mode_error: string = ""
 match process.run(process.request("git", ["ls-files", "-s", "--", "LICENSE"]).with_working_directory(root)) {
     ok(completed) => {
         if completed.exit_code == 0 {
             let entry = completed.standard_output.trim_whitespace()
-            if not entry.starts_with("100644 ") {
+            let regular = entry.starts_with("100644 ") or entry.starts_with("100755 ")
+            if not regular {
                 licence_mode = entry
+            }
+            if entry == "" {
+                licence_mode = "not in the index"
             }
         } else {
             licence_mode_error = "git exit {completed.exit_code}"
