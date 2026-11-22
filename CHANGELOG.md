@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- A root `LICENSE` carrying the GNU GPL version 3 text, so a code host reports
+  `GPL-3.0`; `LICENSES/` keeps the SPDX texts.
+
+### Changed
+
+- The gate refuses a tracked build artifact (`artifacts/`, `*.deb`), a root
+  `LICENSE` that diverges from `LICENSES/GPL-3.0-or-later.txt`, and a `LICENSE`
+  that is not a regular file.
+
 ## [0.1.0] - 2026-11-22
 
 The first release of VPN Manager: a per-user WireGuard client for Debian GNOME,

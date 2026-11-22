@@ -71,6 +71,7 @@ let required: list<string> = [
     "Directory.Build.props",
     "Directory.Packages.props",
     "VpnManager.slnx",
+    "LICENSE",
     "LICENSES/GPL-3.0-or-later.txt",
     "src/VpnManager.Core/VpnManager.Core.csproj",
     "src/VpnManager.App/VpnManager.App.csproj",
@@ -144,6 +145,36 @@ if not report("core sibling clone", exists(core_directory / "src" / "Core" / "Co
 
 let gpl = read_text(base, "LICENSES/GPL-3.0-or-later.txt")
 if not report("GPL-3.0-or-later text", gpl.contains("GNU GENERAL PUBLIC LICENSE"), "LICENSES/GPL-3.0-or-later.txt") {
+    success = false
+}
+
+# GitHub reads the licence from the repository root only, and a rewritten copy
+# loses its detection: the root file stays the exact SPDX text.
+let root_gpl = read_text(base, "LICENSE")
+if not report("root LICENSE is the GPL-3.0 text", root_gpl != "" and root_gpl == gpl, "LICENSE") {
+    success = false
+}
+
+# A code host reads the blob, not its target: a symlink would pass the text rule
+# and fail the detection it exists to get.
+let mutable licence_mode: string = ""
+let mutable licence_mode_error: string = ""
+match process.run(process.request("git", ["ls-files", "-s", "--", "LICENSE"]).with_working_directory(root)) {
+    ok(completed) => {
+        if completed.exit_code == 0 {
+            let entry = completed.standard_output.trim_whitespace()
+            if not entry.starts_with("100644 ") {
+                licence_mode = entry
+            }
+        } else {
+            licence_mode_error = "git exit {completed.exit_code}"
+        }
+    }
+    error(failure) => {
+        licence_mode_error = failure.kind
+    }
+}
+if not report("root LICENSE is a regular file", licence_mode_error == "" and licence_mode == "", "{licence_mode_error}{licence_mode}") {
     success = false
 }
 
