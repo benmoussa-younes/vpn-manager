@@ -1,0 +1,34 @@
+version = 1
+
+# The product, its tests and its build files are GPL-3.0-or-later.
+[[annotations]]
+path = "**"
+SPDX-FileCopyrightText = "2026 Younes BENMOUSSA <younes.benmoussa@pm.me>"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# The documentation is CC BY-SA 4.0.
+[[annotations]]
+path = ["README.md", "AGENTS.md", "**/AGENTS.md", "CHANGELOG.md", "SECURITY.md", "CONTRIBUTING.md", "packaging/README.md"]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Younes BENMOUSSA <younes.benmoussa@pm.me>"
+SPDX-License-Identifier = "CC-BY-SA-4.0"
+
+# The legal notices are part of the GPL distribution.
+[[annotations]]
+path = "NOTICE"
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Younes BENMOUSSA <younes.benmoussa@pm.me>"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+[[annotations]]
+path = "THIRD-PARTY"
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Younes BENMOUSSA <younes.benmoussa@pm.me>"
+SPDX-License-Identifier = "GPL-3.0-or-later AND LGPL-3.0-or-later AND MIT AND OFL-1.1 AND Apache-2.0 AND BSD-3-Clause"
+
+# The product screenshots are documentation.
+[[annotations]]
+path = "assets/**"
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Younes BENMOUSSA <younes.benmoussa@pm.me>"
+SPDX-License-Identifier = "CC-BY-SA-4.0"

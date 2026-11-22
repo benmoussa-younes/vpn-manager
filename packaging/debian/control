@@ -1,0 +1,27 @@
+Source: vpn-manager
+Section: net
+Priority: optional
+Maintainer: Younes Benmoussa <younes.benmoussa@pm.me>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.7.0
+Homepage: https://github.com/benmoussa-younes/vpn-manager
+Rules-Requires-Root: no
+
+Package: vpn-manager
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}, network-manager, wireguard-tools, procps, pkexec, libfontconfig1, libx11-6, libice6, libsm6, libxext6, libxrandr2, libxi6, libxcursor1
+Suggests: wireguard
+Description: per-user WireGuard client for Debian GNOME
+ VPN Manager is a desktop client for WireGuard on a Debian GNOME host. It
+ lists the profiles under the operator's configuration directory and the
+ WireGuard connections NetworkManager owns, imports and exports profiles,
+ connects and disconnects through NetworkManager, and shows the live state,
+ the transfer counters, the IPv6 classification and the DNS containment.
+ .
+ Everything happens in the operator's own configuration directory. The
+ application never asks for a password and never reads or writes
+ /etc/wireguard. Its one privileged action, --fix-sysctl, goes through a fixed
+ polkit helper.
+ .
+ The package ships a sysctl drop-in that a full tunnel through NetworkManager
+ needs on a stock Debian, and applies only that file on install.

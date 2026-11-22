@@ -1,0 +1,37 @@
+Third-party components
+======================
+
+The product links the following components. The licence texts are in LICENSES/.
+
+Core (Core, Core.Platform, Core.Platform.Linux, Core.IO, Core.Mvp,
+Core.Serialization)
+  Copyright (C) 2026 Younes BENMOUSSA
+  LGPL-3.0-or-later (see LICENSES/LGPL-3.0-or-later.txt)
+
+Avalonia, Avalonia.Desktop, Avalonia.Fonts.Inter, Avalonia.Headless,
+Avalonia.Themes.Fluent, Avalonia.Wayland
+  Copyright (c) AvaloniaUI OÜ and contributors
+  MIT (see LICENSES/MIT.txt)
+
+SkiaSharp, HarfBuzzSharp, Tmds.DBus.Protocol, NWayland, MicroCom.Runtime
+  Copyright (c) Microsoft Corporation and contributors
+  MIT (see LICENSES/MIT.txt)
+
+Inter
+  Copyright (c) The Inter Project Authors
+  OFL-1.1 (see LICENSES/OFL-1.1.txt)
+
+.NET runtime and Microsoft.NET.Test.Sdk
+  Copyright (c) .NET Foundation and contributors
+  MIT (see LICENSES/MIT.txt)
+
+xunit.v3.mtp-off, xunit.runner.visualstudio
+  Copyright (c) .NET Foundation and contributors
+  Apache-2.0 (see LICENSES/Apache-2.0.txt)
+
+Skia native, Angle (Windows only, not shipped on linux-x64)
+  Copyright (c) Google LLC and contributors
+  BSD-3-Clause (see LICENSES/BSD-3-Clause.txt)
+
+The Scripts interpreter is a toolchain prerequisite installed separately; it is
+not vendored or linked into the product.

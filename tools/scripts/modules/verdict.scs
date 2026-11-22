@@ -1,0 +1,27 @@
+#!/usr/bin/env -S scripts run
+# verdict.scs — the minimal verdict module a project gate imports.
+#
+#   import "../modules/verdict" as verdict
+#
+# One format for the last line and the exit code, so two gates cannot disagree.
+# `defect` builds the line of one finding, so a gate reports before it verdicts.
+
+public function line(success: boolean) -> string {
+    if success {
+        return "VERDICT: PASS"
+    }
+    return "VERDICT: FAIL"
+}
+
+public function code(success: boolean) -> integer {
+    if success {
+        return 0
+    }
+    return 1
+}
+
+# A check's outcome and its reason, for a gate that reports every defect before
+# the verdict.
+public function defect(name: string, control: string, detail: string) -> string {
+    return "DEFECT {name}: {control} {detail}"
+}

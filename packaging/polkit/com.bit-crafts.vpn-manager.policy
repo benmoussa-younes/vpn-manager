@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>VPN Manager</vendor>
+  <action id="com.bit-crafts.vpn-manager.sysctl-src-valid-mark">
+    <description>Set the WireGuard full-tunnel reverse-path sysctl</description>
+    <message>Authentication is required to set the WireGuard full-tunnel sysctl.</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/vpn-manager/vpn-manager-helper</annotate>
+    <annotate key="org.freedesktop.policykit.exec.argv1">sysctl-src-valid-mark</annotate>
+  </action>
+</policyconfig>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" role="img" aria-label="WireGuard Manager">
+  <!--
+    SPDX-FileCopyrightText: 2026 Younes Benmoussa <younes.benmoussa@pm.me>
+    SPDX-License-Identifier: GPL-3.0-or-later
+
+    The monochrome (symbolic) variant of the product icon: a shield with a keyhole.
+    Symbolic icons are recoloured by the shell, so the drawing is single-colour and
+    carries no background.
+
+    This notice lives inside the root element on purpose: gdk-pixbuf finds an SVG
+    by its root tag in the first bytes, so a comment ahead of the root would make
+    GTK fail to load the icon.
+  -->
+  <path d="M8 1 L14 3.4 V8 C14 12.1 11.2 14.7 8 15.5 C4.8 14.7 2 12.1 2 8 V3.4 Z"
+        fill="none" stroke="#000000" stroke-width="1.5" stroke-linejoin="round"/>
+  <circle cx="8" cy="7.4" r="1.2" fill="#000000"/>
+  <rect x="7.3" y="8.4" width="1.4" height="3" rx="0.7" fill="#000000"/>
+</svg>

@@ -1,0 +1,18 @@
+# The release source tarball carries only the release solution (src + tests),
+# the build metadata and the licence files. Local benchmarks and experiments,
+# planning, CI and editor files are never packaged. `git archive` honours these
+# export-ignore patterns; the directory patterns (without `/**`) drop the empty
+# directory entry that `/**` alone would leave.
+/.config        export-ignore
+/.config/**     export-ignore
+/.github        export-ignore
+/.github/**     export-ignore
+/benchmarks     export-ignore
+/benchmarks/**  export-ignore
+/experiments    export-ignore
+/experiments/** export-ignore
+/artifacts      export-ignore
+/artifacts/**   export-ignore
+AGENTS.md       export-ignore
+.gitignore      export-ignore
+.gitattributes  export-ignore

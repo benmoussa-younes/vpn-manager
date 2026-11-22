@@ -1,0 +1,139 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (for example v0.1.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            Directory.Packages.props
+            global.json
+            **/*.csproj
+
+      - name: Core at the pin
+        run: |
+          pin="$(cat CORE_VERSION)"
+          git clone --branch "$pin" --depth 1 https://github.com/benmoussa-younes/core.git ../core
+          test "$(git -C ../core describe --tags --exact-match)" = "$pin"
+
+      - name: Native AOT toolchain
+        run: >
+          sudo apt-get update &&
+          sudo apt-get install -y --no-install-recommends
+          clang zlib1g-dev libfontconfig1 lintian
+
+      - name: Scripts interpreter
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/scripts.tar.gz" \
+            https://github.com/benmoussa-younes/scripts/releases/download/v0.2.1/scripts_0.2.1_linux-x64.tar.gz
+          tar -xzf "$RUNNER_TEMP/scripts.tar.gz" -C "$RUNNER_TEMP"
+          sudo install -m 0755 "$RUNNER_TEMP/scripts-0.2.1/scripts" /usr/local/bin/scripts
+
+      - name: Gate dependencies
+        run: |
+          pipx install reuse==5.0.2
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Gate, including the Native AOT proof
+        run: scripts run tools/scripts/binaries/gate.scs --aot
+
+      - name: Verify tag matches VersionPrefix
+        run: |
+          version="$(dotnet msbuild src/VpnManager.App/VpnManager.App.csproj -getProperty:VersionPrefix -nologo)"
+          test "$version" = "${TAG#v}"
+
+      - name: Debian package
+        run: packaging/build-deb.sh
+
+      - name: Verify the Debian package
+        run: |
+          deb="$(ls artifacts/*.deb)"
+          root="$(mktemp -d)"
+          dpkg-deb -x "$deb" "$root"
+          "$root/usr/lib/vpn-manager/vpn-manager" --self-test
+          test "$(stat -c %a "$root/usr/lib/vpn-manager/vpn-manager")" = 755
+          test "$(stat -c %a "$root/usr/lib/vpn-manager/vpn-manager-helper")" = 755
+          test ! -u "$root/usr/lib/vpn-manager/vpn-manager-helper"
+          lintian --fail-on error "$deb"
+
+      - name: Source archive
+        run: |
+          mkdir -p artifacts
+          prefix="vpn-manager-${TAG}"
+          git archive --format=tar.gz --prefix="${prefix}/" \
+            -o "artifacts/${prefix}-src.tar.gz" HEAD
+
+      - name: SBOM
+        run: pipx run reuse==5.0.2 spdx > artifacts/vpn-manager.spdx
+
+      - name: Checksums
+        run: |
+          cd artifacts
+          sha256sum ./*.deb ./*-src.tar.gz ./*.spdx > SHA256SUMS
+
+      - name: Upload release assets
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-assets
+          if-no-files-found: error
+          path: artifacts/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download release assets
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-assets
+          path: artifacts
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" artifacts/*
+          else
+            gh release create "$TAG" \
+              --verify-tag \
+              --title "VPN Manager ${TAG}" \
+              --generate-notes \
+              artifacts/*
+          fi
