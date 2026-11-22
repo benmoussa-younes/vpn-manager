@@ -34,11 +34,22 @@ public sealed record TunnelStateEntry
     /// </summary>
     public bool Verified { get; init; }
 
+    private readonly NetworkManagerDnsMode _dnsMode = NetworkManagerDnsMode.Profile;
+
     /// <summary>Gets whether NetworkManager may reconnect the profile after a link change.</summary>
     public bool AutoReconnect { get; init; } = true;
 
     /// <summary>Gets how the profile's DNS entries are applied.</summary>
-    public NetworkManagerDnsMode DnsMode { get; init; } = NetworkManagerDnsMode.Profile;
+    /// <remarks>
+    /// A stored value that no longer names a mode (the removed full-tunnel mode
+    /// was <c>3</c>) reads as <see cref="NetworkManagerDnsMode.Profile"/>, its
+    /// historical behaviour, instead of failing the whole state load.
+    /// </remarks>
+    public NetworkManagerDnsMode DnsMode
+    {
+        get => _dnsMode;
+        init => _dnsMode = Enum.IsDefined(value) ? value : NetworkManagerDnsMode.Profile;
+    }
 
     /// <summary>Gets the search domains the split-DNS mode routes through the tunnel.</summary>
     public IReadOnlyList<string> DnsSearchDomains { get; init; } = [];

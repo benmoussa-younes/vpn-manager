@@ -197,7 +197,6 @@ VpnManager.Core.NetworkManager.NetworkManagerConnectionEntry.Type.get -> string!
 VpnManager.Core.NetworkManager.NetworkManagerConnectionEntry.Type.init -> void
 VpnManager.Core.NetworkManager.NetworkManagerConnectionParser
 VpnManager.Core.NetworkManager.NetworkManagerDnsMode
-VpnManager.Core.NetworkManager.NetworkManagerDnsMode.FullTunnel = 3 -> VpnManager.Core.NetworkManager.NetworkManagerDnsMode
 VpnManager.Core.NetworkManager.NetworkManagerDnsMode.Profile = 0 -> VpnManager.Core.NetworkManager.NetworkManagerDnsMode
 VpnManager.Core.NetworkManager.NetworkManagerDnsMode.Split = 2 -> VpnManager.Core.NetworkManager.NetworkManagerDnsMode
 VpnManager.Core.NetworkManager.NetworkManagerDnsMode.System = 1 -> VpnManager.Core.NetworkManager.NetworkManagerDnsMode

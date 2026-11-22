@@ -47,7 +47,6 @@ public sealed class TunnelPolicyView : UserControl, IView
                 "Profile DNS",
                 "System DNS",
                 "Split DNS",
-                "Full tunnel DNS",
             },
             SelectedIndex = 0,
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -81,7 +80,11 @@ public sealed class TunnelPolicyView : UserControl, IView
         Content = column;
 
         _reconnect.IsCheckedChanged += (_, _) => OnChanged();
-        _mode.SelectionChanged += (_, _) => OnChanged();
+        _mode.SelectionChanged += (_, _) =>
+        {
+            UpdateSearchEnabled();
+            OnChanged();
+        };
         _search.LostFocus += (_, _) => OnChanged();
         _search.KeyDown += (_, args) =>
         {
@@ -90,6 +93,8 @@ public sealed class TunnelPolicyView : UserControl, IView
                 OnChanged();
             }
         };
+
+        UpdateSearchEnabled();
     }
 
     /// <summary>Raised when a policy control changed.</summary>
@@ -127,6 +132,7 @@ public sealed class TunnelPolicyView : UserControl, IView
             _reconnect.IsChecked = snapshot.AutoReconnect;
             _mode.SelectedIndex = (int)snapshot.DnsMode;
             _search.Text = string.Join(", ", snapshot.SearchDomains);
+            UpdateSearchEnabled();
         }
         finally
         {
@@ -134,6 +140,14 @@ public sealed class TunnelPolicyView : UserControl, IView
         }
 
         _reconnect.Focus();
+    }
+
+    private void UpdateSearchEnabled()
+    {
+        // Split routes only the listed domains to the profile DNS; in Profile and
+        // System the list changes nothing, so the field is disabled rather than
+        // silently ignored.
+        _search.IsEnabled = _mode.SelectedIndex == (int)NetworkManagerDnsMode.Split;
     }
 
     private void OnChanged()

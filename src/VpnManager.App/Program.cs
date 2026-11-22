@@ -189,7 +189,7 @@ internal static class Program
         Console.WriteLine("  vpn-manager --status [--json]    print the profiles and their policy");
         Console.WriteLine("  vpn-manager --connect <profile>  bring a profile up through NetworkManager");
         Console.WriteLine("  vpn-manager --disconnect <profile>  take a profile down");
-        Console.WriteLine("  vpn-manager --policy <profile> [--auto-reconnect on|off] [--dns-mode profile|system|split|full] [--dns-search a,b|'']");
+        Console.WriteLine("  vpn-manager --policy <profile> [--auto-reconnect on|off] [--dns-mode profile|system|split] [--dns-search a,b|'']");
         Console.WriteLine("  vpn-manager --fix-sysctl       set the full-tunnel sysctl through polkit");
         Console.WriteLine("  vpn-manager --dbus             run the session D-Bus service");
         Console.WriteLine("  vpn-manager --self-test          run the display-free self-test");

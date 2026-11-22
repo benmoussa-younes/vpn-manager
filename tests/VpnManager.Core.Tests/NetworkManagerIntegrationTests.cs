@@ -416,7 +416,7 @@ public sealed class NmcliNetworkManagerConnectionsTests
         Assert.True(result.IsSuccess);
         var command = string.Join(' ', Assert.Single(runner.Requests).Arguments);
         Assert.Contains("ipv4.dns 1.1.1.1", command, StringComparison.Ordinal);
-        Assert.Contains("ipv4.dns-search corp.example", command, StringComparison.Ordinal);
+        Assert.Contains("ipv4.dns-search ~corp.example", command, StringComparison.Ordinal);
         Assert.DoesNotContain("ipv6.", command, StringComparison.Ordinal);
     }
 
@@ -434,7 +434,7 @@ public sealed class NmcliNetworkManagerConnectionsTests
     }
 
     [Fact]
-    public async Task A_full_tunnel_policy_adds_the_root_routing_domain()
+    public async Task A_profile_policy_keeps_the_domains_as_search_suffixes()
     {
         var runner = new FakeProcessRunner(_ => ProcessResult.Completed(0, string.Empty, string.Empty));
         var connections = new NmcliNetworkManagerConnections(runner);
@@ -443,11 +443,12 @@ public sealed class NmcliNetworkManagerConnectionsTests
             "wg0",
             ["10.2.0.1"],
             ["corp.example"],
-            NetworkManagerDnsMode.FullTunnel);
+            NetworkManagerDnsMode.Profile);
 
         Assert.True(result.IsSuccess);
         var command = string.Join(' ', Assert.Single(runner.Requests).Arguments);
-        Assert.Contains("ipv4.dns-search ~.,corp.example", command, StringComparison.Ordinal);
+        Assert.Contains("ipv4.dns-search corp.example", command, StringComparison.Ordinal);
+        Assert.DoesNotContain("~", command, StringComparison.Ordinal);
     }
 
     [Fact]

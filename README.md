@@ -25,7 +25,7 @@ action goes through the fixed polkit helper.
 - Supports a `--read-only` session that browses and exports without changing
   anything.
 - Applies a per-profile NetworkManager policy: automatic reconnection, and the
-  `Profile`, `System`, `Split` or `FullTunnel` DNS mode. The policy card in the
+  `Profile`, `System` or `Split` DNS mode. The policy card in the
   pane edits those three settings and applies each change immediately; a live
   connection is updated without reconnecting.
 - Saves the configuration with an explicit Save (the header shows a dot while

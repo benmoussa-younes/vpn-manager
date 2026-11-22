@@ -185,7 +185,6 @@ internal sealed class VpnManagerDbusService : IPathMethodHandler, IAsyncDisposab
             "profile" => NetworkManagerDnsMode.Profile,
             "system" => NetworkManagerDnsMode.System,
             "split" => NetworkManagerDnsMode.Split,
-            "full" or "full-tunnel" or "fulltunnel" => NetworkManagerDnsMode.FullTunnel,
             _ => (NetworkManagerDnsMode?)null,
         };
 

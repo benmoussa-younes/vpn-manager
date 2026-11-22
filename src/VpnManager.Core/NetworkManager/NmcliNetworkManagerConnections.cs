@@ -284,11 +284,14 @@ public sealed class NmcliNetworkManagerConnections : INetworkManagerConnections
         }
 
         var domains = search.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        if (mode == NetworkManagerDnsMode.FullTunnel && !domains.Contains("~.", StringComparer.Ordinal))
+        if (mode == NetworkManagerDnsMode.Split)
         {
-            // Make the mode explicit instead of relying on NetworkManager adding
-            // the root routing domain because the tunnel owns the default route.
-            domains.Insert(0, "~.");
+            // A plain dns-search entry is only a search suffix: the resolver would
+            // still send every name to this link. The leading tilde makes each entry
+            // a routing domain, so only those names use the profile DNS.
+            domains = domains
+                .Select(domain => domain.StartsWith('~') ? domain : string.Concat("~", domain))
+                .ToList();
         }
 
         Invalidate(connectionName);

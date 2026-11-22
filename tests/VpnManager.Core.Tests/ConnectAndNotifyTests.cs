@@ -179,7 +179,7 @@ public sealed class ConnectAndNotifyTests
 
         var saved = await service.SetPolicyAsync(
             "wg0",
-            new TunnelPolicy(AutoReconnect: true, DnsMode: NetworkManagerDnsMode.FullTunnel, DnsSearchDomains: []));
+            new TunnelPolicy(AutoReconnect: true, DnsMode: NetworkManagerDnsMode.Split, DnsSearchDomains: []));
 
         Assert.True(saved.IsSuccess);
         Assert.Equal("wg0-if", Assert.Single(networkManager.Reapplied));

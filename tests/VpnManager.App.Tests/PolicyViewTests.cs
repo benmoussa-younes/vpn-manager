@@ -18,16 +18,35 @@ public sealed class PolicyViewTests
             Assert.False(view.ReconnectBox.IsChecked);
             Assert.Equal((int)NetworkManagerDnsMode.Split, view.ModeBox.SelectedIndex);
             Assert.Equal("corp.example", view.SearchBox.Text);
+            Assert.True(view.SearchBox.IsEnabled);
 
             view.ReconnectBox.IsChecked = true;
-            view.ModeBox.SelectedIndex = (int)NetworkManagerDnsMode.FullTunnel;
+            view.ModeBox.SelectedIndex = (int)NetworkManagerDnsMode.Profile;
             view.SearchBox.Text = "a.example, b.example; c.example";
 
             var input = view.ReadInput();
 
             Assert.True(input.AutoReconnect);
-            Assert.Equal(NetworkManagerDnsMode.FullTunnel, input.DnsMode);
+            Assert.Equal(NetworkManagerDnsMode.Profile, input.DnsMode);
             Assert.Equal(["a.example", "b.example", "c.example"], input.SearchDomains);
+        });
+    }
+
+    [Fact]
+    public async Task The_search_domains_are_enabled_only_for_split_dns()
+    {
+        await HeadlessTestSession.RunAsync(() =>
+        {
+            var view = new TunnelPolicyView();
+            view.Load(new TunnelPolicySnapshot("wg0", AutoReconnect: true, NetworkManagerDnsMode.Profile, []));
+
+            Assert.False(view.SearchBox.IsEnabled);
+
+            view.ModeBox.SelectedIndex = (int)NetworkManagerDnsMode.Split;
+            Assert.True(view.SearchBox.IsEnabled);
+
+            view.ModeBox.SelectedIndex = (int)NetworkManagerDnsMode.System;
+            Assert.False(view.SearchBox.IsEnabled);
         });
     }
 

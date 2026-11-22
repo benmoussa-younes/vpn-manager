@@ -96,13 +96,12 @@ internal sealed record CliOptions(
                 "profile" => NetworkManagerDnsMode.Profile,
                 "system" => NetworkManagerDnsMode.System,
                 "split" => NetworkManagerDnsMode.Split,
-                "full" or "full-tunnel" or "fulltunnel" => NetworkManagerDnsMode.FullTunnel,
                 _ => null,
             };
 
             if (dnsMode is null)
             {
-                return new CliOptions(command, json, name, Error: "--dns-mode expects profile, system, split or full.");
+                return new CliOptions(command, json, name, Error: "--dns-mode expects profile, system or split.");
             }
         }
 
