@@ -4,10 +4,15 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns: ["*"]
 
   - package-ecosystem: nuget
     directory: /
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    groups:
+      nuget:
+        patterns: ["*"]

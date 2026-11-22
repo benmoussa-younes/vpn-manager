@@ -8,12 +8,22 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+
 jobs:
   licence:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Licence
         run: pipx run reuse==5.0.2 lint
@@ -22,11 +32,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with:
-          dotnet-version: 10.0.404
-          dotnet-quality: ga
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            Directory.Packages.props
+            global.json
+            **/*.csproj
 
       - name: Core at the pin
         run: |
@@ -34,8 +51,19 @@ jobs:
           git clone --branch "$pin" --depth 1 https://github.com/benmoussa-younes/core.git ../core
           test "$(git -C ../core describe --tags --exact-match)" = "$pin"
 
+      - name: Restore
+        run: dotnet restore VpnManager.slnx
+
+      - name: Format
+        run: dotnet format VpnManager.slnx --verify-no-changes --no-restore
+
+      - name: Vulnerable packages
+        run: |
+          dotnet list VpnManager.slnx package --vulnerable --include-transitive --format json > vulnerabilities.json
+          jq -e '[.. | .vulnerabilities? // empty | .[]] | length == 0' vulnerabilities.json
+
       - name: Build
-        run: dotnet build VpnManager.slnx -c Release
+        run: dotnet build VpnManager.slnx -c Release --no-restore
 
       - name: Test
         run: >
@@ -54,8 +82,9 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: test-results
           if-no-files-found: ignore
+          retention-days: 7
           path: TestResults/*.trx
