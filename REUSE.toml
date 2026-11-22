@@ -25,3 +25,10 @@ path = "THIRD-PARTY"
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Younes BENMOUSSA <younes.benmoussa@pm.me>"
 SPDX-License-Identifier = "GPL-3.0-or-later AND LGPL-3.0-or-later AND MIT AND OFL-1.1 AND Apache-2.0 AND BSD-3-Clause"
+
+# The product screenshots are documentation.
+[[annotations]]
+path = "assets/**"
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Younes BENMOUSSA <younes.benmoussa@pm.me>"
+SPDX-License-Identifier = "CC-BY-SA-4.0"

@@ -44,6 +44,19 @@ action goes through the fixed polkit helper.
   enterprise orchestration. The name is the reverse-DNS of the project's
   `bit-crafts.com` domain; the per-user paths stay under `benmoussa`.
 
+## Screenshots
+
+| Master-detail pane | New tunnel |
+|---|---|
+| ![A selected profile: the sidebar, the editable pane, the peers card and the policy card](assets/screenshots/master-detail.png) | ![The new tunnel form](assets/screenshots/new-tunnel.png) |
+
+| Preferences | About |
+|---|---|
+| ![The appearance preferences](assets/screenshots/preferences.png) | ![The About dialog](assets/screenshots/about.png) |
+
+The screenshots come from the 0.1.0 build; the endpoint, the public keys and the
+machine name are blurred.
+
 ## What it is not
 
 - Not a server, hub or peer-provisioning tool.
