@@ -16,9 +16,9 @@ scripts check tools/scripts/binaries/gate.scs
 scripts run tools/scripts/binaries/gate.scs        # one VERDICT line, exit 0/1
 ```
 
-The gate checks the tracked tree, the licence metadata, the pinned core tag, the
-version, the format, the build and the tests. It needs Git, `reuse` and the Scripts interpreter on
-`PATH`; it writes nothing tracked.
+The gate checks the tracked tree, the licence metadata, the pinned core source,
+the version, the format, the build and the tests. It needs Git, `reuse` and the
+Scripts interpreter on `PATH`; it writes nothing tracked.
 
 ## Core
 
@@ -30,7 +30,12 @@ git clone --branch v0.2.3 --depth 1 https://github.com/benmoussa-younes/core.git
 ```
 
 The projects reference `../../../core/src/...`; the pin and the references change
-in the same commit as the API adaptation.
+in the same commit as the API adaptation. The gate accepts a sibling checkout
+that follows `core`'s `main` when the pin is in its history and `core/src` plus
+the root build files it pins are identical to the pin and clean. That set is a
+superset of what shapes the build, so a change to one of those files fails the
+gate even when the compiled code would not move. Any other difference in those
+files fails the gate.
 
 ## Conventions
 

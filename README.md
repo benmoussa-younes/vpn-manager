@@ -169,8 +169,12 @@ repository:
 
 ```bash
 git clone --branch v0.2.3 --depth 1 https://github.com/benmoussa-younes/core.git ../core
-git -C ../core describe --tags --exact-match   # must print v0.2.3
+git -C ../core describe --tags --exact-match   # prints v0.2.3 for this clone
 ```
+
+A sibling checkout that follows `core`'s `main` is accepted when the pin is in
+its history and `core/src` plus the root build files the gate pins are identical
+to the pin and clean.
 
 Then build, test and run the gate:
 

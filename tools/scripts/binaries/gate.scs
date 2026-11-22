@@ -3,9 +3,9 @@
 #
 #   tools/scripts/binaries/gate.scs [--aot]
 #
-# The fast gate checks the tree, the licence metadata, the pinned core tag, the
-# version, the build and the tests. `--aot` additionally publishes the Native AOT
-# binary, counts the ILC lines and runs `--self-test` on that exact binary.
+# The fast gate checks the tree, the licence metadata, the pinned core source,
+# the version, the build and the tests. `--aot` additionally publishes the Native
+# AOT binary, counts the ILC lines and runs `--self-test` on that exact binary.
 import "../modules/verdict" as verdict
 
 function exists(target: path) -> boolean {
@@ -149,18 +149,56 @@ let core_directory = root.parent() / "core"
 if not report("core sibling clone", exists(core_directory / "src" / "Core" / "Core.csproj"), core_directory.to_string()) {
     success = false
 } else {
-    match process.run(process.request("git", ["describe", "--tags", "--exact-match"]).with_working_directory(core_directory)) {
+    # The consumer compiles core's sources and imports its root build files, so
+    # that set must equal the pin. core's own checkout may sit on main, where a
+    # documentation or CI change does not alter what is built here. The pin is a
+    # tag reference, so a malicious CORE_VERSION cannot become an option.
+    let pin_ref = "refs/tags/{pin}"
+    let mutable pin_problem: string = ""
+    match process.run(process.request("git", ["merge-base", "--is-ancestor", pin_ref, "HEAD"]).with_working_directory(core_directory)) {
         ok(completed) => {
-            let tag = completed.standard_output.trim_whitespace()
-            if not report("core checked out at the pin", completed.exit_code == 0 and tag == pin, tag) {
-                success = false
+            if completed.exit_code == 1 {
+                pin_problem = "the pin is not history of the checkout"
+            } else if completed.exit_code == 128 {
+                pin_problem = "the pin is not in the checkout"
+            } else if completed.exit_code != 0 {
+                pin_problem = "git exit {completed.exit_code}"
             }
         }
         error(failure) => {
-            if not report("core checked out at the pin", false, failure.kind) {
-                success = false
+            pin_problem = failure.kind
+        }
+    }
+    if pin_problem == "" {
+        match process.run(process.request("git", ["diff", "--quiet", pin_ref, "HEAD", "--", "src", "Directory.Build.props", "Directory.Build.targets", "Directory.Packages.props", "global.json", "nuget.config", ".editorconfig", ".gitattributes"]).with_working_directory(core_directory)) {
+            ok(completed) => {
+                if completed.exit_code == 1 {
+                    pin_problem = "the build inputs differ from the pin"
+                } else if completed.exit_code != 0 {
+                    pin_problem = "git exit {completed.exit_code}"
+                }
+            }
+            error(failure) => {
+                pin_problem = failure.kind
             }
         }
+    }
+    if pin_problem == "" {
+        match process.run(process.request("git", ["-c", "status.showUntrackedFiles=normal", "status", "--porcelain", "--", "src", "Directory.Build.props", "Directory.Build.targets", "Directory.Packages.props", "global.json", "nuget.config", ".editorconfig", ".gitattributes"]).with_working_directory(core_directory)) {
+            ok(completed) => {
+                if completed.exit_code != 0 {
+                    pin_problem = "git exit {completed.exit_code}"
+                } else if completed.standard_output.trim_whitespace() != "" {
+                    pin_problem = "the build inputs have uncommitted changes"
+                }
+            }
+            error(failure) => {
+                pin_problem = failure.kind
+            }
+        }
+    }
+    if not report("core source at the pin", pin_problem == "", pin_problem) {
+        success = false
     }
 }
 
