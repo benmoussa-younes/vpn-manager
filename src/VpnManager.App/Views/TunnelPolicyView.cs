@@ -1,0 +1,288 @@
+using Avalonia;
+using Avalonia.Automation;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Layout;
+using Avalonia.Media;
+using Core.Mvp.Composition;
+using Core.Mvp.Presentation;
+using Core.Mvp.Views;
+using Core.Results;
+using VpnManager.App.Controls;
+using VpnManager.Core.NetworkManager;
+using VpnManager.Core.Presentation;
+
+namespace VpnManager.App.Views;
+
+/// <summary>
+/// The per-profile policy page (MVP, passive view): automatic reconnection, the
+/// DNS containment mode and the split-DNS routing domains. The actions live in
+/// the shell toolbar; the page only reads and writes its fields.
+/// </summary>
+public sealed class TunnelPolicyView : UserControl, IView
+{
+    private const double LabelColumn = 140;
+
+    private readonly TextBlock _tunnel;
+    private readonly CheckBox _reconnect;
+    private readonly ComboBox _mode;
+    private readonly TextBox _search;
+    private string _name = string.Empty;
+    private bool _loading;
+    private bool _loadedReconnect;
+    private int _loadedMode = (int)NetworkManagerDnsMode.Profile;
+
+    /// <summary>Initializes the policy page.</summary>
+    public TunnelPolicyView()
+    {
+        _tunnel = new TextBlock
+        {
+            Classes = { "muted" },
+            VerticalAlignment = VerticalAlignment.Center,
+            TextWrapping = TextWrapping.Wrap,
+        };
+        _reconnect = new CheckBox { Content = "Reconnect automatically after a network change" };
+        _mode = new ComboBox
+        {
+            ItemsSource = new[]
+            {
+                "Profile DNS",
+                "System DNS",
+                "Split DNS",
+            },
+            SelectedIndex = 0,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+        _search = new TextBox
+        {
+            PlaceholderText = "corp.example, lab.example (split DNS only)",
+        };
+
+        var column = new StackPanel
+        {
+            Spacing = 16,
+            Children =
+            {
+                Card(
+                    "Policy",
+                    Row("Tunnel", _tunnel),
+                    Row("Reconnection", _reconnect),
+                    Row("DNS mode", _mode),
+                    Row("Search domains", _search)),
+                new TextBlock
+                {
+                    Text = "Profile DNS uses the DNS servers written in the configuration for every name. System DNS leaves the resolver untouched. Split DNS sends only the listed domains to the VPN.",
+                    Classes = { "muted" },
+                    TextWrapping = TextWrapping.Wrap,
+                },
+            },
+        };
+
+        column.HorizontalAlignment = HorizontalAlignment.Stretch;
+        Content = column;
+
+        _reconnect.IsCheckedChanged += (_, _) =>
+        {
+            if (_loading || _reconnect.IsChecked == _loadedReconnect)
+            {
+                return;
+            }
+
+            OnChanged();
+        };
+        _mode.SelectionChanged += (_, _) =>
+        {
+            UpdateSearchEnabled();
+
+            // The selector can commit the value loaded from the snapshot after
+            // Load has returned; that must not look like a policy change.
+            if (_loading || _mode.SelectedIndex == _loadedMode)
+            {
+                return;
+            }
+
+            OnChanged();
+        };
+        _search.LostFocus += (_, _) => OnChanged();
+        _search.KeyDown += (_, args) =>
+        {
+            if (args.Key == Key.Enter)
+            {
+                OnChanged();
+            }
+        };
+
+        UpdateSearchEnabled();
+    }
+
+    /// <summary>Raised when a policy control changed.</summary>
+    public event Action? Changed;
+
+    /// <summary>Raised when the operator saved the policy.</summary>
+    public event Action<TunnelPolicyInput>? SaveRequested;
+
+    /// <summary>Raised when the operator dismissed the page.</summary>
+    public event Action? CancelRequested;
+
+    /// <summary>Gets the reconnection check box, for tests.</summary>
+    internal CheckBox ReconnectBox => _reconnect;
+
+    /// <summary>Gets the DNS mode selector, for tests.</summary>
+    internal ComboBox ModeBox => _mode;
+
+    /// <summary>Gets the search-domains box, for tests.</summary>
+    internal TextBox SearchBox => _search;
+
+    /// <summary>Gets the tunnel this page edits, for tests.</summary>
+    internal string TunnelName => _name;
+
+    /// <summary>Sets the fields from the snapshot.</summary>
+    /// <param name="snapshot">The policy currently stored.</param>
+    public void Load(TunnelPolicySnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+
+        _loading = true;
+        try
+        {
+            _name = snapshot.Name;
+            _tunnel.Text = snapshot.Name;
+            _loadedReconnect = snapshot.AutoReconnect;
+            _reconnect.IsChecked = _loadedReconnect;
+            _loadedMode = (int)snapshot.DnsMode;
+            _mode.SelectedIndex = _loadedMode;
+            _search.Text = string.Join(", ", snapshot.SearchDomains);
+            UpdateSearchEnabled();
+        }
+        finally
+        {
+            _loading = false;
+        }
+
+        _reconnect.Focus();
+    }
+
+    private void UpdateSearchEnabled()
+    {
+        // Split routes only the listed domains to the profile DNS; in Profile and
+        // System the list changes nothing, so the field is disabled rather than
+        // silently ignored.
+        _search.IsEnabled = _mode.SelectedIndex == (int)NetworkManagerDnsMode.Split;
+    }
+
+    private void OnChanged()
+    {
+        if (!_loading)
+        {
+            Changed?.Invoke();
+        }
+    }
+
+    /// <summary>Reads the fields back as the policy input.</summary>
+    /// <returns>The values as they are in the fields.</returns>
+    public TunnelPolicyInput ReadInput() => new(
+        _name,
+        _reconnect.IsChecked == true,
+        (NetworkManagerDnsMode)Math.Clamp(_mode.SelectedIndex, 0, 3),
+        ParseDomains(_search.Text ?? string.Empty));
+
+    /// <summary>Handles one of the page's own shell command ids.</summary>
+    /// <param name="id">The command id.</param>
+    /// <returns><see langword="true"/> when the id was the page's.</returns>
+    public bool HandleCommand(string id)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+
+        switch (id)
+        {
+            case "policy.save":
+                SaveRequested?.Invoke(ReadInput());
+                return true;
+            case "policy.cancel":
+                CancelRequested?.Invoke();
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>Publishes the page's chrome and commands to the shell.</summary>
+    /// <param name="host">The shell host.</param>
+    public void PublishSnapshot(IViewHost host)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+
+        host.SetSnapshot(new ShellSnapshot(
+            "Policy",
+            string.Concat("Reconnection and DNS for '", _name, "'."),
+            new CommandSet(
+            [
+                new AppCommand("policy.save", "Save", IconKey: "IconSave", ToolTip: "Apply the policy", Shortcut: "Ctrl+S", Group: "primary"),
+                new AppCommand("policy.cancel", "Cancel", IconKey: "IconClose", ToolTip: "Cancel", Shortcut: "Escape", Group: "dismiss"),
+            ])));
+    }
+
+    /// <inheritdoc />
+    public void SetBusy(bool busy)
+    {
+        // The shell's busy overlay is driven by the presenter's operation.
+    }
+
+    /// <inheritdoc />
+    public void ShowError(CoreError error)
+    {
+        ArgumentNullException.ThrowIfNull(error);
+
+        // The presenter reports a policy failure in the shell banner.
+    }
+
+    private static string[] ParseDomains(string text) => text
+        .Split([',', ';', ' ', '\t', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    private static Border Card(string heading, params Control[] rows)
+    {
+        var stack = new StackPanel
+        {
+            Spacing = 12,
+            Children =
+            {
+                new TextBlock { Text = heading, Classes = { "heading" } },
+            },
+        };
+
+        foreach (var row in rows)
+        {
+            stack.Children.Add(row);
+        }
+
+        var border = new Border
+        {
+            BorderThickness = new Thickness(1),
+            CornerRadius = ThemeResources.Corner("SurfaceCornerRadius"),
+            Padding = new Thickness(16),
+            Child = stack,
+        };
+
+        ThemeResources.Bind(border, Border.BackgroundProperty, "SurfaceBrush");
+        ThemeResources.Bind(border, Border.BorderBrushProperty, "BorderBrush");
+        return border;
+    }
+
+    private static Grid Row(string label, Control control)
+    {
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions($"{LabelColumn},*") };
+        var caption = new TextBlock
+        {
+            Text = label,
+            Classes = { "muted" },
+            Margin = new Thickness(0, 0, 12, 0),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        AutomationProperties.SetLabeledBy(control, caption);
+        Grid.SetColumn(caption, 0);
+        Grid.SetColumn(control, 1);
+        grid.Children.Add(caption);
+        grid.Children.Add(control);
+        return grid;
+    }
+}

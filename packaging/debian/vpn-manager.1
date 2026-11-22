@@ -1,0 +1,83 @@
+.TH VPN-MANAGER 1 "2026-11-21" "VPN Manager 0.1.0" "User Commands"
+.SH NAME
+vpn-manager \- manage WireGuard tunnels for the current user
+.SH SYNOPSIS
+.B vpn-manager
+.RI [ options ]
+.SH DESCRIPTION
+.B VPN Manager
+is a desktop client for WireGuard. It lists the profiles under the operator's
+configuration directory and the WireGuard connections NetworkManager owns,
+imports and exports profiles, connects and disconnects through NetworkManager,
+and shows the live state, the transfer counters, the IPv6 classification and the
+DNS containment.
+.PP
+Everything happens in the operator's own configuration directory. The
+application runs unprivileged and never reads or writes
+.IR /etc/wireguard .
+The one privileged action,
+.BR \-\-fix-sysctl ,
+uses the fixed polkit helper to set the full-tunnel sysctl.
+.PP
+Only one instance runs per user: starting the application again surfaces the
+window of the running instance and the new process exits.
+.SH OPTIONS
+.TP
+.BR \-\-config\-dir " " \fIpath\fR
+Manage the profile files in
+.I path
+instead of the default directory.
+.TP
+.B \-\-read\-only
+Browse and export without changing anything.
+.TP
+.B \-\-diagnostics
+Print what is readable without a display and exit.
+.TP
+.BR \-\-status " [" \-\-json ]
+Print the profiles and their policy, optionally as JSON.
+.TP
+.BI \-\-connect " " profile
+Bring a profile up through NetworkManager.
+.TP
+.BI \-\-disconnect " " profile
+Take a profile down and mark it manually disconnected.
+.TP
+.BI \-\-policy " " profile
+Set the per-profile policy with
+.BR \-\-auto-reconnect " on|off,"
+.BR \-\-dns-mode " profile|system|split"
+and
+.BR \-\-dns-search " a,b."
+An empty value clears the stored search domains. A change to an active
+connection is reapplied immediately.
+.TP
+.B \-\-dbus
+Run the session D\-Bus service for enterprise orchestration; it stops when the
+session bus closes or the process is terminated.
+.TP
+.B \-\-self\-test
+Run the display-free self-test and exit.
+.TP
+.B \-\-version
+Print the version and exit.
+.TP
+.BR \-h ", " \-\-help
+Print the usage text and exit.
+.SH FILES
+.TP
+.I ~/.config/benmoussa/vpn-manager
+The per-user profile directory.
+.TP
+.I ~/.local/state/benmoussa/vpn-manager
+The application state, its log, its operation journal and its crash log.
+.TP
+.I $XDG_RUNTIME_DIR/benmoussa-vpn-manager.socket
+The single-instance claim. When
+.I XDG_RUNTIME_DIR
+is not set, the run directory falls back to
+.IR ~/.local/state/vpn-manager/run .
+.SH SEE ALSO
+.BR nmcli (1),
+.BR wg (8),
+.BR wg-quick (8)

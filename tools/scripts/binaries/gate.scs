@@ -1,0 +1,395 @@
+#!/usr/bin/env -S scripts run
+# gate.scs — read-only verification of the VPN Manager repository.
+#
+#   tools/scripts/binaries/gate.scs [--aot]
+#
+# The fast gate checks the tree, the licence metadata, the pinned core tag, the
+# version, the build and the tests. `--aot` additionally publishes the Native AOT
+# binary, counts the ILC lines and runs `--self-test` on that exact binary.
+import "../modules/verdict" as verdict
+
+function exists(target: path) -> boolean {
+    match filesystem.get_path_status(target) {
+        ok(_) => {
+            return true
+        }
+        error(_) => {
+            return false
+        }
+    }
+}
+
+function read_text(base: string, relative: string) -> string {
+    match filesystem.read_file("{base}/{relative}".to_path()) {
+        ok(content) => {
+            return content
+        }
+        error(_) => {
+            return ""
+        }
+    }
+}
+
+function report(name: string, passed: boolean, detail: string) -> boolean {
+    if passed {
+        io.write_standard_output_line("PASS {name}")
+    } else {
+        io.write_standard_error_line("FAIL {name}: {detail}")
+    }
+    return passed
+}
+
+let root: path = process.script_path().parent().parent().parent().parent()
+let base: string = root.to_string()
+let mutable success = true
+let mutable aot_mode = false
+# The test summary is localized and Debian ships no ICU: the overlay makes every
+# dotnet call below report the same result whatever the operator's locale.
+let tool_environment: map<string, string> = {
+    "DOTNET_CLI_UI_LANGUAGE": "en",
+    "DOTNET_SYSTEM_GLOBALIZATION_INVARIANT": "1",
+    "DOTNET_NOLOGO": "1",
+    "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
+}
+for argument in process.arguments() {
+    if argument == "--aot" {
+        aot_mode = true
+    }
+}
+
+let required: list<string> = [
+    "README.md",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "REUSE.toml",
+    "NOTICE",
+    "THIRD-PARTY",
+    "CORE_VERSION",
+    "global.json",
+    "Directory.Build.props",
+    "Directory.Packages.props",
+    "VpnManager.slnx",
+    "LICENSES/GPL-3.0-or-later.txt",
+    "src/VpnManager.Core/VpnManager.Core.csproj",
+    "src/VpnManager.App/VpnManager.App.csproj",
+    "tests/VpnManager.Core.Tests/VpnManager.Core.Tests.csproj",
+    "tests/VpnManager.App.Tests/VpnManager.App.Tests.csproj",
+    "tools/scripts/binaries/gate.scs",
+]
+
+let mutable absent: list<string> = []
+for relative in required {
+    if not exists(root / relative) {
+        absent.append(relative)
+    }
+}
+if not report("required files", absent.length() == 0, absent.join(", ")) {
+    success = false
+}
+
+# The rule is about what the repository ships: the agent runtime creates an
+# ignored .opencode/ in every checkout, which is not a tracked tree.
+let mutable forbidden_dirs: list<string> = []
+for relative in ["docs", ".agents", ".opencode", ".vscode", "vendor"] {
+    match process.run(process.request("git", ["ls-files", "--", relative]).with_working_directory(root)) {
+        ok(completed) => {
+            if completed.standard_output.trim_whitespace() != "" {
+                forbidden_dirs.append(relative)
+            }
+        }
+        error(_) => {
+            forbidden_dirs.append(relative)
+        }
+    }
+}
+if not report("no local or vendored tree", forbidden_dirs.length() == 0, forbidden_dirs.join(", ")) {
+    success = false
+}
+
+let props = read_text(base, "Directory.Build.props")
+if not report("version 0.1.0", props.contains(">0.1.0</VersionPrefix>"), "Directory.Build.props") {
+    success = false
+}
+
+let changelog = read_text(base, "CHANGELOG.md")
+if not report("changelog 0.1.0", changelog.contains("## [0.1.0]"), "CHANGELOG.md") {
+    success = false
+}
+
+let pin = read_text(base, "CORE_VERSION").trim_whitespace()
+if not report("core pin v0.2.3", pin == "v0.2.3", pin) {
+    success = false
+}
+
+let core_directory = root.parent() / "core"
+if not report("core sibling clone", exists(core_directory / "src" / "Core" / "Core.csproj"), core_directory.to_string()) {
+    success = false
+} else {
+    match process.run(process.request("git", ["describe", "--tags", "--exact-match"]).with_working_directory(core_directory)) {
+        ok(completed) => {
+            let tag = completed.standard_output.trim_whitespace()
+            if not report("core checked out at the pin", completed.exit_code == 0 and tag == pin, tag) {
+                success = false
+            }
+        }
+        error(failure) => {
+            if not report("core checked out at the pin", false, failure.kind) {
+                success = false
+            }
+        }
+    }
+}
+
+let gpl = read_text(base, "LICENSES/GPL-3.0-or-later.txt")
+if not report("GPL-3.0-or-later text", gpl.contains("GNU GENERAL PUBLIC LICENSE"), "LICENSES/GPL-3.0-or-later.txt") {
+    success = false
+}
+
+let reuse = read_text(base, "REUSE.toml")
+if not report("REUSE default GPL", reuse.contains("GPL-3.0-or-later"), "REUSE.toml") {
+    success = false
+}
+
+let control = read_text(base, "packaging/debian/control")
+let package_script = read_text(base, "packaging/build-deb.sh")
+let dependencies_ok = control.contains("network-manager") and control.contains("wireguard-tools") and control.contains("pkexec") and package_script.contains("network-manager") and package_script.contains("wireguard-tools") and package_script.contains("pkexec")
+if not report("debian dependencies", dependencies_ok, "network-manager, wireguard-tools and pkexec") {
+    success = false
+}
+
+let mutable markdown_to_check: list<string> = []
+match process.run(process.request("git", ["ls-files", "--cached", "--others", "--exclude-standard"]).with_working_directory(root)) {
+    ok(completed) => {
+        if completed.exit_code != 0 {
+            if not report("tracked file list", false, "git exit {completed.exit_code}") {
+                success = false
+            }
+        } else {
+            for entry in completed.standard_output.lines() {
+                let name = entry.trim_whitespace()
+                if name.ends_with(".md") {
+                    markdown_to_check.append(name)
+                }
+            }
+        }
+    }
+    error(failure) => {
+        if not report("tracked file list", false, failure.kind) {
+            success = false
+        }
+    }
+}
+
+let mutable unexpected_markdown: list<string> = []
+for name in markdown_to_check {
+    if name != "README.md" and name != "AGENTS.md" and name != "CHANGELOG.md" and name != "SECURITY.md" and name != "CONTRIBUTING.md" and name != "packaging/README.md" {
+        unexpected_markdown.append(name)
+    }
+}
+if not report("markdown allowlist", unexpected_markdown.length() == 0, unexpected_markdown.join(", ")) {
+    success = false
+}
+
+let mutable agent_files = 0
+for name in markdown_to_check {
+    if name == "AGENTS.md" {
+        agent_files = agent_files + 1
+    }
+}
+if not report("one root AGENTS.md", agent_files == 1, "{agent_files} found") {
+    success = false
+}
+
+match process.run(process.request("git", ["grep", "-InE", "-e", "/home/|/srv/github|old-archive-do-not-read", "--", ".", ":(exclude)tools/scripts/binaries/gate.scs"]).with_working_directory(root)) {
+    ok(completed) => {
+        if completed.exit_code == 1 {
+            io.write_standard_output_line("PASS no internal host or personal path")
+        } else if completed.exit_code == 0 {
+            io.write_standard_error_line("FAIL no internal host or personal path: {completed.standard_output.trim_whitespace()}")
+            success = false
+        } else {
+            io.write_standard_error_line("FAIL no internal host or personal path: git grep exit {completed.exit_code}")
+            success = false
+        }
+    }
+    error(failure) => {
+        io.write_standard_error_line("FAIL no internal host or personal path: {failure.kind}")
+        success = false
+    }
+}
+
+match process.run(process.request("git", ["grep", "-InE", "-e", "bitcrafts|BitCrafts", "--", ".", ":(exclude)tools/scripts/binaries/gate.scs"]).with_working_directory(root)) {
+    ok(completed) => {
+        if completed.exit_code == 1 {
+            io.write_standard_output_line("PASS no old product name")
+        } else if completed.exit_code == 0 {
+            io.write_standard_error_line("FAIL no old product name: {completed.standard_output.trim_whitespace()}")
+            success = false
+        } else {
+            io.write_standard_error_line("FAIL no old product name: git grep exit {completed.exit_code}")
+            success = false
+        }
+    }
+    error(failure) => {
+        io.write_standard_error_line("FAIL no old product name: {failure.kind}")
+        success = false
+    }
+}
+
+match process.run(process.request("dotnet", ["build", "VpnManager.slnx", "-c", "Release"]).with_working_directory(root).with_environment(tool_environment)) {
+    ok(completed) => {
+        if completed.exit_code == 0 {
+            io.write_standard_output_line("PASS build")
+        } else {
+            io.write_standard_error_line("FAIL build: exit {completed.exit_code} {completed.standard_error.trim_whitespace()}")
+            success = false
+        }
+    }
+    error(failure) => {
+        io.write_standard_error_line("FAIL build: {failure.kind}")
+        success = false
+    }
+}
+
+match process.run(process.request("dotnet", ["format", "VpnManager.slnx", "--verify-no-changes", "--no-restore"]).with_working_directory(root).with_environment(tool_environment)) {
+    ok(completed) => {
+        if completed.exit_code == 0 {
+            io.write_standard_output_line("PASS format")
+        } else {
+            io.write_standard_error_line("FAIL format: exit {completed.exit_code} {completed.standard_error.trim_whitespace()}")
+            success = false
+        }
+    }
+    error(failure) => {
+        io.write_standard_error_line("FAIL format: {failure.kind}")
+        success = false
+    }
+}
+
+match process.run(process.request("dotnet", ["test", "VpnManager.slnx", "-c", "Release", "--no-build"]).with_working_directory(root).with_environment(tool_environment)) {
+    ok(completed) => {
+        let output = completed.standard_output
+        if completed.exit_code == 0 and output.contains("Passed!") and not output.contains("Failed!") {
+            io.write_standard_output_line("PASS tests")
+        } else {
+            io.write_standard_error_line("FAIL tests: exit {completed.exit_code} {completed.standard_error.trim_whitespace()}")
+            success = false
+        }
+    }
+    error(failure) => {
+        io.write_standard_error_line("FAIL tests: {failure.kind}")
+        success = false
+    }
+}
+
+match process.run(process.request("reuse", ["lint"]).with_working_directory(root)) {
+    ok(completed) => {
+        if completed.exit_code == 0 {
+            io.write_standard_output_line("PASS reuse lint")
+        } else {
+            io.write_standard_error_line("FAIL reuse lint: exit {completed.exit_code} {completed.standard_error.trim_whitespace()}")
+            success = false
+        }
+    }
+    error(failure) => {
+        io.write_standard_error_line("FAIL reuse lint: {failure.kind}")
+        success = false
+    }
+}
+
+if aot_mode {
+    let publish_directory = "/tmp/vpn-manager-gate-publish"
+    match process.run(process.request("rm", ["-rf", publish_directory]).with_working_directory(root)) {
+        ok(_) => {}
+        error(failure) => {
+            io.write_standard_error_line("FAIL aot clean: {failure.kind}")
+            success = false
+        }
+    }
+
+    match process.run(process.request("dotnet", ["publish", "src/VpnManager.App/VpnManager.App.csproj", "-c", "Release", "-r", "linux-x64", "-o", publish_directory]).with_working_directory(root).with_environment(tool_environment)) {
+        ok(completed) => {
+            let mutable ilc = 0
+            for line in completed.standard_output.split("\n") {
+                if line.contains("ILC: ") {
+                    ilc = ilc + 1
+                }
+            }
+            if completed.exit_code == 0 and ilc == 0 {
+                io.write_standard_output_line("PASS aot publish has zero ILC lines")
+            } else {
+                io.write_standard_error_line("FAIL aot publish: exit {completed.exit_code}, {ilc} ILC lines")
+                success = false
+            }
+        }
+        error(failure) => {
+            io.write_standard_error_line("FAIL aot publish: {failure.kind}")
+            success = false
+        }
+    }
+
+    let helper_directory = "/tmp/vpn-manager-helper-gate-publish"
+    match process.run(process.request("rm", ["-rf", helper_directory]).with_working_directory(root)) {
+        ok(_) => {}
+        error(failure) => {
+            io.write_standard_error_line("FAIL helper aot clean: {failure.kind}")
+            success = false
+        }
+    }
+
+    match process.run(process.request("dotnet", ["publish", "src/VpnManager.Helper/VpnManager.Helper.csproj", "-c", "Release", "-r", "linux-x64", "-o", helper_directory]).with_working_directory(root).with_environment(tool_environment)) {
+        ok(completed) => {
+            let mutable helper_ilc = 0
+            for line in completed.standard_output.split("\n") {
+                if line.contains("ILC: ") {
+                    helper_ilc = helper_ilc + 1
+                }
+            }
+            if completed.exit_code == 0 and helper_ilc == 0 {
+                io.write_standard_output_line("PASS helper aot publish has zero ILC lines")
+            } else {
+                io.write_standard_error_line("FAIL helper aot publish: exit {completed.exit_code}, {helper_ilc} ILC lines")
+                success = false
+            }
+        }
+        error(failure) => {
+            io.write_standard_error_line("FAIL helper aot publish: {failure.kind}")
+            success = false
+        }
+    }
+
+    match process.run(process.request("./vpn-manager-helper", ["--self-test"]).with_working_directory(helper_directory.to_path())) {
+        ok(completed) => {
+            if completed.exit_code == 0 and completed.standard_output.contains("SELF-TEST PASS") {
+                io.write_standard_output_line("PASS helper aot self-test")
+            } else {
+                io.write_standard_error_line("FAIL helper aot self-test: exit {completed.exit_code} {completed.standard_error.trim_whitespace()}")
+                success = false
+            }
+        }
+        error(failure) => {
+            io.write_standard_error_line("FAIL helper aot self-test: {failure.kind}")
+            success = false
+        }
+    }
+
+    match process.run(process.request("./vpn-manager", ["--self-test"]).with_working_directory(publish_directory.to_path())) {
+        ok(completed) => {
+            if completed.exit_code == 0 and completed.standard_output.contains("SELF-TEST PASS") {
+                io.write_standard_output_line("PASS aot self-test")
+            } else {
+                io.write_standard_error_line("FAIL aot self-test: exit {completed.exit_code} {completed.standard_error.trim_whitespace()}")
+                success = false
+            }
+        }
+        error(failure) => {
+            io.write_standard_error_line("FAIL aot self-test: {failure.kind}")
+            success = false
+        }
+    }
+}
+
+io.write_standard_output_line(verdict.line(success))
+process.exit_with_code(verdict.code(success))

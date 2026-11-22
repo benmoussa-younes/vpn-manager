@@ -1,0 +1,27 @@
+VPN Manager
+Copyright (C) 2026 Younes BENMOUSSA <younes.benmoussa@pm.me>
+
+This program is free software: you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+The source of this release is the repository at
+https://github.com/benmoussa-younes/vpn-manager and the corresponding release
+archive.
+
+The product consumes Core as source at the tag pinned in CORE_VERSION. Core is
+Copyright (C) 2026 Younes BENMOUSSA and is licensed under the GNU Lesser General
+Public License, version 3 or later. Its source is available at
+https://github.com/benmoussa-younes/core, and the pinned release archive is
+attached to its GitHub release.
+
+The profile manager is derived from the previous WireGuard manager codebase,
+Copyright (C) 2026 Younes BENMOUSSA, licensed under GPL-3.0-or-later.
+
+The third-party components are listed in THIRD-PARTY; their licence texts are in
+LICENSES/.

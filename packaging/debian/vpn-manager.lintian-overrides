@@ -1,0 +1,10 @@
+# The Native AOT publish output bundles SkiaSharp, which embeds its own copies of
+# freetype, libjpeg and libpng. They are private to the application and are not
+# linked against the system libraries, so the embedded copies are intentional.
+embedded-library freetype [usr/lib/vpn-manager/libSkiaSharp.so]
+embedded-library libjpeg [usr/lib/vpn-manager/libSkiaSharp.so]
+embedded-library libpng [usr/lib/vpn-manager/libSkiaSharp.so]
+
+# The package is not uploaded to the Debian archive, so there is no Debian bug
+# report to close in the changelog.
+initial-upload-closes-no-bugs

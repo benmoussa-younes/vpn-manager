@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+
+jobs:
+  licence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Licence
+        run: pipx run reuse==5.0.2 lint
+
+  build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            Directory.Packages.props
+            global.json
+            **/*.csproj
+
+      - name: Core at the pin
+        run: |
+          pin="$(cat CORE_VERSION)"
+          git clone --branch "$pin" --depth 1 https://github.com/benmoussa-younes/core.git ../core
+          test "$(git -C ../core describe --tags --exact-match)" = "$pin"
+
+      - name: Scripts interpreter
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/scripts.tar.gz" \
+            https://github.com/benmoussa-younes/scripts/releases/download/v0.2.1/scripts_0.2.1_linux-x64.tar.gz
+          tar -xzf "$RUNNER_TEMP/scripts.tar.gz" -C "$RUNNER_TEMP"
+          sudo install -m 0755 "$RUNNER_TEMP/scripts-0.2.1/scripts" /usr/local/bin/scripts
+
+      - name: Gate dependencies
+        run: |
+          pipx install reuse==5.0.2
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Gate
+        run: scripts run tools/scripts/binaries/gate.scs
+
+      - name: Restore
+        run: dotnet restore VpnManager.slnx
+
+      - name: Format
+        run: dotnet format VpnManager.slnx --verify-no-changes --no-restore
+
+      - name: Vulnerable packages
+        run: |
+          dotnet list VpnManager.slnx package --vulnerable --include-transitive --format json > vulnerabilities.json
+          jq -e '[.. | .vulnerabilities? // empty | .[]] | length == 0' vulnerabilities.json
+
+      - name: Build
+        run: dotnet build VpnManager.slnx -c Release --no-restore
+
+      - name: Test
+        run: >
+          dotnet test VpnManager.slnx -c Release --no-build
+          --collect:"XPlat Code Coverage"
+          --logger "trx;LogFileName=test-results.trx"
+          --results-directory TestResults
+
+      - name: D-Bus session dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends dbus libglib2.0-bin
+
+      - name: D-Bus integration
+        run: >
+          dbus-run-session -- dotnet test tests/VpnManager.App.Tests/VpnManager.App.Tests.csproj
+          -c Release --no-build --filter FullyQualifiedName~DbusIntegrationTests
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: test-results
+          if-no-files-found: ignore
+          retention-days: 7
+          path: TestResults/*.trx

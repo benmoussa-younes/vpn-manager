@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="VPN Manager">
+  <!--
+    SPDX-FileCopyrightText: 2026 Younes Benmoussa <younes.benmoussa@pm.me>
+    SPDX-License-Identifier: GPL-3.0-or-later
+
+    The product icon, drawn from the studio chart (emerald #10b981, deep green
+    #052e16). It is geometric on purpose: no font and no raster, so it scales
+    from the app grid to the dock without a dependency.
+
+    This notice lives inside the root element on purpose. gdk-pixbuf sniffs an
+    SVG by scanning its first bytes for the root tag; a comment ahead of the root
+    pushes the tag out of reach, so GTK fails to load the icon and the shell
+    shows none.
+  -->
+  <rect width="512" height="512" rx="112" fill="#10b981"/>
+  <path d="M256 88 L400 140 V266 C400 350 337 414 256 444 C175 414 112 350 112 266 V140 Z" fill="#052e16"/>
+  <path d="M256 168 L336 196 V266 C336 316 300 356 256 374 C212 356 176 316 176 266 V196 Z" fill="#10b981"/>
+  <circle cx="256" cy="262" r="30" fill="#052e16"/>
+  <rect x="240" y="276" width="32" height="62" rx="16" fill="#052e16"/>
+</svg>
