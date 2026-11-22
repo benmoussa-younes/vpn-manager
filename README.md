@@ -6,7 +6,8 @@ prints a private key. The GUI never elevates; the one explicit `--fix-sysctl`
 action goes through the fixed polkit helper.
 
 - **Repository**: <https://github.com/benmoussa-younes/vpn-manager>
-- **Licence**: `GPL-3.0-or-later` (see [`LICENSES/GPL-3.0-or-later.txt`](LICENSES/GPL-3.0-or-later.txt))
+- **Licence**: `GPL-3.0-or-later` (see [`LICENSE`](LICENSE); the SPDX texts are in
+  [`LICENSES/`](LICENSES))
 
 ## What it does
 
@@ -265,5 +266,8 @@ basis, with no promised delay or fix.
 ## Licence
 
 `GPL-3.0-or-later`. Copyright (C) 2026 Younes BENMOUSSA
-<younes.benmoussa@pm.me>. The documentation is `CC-BY-SA-4.0`; the third-party
+<younes.benmoussa@pm.me>. [`LICENSE`](LICENSE) carries the GNU GPL version 3
+text, the one a code host reads at the repository root; the gate compares it with
+[`LICENSES/GPL-3.0-or-later.txt`](LICENSES/GPL-3.0-or-later.txt), the SPDX text
+the REUSE metadata names. The documentation is `CC-BY-SA-4.0`; the third-party
 components are listed in [`THIRD-PARTY`](THIRD-PARTY).
