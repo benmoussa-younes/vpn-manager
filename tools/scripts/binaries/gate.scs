@@ -102,7 +102,7 @@ if not report("changelog 0.1.0", changelog.contains("## [0.1.0]"), "CHANGELOG.md
 }
 
 let pin = read_text(base, "CORE_VERSION").trim_whitespace()
-if not report("core pin v0.2.2", pin == "v0.2.2", pin) {
+if not report("core pin v0.2.3", pin == "v0.2.3", pin) {
     success = false
 }
 
