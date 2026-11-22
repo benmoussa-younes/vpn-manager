@@ -18,6 +18,10 @@ and this project adheres to
 - The gate refuses a tracked build artifact (`artifacts/`, `*.deb`), a root
   `LICENSE` that diverges from `LICENSES/GPL-3.0-or-later.txt`, and a `LICENSE`
   that is not a regular file.
+- The gate accepts a sibling `core` checkout that follows `core`'s `main` when
+  the pinned tag is in its history and `core/src` plus the root build files it
+  pins are identical to the pin and clean, instead of demanding a detached
+  checkout; any other difference in those files still fails.
 
 ## [0.1.0] - 2026-11-22
 
