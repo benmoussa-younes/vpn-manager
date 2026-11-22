@@ -83,7 +83,6 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
         view.RefreshRequested += () => RunGuarded(RefreshAsync);
         view.TunnelSelected += name => RunGuarded(() => SelectAsync(name));
         view.CreateRequested += BeginCreate;
-        view.EditRequested += name => RunGuarded(() => BeginEditAsync(name));
         view.DeleteRequested += name => RunGuarded(() => DeleteAsync(name));
         view.StartRequested += name => RunGuarded(() => StartAsync(name));
         view.StopRequested += name => RunGuarded(() => StopAsync(name));
@@ -95,12 +94,8 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
         view.EditorPeerAddRequested += AddPeer;
         view.EditorPeerRemoveRequested += RemovePeer;
         view.EditorKeyPairRequested += () => RunGuarded(GenerateKeyPairAsync);
-        view.RenameRequested += BeginRename;
         view.RenameSubmitted += input => RunGuarded(() => RenameAsync(input));
-        view.RenameCancelRequested += CancelRename;
-        view.PolicyEditRequested += BeginPolicy;
-        view.PolicySubmitted += input => RunGuarded(() => SavePolicyAsync(input));
-        view.PolicyCancelRequested += CancelPolicy;
+        view.PolicySubmitted += input => RunGuarded(() => ApplyPolicyAsync(input));
     }
 
     /// <summary>Gets the selected tunnel name, or <see langword="null"/>.</summary>
@@ -264,11 +259,26 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
     /// <summary>Records the operator's selection and resets the transfer display.</summary>
     /// <param name="name">The tunnel name.</param>
     /// <returns>A completed task.</returns>
-    public Task SelectAsync(string name)
+    public async Task SelectAsync(string name)
     {
         ArgumentNullException.ThrowIfNull(name);
+
         _selectedName = name;
-        return Task.CompletedTask;
+        var summary = _lastSummaries?.FirstOrDefault(row => string.Equals(row.Name, name, StringComparison.Ordinal));
+        if (summary is null || summary.Source == TunnelSource.NetworkManager)
+        {
+            // A connection the application does not own: show its state and the
+            // connect action, but no editable configuration.
+            View.HideEditor();
+            View.HideRename();
+            View.HidePolicy();
+            return;
+        }
+
+        await BeginEditAsync(name).ConfigureAwait(true);
+        var policy = _service.GetPolicy(name);
+        View.ShowRename(new TunnelRenameSnapshot(name, summary.DisplayName ?? name));
+        View.ShowPolicy(new TunnelPolicySnapshot(name, policy.AutoReconnect, policy.DnsMode, policy.SearchDomains));
     }
 
     /// <summary>
@@ -361,7 +371,10 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
     public void BeginCreate()
     {
         _editor = new EditorSession { IsNew = true, Name = string.Empty };
+        _selectedName = null;
         View.SetError(null);
+        View.HideRename();
+        View.HidePolicy();
         View.ShowEditor(CreateSnapshot(_editor));
         View.SetStatus("New tunnel: fill in the fields and save.");
     }
@@ -546,6 +559,7 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
         View.ShowToast($"Saved {writtenPath}.");
         Journal($"saved {configuration.Name}");
         await RefreshAsync().ConfigureAwait(true);
+        await SelectAsync(configuration.Name).ConfigureAwait(true);
     }
 
     /// <summary>Closes the editor without saving.</summary>
@@ -554,26 +568,16 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
         _editor = null;
         View.HideEditor();
         View.SetStatus("Edit cancelled.");
+
+        if (_selectedName is { } name)
+        {
+            _ = SelectAsync(name);
+        }
     }
 
     /// <summary>
-    /// Opens the rename page. The display name is also the NetworkManager
-    /// connection id; the file, the interface and the real tunnel name stay.
-    /// </summary>
-    /// <param name="name">The real tunnel name.</param>
-    public void BeginRename(string name)
-    {
-        ArgumentNullException.ThrowIfNull(name);
-
-        var summary = _lastSummaries?.FirstOrDefault(row => string.Equals(row.Name, name, StringComparison.Ordinal));
-        var shown = summary?.DisplayName is { Length: > 0 } alias ? alias : name;
-        View.SetError(null);
-        View.ShowRename(new TunnelRenameSnapshot(name, shown));
-    }
-
-    /// <summary>
-    /// Stores the display name the operator typed: an alias shown only by the
-    /// application, or an empty text to show the real name again.
+    /// Stores the display name the operator typed: the NetworkManager connection
+    /// id, or an empty text to restore the real name.
     /// </summary>
     /// <param name="input">The real tunnel name and the display name.</param>
     /// <returns>A task that completes when the view has been updated.</returns>
@@ -597,55 +601,28 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
         await RefreshAsync().ConfigureAwait(true);
     }
 
-    /// <summary>Opens the policy editor for a tunnel.</summary>
-    /// <param name="name">The real tunnel name.</param>
-    public void BeginPolicy(string name)
-    {
-        ArgumentNullException.ThrowIfNull(name);
-
-        var policy = _service.GetPolicy(name);
-        View.SetError(null);
-        View.ShowPolicy(new TunnelPolicySnapshot(name, policy.AutoReconnect, policy.DnsMode, policy.SearchDomains));
-    }
-
     /// <summary>
-    /// Stores the policy the operator chose. A live connection is updated by the
-    /// service without a reconnect.
+    /// Applies a policy change from the inline card. It is quiet: the control the
+    /// operator touched already shows the new value, and a toast per change would
+    /// be noise.
     /// </summary>
-    /// <param name="input">The values read from the page.</param>
-    /// <returns>A task that completes when the view has been updated.</returns>
-    public async Task SavePolicyAsync(TunnelPolicyInput input)
+    /// <param name="input">The values read from the card.</param>
+    /// <returns>A task that completes when the policy is applied.</returns>
+    public async Task ApplyPolicyAsync(TunnelPolicyInput input)
     {
         ArgumentNullException.ThrowIfNull(input);
 
         var saved = await _service
             .SetPolicyAsync(input.Name, new TunnelPolicy(input.AutoReconnect, input.DnsMode, input.SearchDomains))
             .ConfigureAwait(true);
-        if (!saved.TryGetValue(out var policy))
+        if (!saved.IsSuccess)
         {
             View.SetError(saved.Error.Message);
             return;
         }
 
-        View.HidePolicy();
         View.SetError(null);
-        View.ShowToast($"Policy saved for '{input.Name}'.");
         Journal($"policy {input.Name}");
-        await RefreshAsync().ConfigureAwait(true);
-    }
-
-    /// <summary>Closes the policy page without saving.</summary>
-    public void CancelPolicy()
-    {
-        View.HidePolicy();
-        View.SetStatus("Policy edit cancelled.");
-    }
-
-    /// <summary>Closes the rename page without changing the name.</summary>
-    public void CancelRename()
-    {
-        View.HideRename();
-        View.SetStatus("Rename cancelled.");
     }
 
     /// <summary>Adds an empty peer row to the open editor.</summary>

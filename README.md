@@ -10,8 +10,10 @@ action goes through the fixed polkit helper.
 
 ## What it does
 
-- Lists the profiles under `~/.config/benmoussa/vpn-manager` (or the
-  `--config-dir` value) and the WireGuard connections NetworkManager owns.
+- Shows a persistent sidebar of the profiles under
+  `~/.config/benmoussa/vpn-manager` (or the `--config-dir` value) and the
+  WireGuard connections NetworkManager owns; selecting one opens its editable
+  pane to the right. There is no separate detail page and no toolbar.
 - Imports a `.conf` file, a pasted profile, or a full configuration text; exports
   a profile. A profile is written owner-only and parsed before it is stored.
 - Connects and disconnects through `nmcli`, as the operator, one tunnel at a time.
@@ -23,8 +25,12 @@ action goes through the fixed polkit helper.
 - Supports a `--read-only` session that browses and exports without changing
   anything.
 - Applies a per-profile NetworkManager policy: automatic reconnection, and the
-  `Profile`, `System`, `Split` or `FullTunnel` DNS mode. A **Policy** page edits
-  those three settings; a live connection is updated without reconnecting.
+  `Profile`, `System`, `Split` or `FullTunnel` DNS mode. The policy card in the
+  pane edits those three settings and applies each change immediately; a live
+  connection is updated without reconnecting.
+- Saves the configuration with an explicit Save (the header shows a dot while
+  the form has unsaved changes), while the display name commits inline and the
+  policy applies on change.
 - Uses the display name as the NetworkManager connection name (id), while the
   configuration file, the interface and the real tunnel name stay unchanged.
 - Has no tray icon: closing the window quits, and asks before disconnecting a
@@ -70,8 +76,8 @@ back behind the operator's back.
 
 ## Policy
 
-Each profile carries three settings beside its `.conf`, edited from the detail
-page's **Policy** command or from `--policy`:
+Each profile carries three settings beside its `.conf`, edited from the pane's
+**Policy** card or from `--policy`:
 
 | Setting | Effect |
 |---|---|

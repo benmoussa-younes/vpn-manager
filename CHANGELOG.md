@@ -15,6 +15,11 @@ written as `VpnManager.*` on Core v0.2.3.
 
 ### Added
 
+- A master-detail surface: a persistent profile sidebar and one editable pane,
+  replacing the pushed detail/editor/rename/policy pages and the icon toolbar.
+  The configuration form saves explicitly and shows a dirty dot in the header
+  (Core 0.2.3), the display name commits inline, and the policy applies on
+  change.
 - The `CoreHost` composition: XDG paths, durable application log, operation
   journal, crash log, single-instance lock and the desktop notifier.
 - The shared `Core.UI` shell: `CoreWindow` stack navigation, header commands,

@@ -26,29 +26,14 @@ public interface ITunnelListView : IView
     /// <summary>The operator asked for a new tunnel editor.</summary>
     event Action CreateRequested;
 
-    /// <summary>The operator asked to edit a tunnel.</summary>
-    event Action<string> EditRequested;
-
     /// <summary>The operator asked to delete a tunnel.</summary>
     event Action<string> DeleteRequested;
-
-    /// <summary>The operator asked to rename (set a display name for) a tunnel.</summary>
-    event Action<string> RenameRequested;
 
     /// <summary>The operator submitted a display name for a tunnel.</summary>
     event Action<TunnelRenameInput> RenameSubmitted;
 
-    /// <summary>The operator dismissed the rename page.</summary>
-    event Action RenameCancelRequested;
-
-    /// <summary>The operator asked to edit a tunnel's reconnection and DNS policy.</summary>
-    event Action<string> PolicyEditRequested;
-
     /// <summary>The operator submitted a policy from the policy page.</summary>
     event Action<TunnelPolicyInput> PolicySubmitted;
-
-    /// <summary>The operator dismissed the policy page.</summary>
-    event Action PolicyCancelRequested;
 
     /// <summary>The operator asked to connect a tunnel.</summary>
     event Action<string> StartRequested;

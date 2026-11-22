@@ -82,55 +82,6 @@ public sealed class ViewTests
         });
     }
 
-    [Fact]
-    public async Task TheDetailCommandsFollowTheStateAndTheOwnership()
-    {
-        await HeadlessTestSession.RunAsync(() =>
-        {
-            var host = new FakeApplicationHost();
-            var configured = new TunnelDetailView(Item("wg0", "Up", TunnelSource.Configuration), Transfer(), readOnly: false);
-            configured.PublishSnapshot(host);
-
-            Assert.Equal("Disconnect", Command(host, "toggle").Label);
-            Assert.True(Command(host, "toggle").IsEnabled);
-            Assert.True(Command(host, "delete").IsEnabled);
-            Assert.True(Command(host, "policy").IsEnabled);
-
-            host = new FakeApplicationHost();
-            var foreign = new TunnelDetailView(Item("wg1", "Down", TunnelSource.NetworkManager), Transfer(), readOnly: false);
-            foreign.PublishSnapshot(host);
-
-            Assert.Equal("Connect", Command(host, "toggle").Label);
-            Assert.False(Command(host, "delete").IsEnabled);
-            Assert.True(Command(host, "export").IsEnabled);
-            Assert.True(Command(host, "policy").IsEnabled);
-
-            host = new FakeApplicationHost();
-            var readOnly = new TunnelDetailView(Item("wg0", "Up", TunnelSource.Configuration), Transfer(), readOnly: true);
-            readOnly.PublishSnapshot(host);
-
-            Assert.False(Command(host, "toggle").IsEnabled);
-            Assert.False(Command(host, "rename").IsEnabled);
-            Assert.False(Command(host, "delete").IsEnabled);
-            Assert.False(Command(host, "policy").IsEnabled);
-        });
-    }
-
-    [Fact]
-    public async Task TheDetailShowsTheLiveTransfer()
-    {
-        await HeadlessTestSession.RunAsync(() =>
-        {
-            var view = new TunnelDetailView(Item("wg0", "Up", TunnelSource.Configuration), Transfer(), readOnly: false);
-
-            view.UpdateTransfer(new TransferView("1.0 kB/s", "2.0 MB", "3.0 kB/s", "4.0 MB"));
-
-            Assert.Equal("1.0 kB/s", view.DownloadRateText.Text);
-            Assert.Equal("wg0", view.TunnelName);
-            Assert.Equal("Up", view.StateValueText.Text);
-        });
-    }
-
     private static AppCommand Command(FakeApplicationHost host, string id) =>
         Assert.Single(host.Snapshot!.Commands.Commands, command => command.Id == id);
 

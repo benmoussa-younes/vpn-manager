@@ -302,8 +302,6 @@ internal sealed class ShellWindow : IAsyncDisposable
     private static CommandSet BuildApplicationMenu(bool readOnly) => new(
     [
         new AppCommand("new", "New tunnel\u2026", Shortcut: "Ctrl+N", IsEnabled: !readOnly, Group: "tunnel"),
-        new AppCommand("edit", "Edit tunnel\u2026", Shortcut: "Ctrl+E", IsEnabled: !readOnly, Group: "tunnel"),
-        new AppCommand("rename", "Rename tunnel", IsEnabled: !readOnly, Group: "tunnel"),
         new AppCommand("delete", "Delete tunnel", Shortcut: "Delete", IsEnabled: !readOnly, Group: "tunnel"),
         new AppCommand("refresh", "Refresh", Shortcut: "Ctrl+R", Group: "view"),
         new AppCommand("paste", "Paste profile\u2026", IsEnabled: !readOnly, Group: "import"),

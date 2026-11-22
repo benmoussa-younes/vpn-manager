@@ -94,31 +94,17 @@ internal sealed class FakeTunnelView : ITunnelListView
 
     public event Action? RefreshRequested;
 
-    public event Action<string>? PolicyEditRequested;
-
     public event Action<TunnelPolicyInput>? PolicySubmitted;
 
-    public event Action? PolicyCancelRequested;
-
-    internal void RaisePolicyEdit(string name) => PolicyEditRequested?.Invoke(name);
-
     internal void RaisePolicySubmitted(TunnelPolicyInput input) => PolicySubmitted?.Invoke(input);
-
-    internal void RaisePolicyCancel() => PolicyCancelRequested?.Invoke();
 
     public event Action<string>? TunnelSelected;
 
     public event Action? CreateRequested;
 
-    public event Action<string>? EditRequested;
-
     public event Action<string>? DeleteRequested;
 
-    public event Action<string>? RenameRequested;
-
     public event Action<TunnelRenameInput>? RenameSubmitted;
-
-    public event Action? RenameCancelRequested;
 
     public event Action<string>? StartRequested;
 
@@ -149,9 +135,6 @@ internal sealed class FakeTunnelView : ITunnelListView
     /// <summary>Raises <see cref="CreateRequested"/>.</summary>
     internal void RequestCreate() => CreateRequested?.Invoke();
 
-    /// <summary>Raises <see cref="EditRequested"/>.</summary>
-    internal void RequestEdit(string name) => EditRequested?.Invoke(name);
-
     /// <summary>Raises <see cref="DeleteRequested"/>.</summary>
     internal void RequestDelete(string name) => DeleteRequested?.Invoke(name);
 
@@ -167,22 +150,12 @@ internal sealed class FakeTunnelView : ITunnelListView
     /// <summary>Whether the rename page is open.</summary>
     internal bool RenameVisible { get; private set; }
 
-    /// <summary>Raises <see cref="RenameRequested"/>.</summary>
-    internal void RequestRename(string name)
-    {
-        RenameRequests.Add(name);
-        RenameRequested?.Invoke(name);
-    }
-
     /// <summary>Raises <see cref="RenameSubmitted"/>.</summary>
     internal void SubmitRename(TunnelRenameInput input)
     {
         RenameSubmissions.Add(input);
         RenameSubmitted?.Invoke(input);
     }
-
-    /// <summary>Raises <see cref="RenameCancelRequested"/>.</summary>
-    internal void RequestRenameCancel() => RenameCancelRequested?.Invoke();
 
     /// <summary>Raises <see cref="StartRequested"/>.</summary>
     internal void RequestStart(string name) => StartRequested?.Invoke(name);

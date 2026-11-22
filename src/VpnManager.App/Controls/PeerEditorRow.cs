@@ -50,11 +50,27 @@ public sealed class PeerEditorRow : UserControl
         Grid.SetColumn(_remove, 1);
         grid.Children.Add(_remove);
 
+        foreach (var box in new[] { _label, _publicKey, _presharedKey, _allowedIps, _endpoint, _keepalive })
+        {
+            box.TextChanged += (_, _) =>
+            {
+                if (!_loading)
+                {
+                    Changed?.Invoke();
+                }
+            };
+        }
+
         Content = grid;
     }
 
     /// <summary>Raised when the operator asked to remove this row.</summary>
     public event Action? RemoveRequested;
+
+    /// <summary>Raised when a field of this row changed.</summary>
+    public event Action? Changed;
+
+    private bool _loading;
 
     /// <summary>Gets the remove button, for tests.</summary>
     internal Button RemoveButton => _remove;
@@ -65,12 +81,20 @@ public sealed class PeerEditorRow : UserControl
     {
         ArgumentNullException.ThrowIfNull(peer);
 
-        _label.Text = peer.Label;
-        _publicKey.Text = peer.PublicKey;
-        _presharedKey.Text = peer.PresharedKey;
-        _allowedIps.Text = peer.AllowedIps;
-        _endpoint.Text = peer.Endpoint;
-        _keepalive.Text = peer.PersistentKeepalive;
+        _loading = true;
+        try
+        {
+            _label.Text = peer.Label;
+            _publicKey.Text = peer.PublicKey;
+            _presharedKey.Text = peer.PresharedKey;
+            _allowedIps.Text = peer.AllowedIps;
+            _endpoint.Text = peer.Endpoint;
+            _keepalive.Text = peer.PersistentKeepalive;
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     /// <summary>Reads every field back as a peer input.</summary>

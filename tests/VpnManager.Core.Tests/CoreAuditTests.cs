@@ -37,7 +37,7 @@ public sealed class CoreAuditTests
     }
 
     [Fact]
-    public async Task Selecting_a_tunnel_does_not_re_read_every_configuration()
+    public async Task Selecting_a_tunnel_reads_only_that_configuration()
     {
         var store = new FakeWireGuardConfigStore();
         store.Files["wg0"] = TestData.SampleConfigText;
@@ -55,7 +55,8 @@ public sealed class CoreAuditTests
 
         await presenter.SelectAsync("wg0");
 
-        Assert.Equal(afterRefresh, store.ReadCount);
+        // The pane loads the selected profile once; it never re-reads the others.
+        Assert.Equal(afterRefresh + 1, store.ReadCount);
         Assert.Equal("wg0", presenter.SelectedTunnel);
     }
 

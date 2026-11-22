@@ -75,7 +75,10 @@ public sealed class TunnelListPresenterTests
 
         await context.Presenter.SaveAsync(CreateInput(privateKey: TestData.InterfacePrivateKey));
 
-        Assert.False(context.View.EditorVisible);
+        // The pane reloads the saved profile after the save; the editor stays
+        // visible with the stored values instead of closing to an empty page.
+        Assert.True(context.View.EditorVisible);
+        Assert.False(context.View.Editor!.IsNew);
         var write = Assert.Single(context.Store.Writes);
         Assert.Equal("wg3", write.Name);
 
@@ -558,34 +561,12 @@ public sealed class EditorInputMapperTests
         var presenter = new TunnelListPresenter(view, service);
 
         await presenter.RefreshAsync();
-        view.RequestRename("wg0");
-
-        Assert.True(view.RenameVisible);
-        Assert.Equal("wg0", view.Rename!.CurrentDisplayName);
 
         view.SubmitRename(new TunnelRenameInput("wg0", "Work VPN"));
         await (presenter.PendingOperation ?? Task.CompletedTask);
 
-        Assert.False(view.RenameVisible);
         Assert.Contains(view.Toasts, toast => toast.Contains("Work VPN", StringComparison.Ordinal));
         Assert.Equal("Work VPN", Assert.Single(view.Tunnels).ShownName);
-    }
-
-    [Fact]
-    public async Task Cancelling_a_rename_changes_nothing()
-    {
-        var view = new FakeTunnelView();
-        var store = new FakeWireGuardConfigStore();
-        store.Files["wg0"] = TestData.SampleConfigText;
-        var service = new TunnelService(store, new FakeWireGuardRuntimeInspector(), stateStore: new FakeApplicationStateStore());
-        var presenter = new TunnelListPresenter(view, service);
-
-        await presenter.RefreshAsync();
-        view.RequestRename("wg0");
-        view.RequestRenameCancel();
-
-        Assert.False(view.RenameVisible);
-        Assert.Equal("wg0", Assert.Single(view.Tunnels).ShownName);
     }
 
     [Fact]

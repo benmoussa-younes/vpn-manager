@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Core.Mvp.Composition;
@@ -27,6 +28,7 @@ public sealed class TunnelPolicyView : UserControl, IView
     private readonly ComboBox _mode;
     private readonly TextBox _search;
     private string _name = string.Empty;
+    private bool _loading;
 
     /// <summary>Initializes the policy page.</summary>
     public TunnelPolicyView()
@@ -76,12 +78,24 @@ public sealed class TunnelPolicyView : UserControl, IView
             },
         };
 
-        var centering = new Grid { ColumnDefinitions = new ColumnDefinitions("*,720,*") };
-        Grid.SetColumn(column, 1);
-        centering.Children.Add(column);
+        column.MaxWidth = 720;
+        column.HorizontalAlignment = HorizontalAlignment.Center;
+        Content = column;
 
-        Content = new ScrollViewer { Content = centering };
+        _reconnect.IsCheckedChanged += (_, _) => OnChanged();
+        _mode.SelectionChanged += (_, _) => OnChanged();
+        _search.LostFocus += (_, _) => OnChanged();
+        _search.KeyDown += (_, args) =>
+        {
+            if (args.Key == Key.Enter)
+            {
+                OnChanged();
+            }
+        };
     }
+
+    /// <summary>Raised when a policy control changed.</summary>
+    public event Action? Changed;
 
     /// <summary>Raised when the operator saved the policy.</summary>
     public event Action<TunnelPolicyInput>? SaveRequested;
@@ -107,12 +121,29 @@ public sealed class TunnelPolicyView : UserControl, IView
     {
         ArgumentNullException.ThrowIfNull(snapshot);
 
-        _name = snapshot.Name;
-        _tunnel.Text = snapshot.Name;
-        _reconnect.IsChecked = snapshot.AutoReconnect;
-        _mode.SelectedIndex = (int)snapshot.DnsMode;
-        _search.Text = string.Join(", ", snapshot.SearchDomains);
+        _loading = true;
+        try
+        {
+            _name = snapshot.Name;
+            _tunnel.Text = snapshot.Name;
+            _reconnect.IsChecked = snapshot.AutoReconnect;
+            _mode.SelectedIndex = (int)snapshot.DnsMode;
+            _search.Text = string.Join(", ", snapshot.SearchDomains);
+        }
+        finally
+        {
+            _loading = false;
+        }
+
         _reconnect.Focus();
+    }
+
+    private void OnChanged()
+    {
+        if (!_loading)
+        {
+            Changed?.Invoke();
+        }
     }
 
     /// <summary>Reads the fields back as the policy input.</summary>

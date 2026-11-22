@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -11,15 +12,17 @@ using Core.Mvp.Views;
 using Core.Diagnostics;
 using Core.Results;
 using VpnManager.App.Controls;
+using VpnManager.Core.Model;
 using VpnManager.Core.Presentation;
 
 namespace VpnManager.App.Views;
 
 /// <summary>
-/// The master list of tunnels (MVP, passive view): one row per tunnel, each with
-/// its live transfer, and the empty state. Activating a row pushes the tunnel's
-/// <see cref="TunnelDetailView"/> page; the editor is pushed from there. The view
-/// holds no rules about tunnels, keys or files.
+/// The master-detail surface (MVP, passive view): a persistent sidebar of
+/// profiles and, on selection, the profile's editable pane. The pane embeds the
+/// configuration form, the policy card and the display name; the empty state and
+/// the drag-and-drop import stay at the surface level. The view holds no rules
+/// about tunnels, keys or files.
 /// </summary>
 public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
 {
@@ -39,28 +42,43 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
 
     private readonly ListBox _tunnelList = new() { SelectionMode = SelectionMode.Single, Background = Brushes.Transparent };
     private readonly EmptyState _emptyState;
+    private readonly TunnelEditorView _editor = new();
+    private readonly TunnelPolicyView _policyView = new();
+    private readonly TextBox _displayName = new() { PlaceholderText = "Leave blank to show the real name" };
+    private readonly TextBlock _paneName = new() { Classes = { "heading" } };
+    private readonly TextBlock _paneSource = new() { Classes = { "muted" } };
+    private readonly TextBlock _paneState = new();
+    private readonly TextBlock _paneDown = new() { Classes = { "muted" } };
+    private readonly TextBlock _paneUp = new() { Classes = { "muted" } };
+    private readonly Button _connect = new() { Classes = { "primary" }, Content = "Connect" };
+    private readonly Button _save = new() { Classes = { "primary" }, Content = "Save" };
+    private readonly Button _cancel = new() { Content = "Cancel" };
+    private readonly Button _addPeer = new() { Content = "Add peer" };
+    private readonly Button _generate = new() { Content = "Generate key pair" };
+    private readonly Button _export = new() { Content = "Export" };
+    private readonly Button _delete = new() { Classes = { "destructive" }, Content = "Delete" };
+    private readonly Border _displayCard;
+    private readonly ScrollViewer _pane;
+    private readonly StackPanel _editActions;
     private readonly List<string> _rowNames = [];
     private readonly Dictionary<string, string> _tunnelStates = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (TextBlock Down, TextBlock Up)> _rowTransfers = new(StringComparer.Ordinal);
     private IApplicationHost? _host;
     private IFilePicker? _picker;
-    private TunnelEditorView? _editor;
-    private TunnelDetailView? _detail;
-    private TunnelRenameView? _rename;
-    private TunnelPolicyView? _policy;
     private IReadOnlyList<TunnelListItem> _lastTunnels = [];
     private IReadOnlyDictionary<string, TransferView> _transfers = new Dictionary<string, TransferView>(StringComparer.Ordinal);
+    private string? _selectedName;
     private string _status = string.Empty;
     private bool _suspendSelection;
     private bool _readOnly;
     private bool _busy;
+    private bool _dirty;
+    private bool _editorIsNew;
 
-    /// <summary>Initializes the master list and its empty message.</summary>
+    /// <summary>Initializes the master-detail surface: the profile sidebar and the editor pane.</summary>
     public TunnelListView()
     {
         _tunnelList.SelectionChanged += OnTunnelSelectionChanged;
-        _tunnelList.DoubleTapped += OnTunnelDoubleTapped;
-        _tunnelList.KeyDown += OnTunnelKeyDown;
 
         // A `.conf` dropped anywhere on the page is imported.
         DragDrop.SetAllowDrop(this, true);
@@ -70,13 +88,135 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         _emptyState = new EmptyState();
         _emptyState.Configure(EmptyHeading, EmptyDetail, EmptyAction);
         _emptyState.ActionRequested += () => HandleCommand("import");
-        _emptyState.IsVisible = false;
+        _emptyState.IsVisible = true;
 
-        var listPanel = new Panel();
-        listPanel.Children.Add(_tunnelList);
-        listPanel.Children.Add(_emptyState);
+        // The editor and the policy card are embedded, not pushed as pages.
+        _editor.SaveRequested += input => SaveRequested?.Invoke(input);
+        _editor.CancelRequested += () => EditorCancelRequested?.Invoke();
+        _editor.PeerAddRequested += () => EditorPeerAddRequested?.Invoke();
+        _editor.PeerRemoveRequested += index => EditorPeerRemoveRequested?.Invoke(index);
+        _editor.KeyPairRequested += () => EditorKeyPairRequested?.Invoke();
+        _editor.Changed += () => MarkDirty(true);
+        _editor.IsVisible = false;
+        _policyView.Changed += () =>
+        {
+            if (!_readOnly)
+            {
+                PolicySubmitted?.Invoke(_policyView.ReadInput());
+            }
+        };
+        _policyView.IsVisible = false;
 
-        Content = listPanel;
+        _displayName.LostFocus += (_, _) => CommitDisplayName();
+        _displayName.KeyDown += (_, args) =>
+        {
+            if (args.Key == Key.Enter)
+            {
+                CommitDisplayName();
+            }
+        };
+        _displayCard = Card("Display name", _displayName);
+        _displayCard.IsVisible = false;
+
+        _connect.Click += (_, _) => ToggleSelectedTunnel();
+        _save.Click += (_, _) => _editor.HandleCommand("editor.save");
+        _cancel.Click += (_, _) => _editor.HandleCommand("editor.cancel");
+        _addPeer.Click += (_, _) => _editor.HandleCommand("editor.addPeer");
+        _generate.Click += (_, _) => _editor.HandleCommand("editor.generate");
+        _export.Click += (_, _) => HandleCommand("export");
+        _delete.Click += (_, _) => HandleCommand("delete");
+
+        _editActions = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 6,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Children = { _addPeer, _generate, _cancel, _save },
+        };
+        var ioActions = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 6,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Children = { _export, _delete },
+        };
+
+        var header = new StackPanel
+        {
+            Spacing = 6,
+            Children =
+            {
+                _paneName,
+                new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 10,
+                    Children = { _paneState, _paneSource },
+                },
+                new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 10,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Children = { _paneDown, _paneUp, _connect },
+                },
+            },
+        };
+
+        var paneContent = new StackPanel
+        {
+            Spacing = 16,
+            Margin = new Thickness(24),
+            Children = { header, _displayCard, _editor, _policyView, _editActions, ioActions },
+        };
+        paneContent.MaxWidth = 760;
+        paneContent.HorizontalAlignment = HorizontalAlignment.Center;
+        _pane = new ScrollViewer { Content = paneContent, IsVisible = false };
+
+        var newButton = new Button { Content = "New", Classes = { "flat" } };
+        newButton.Click += (_, _) => CreateRequested?.Invoke();
+        var importButton = new Button { Content = "Import\u2026", Classes = { "flat" } };
+        importButton.Click += (_, _) => HandleCommand("import");
+        var refreshButton = new Button { Content = "Refresh", Classes = { "flat" } };
+        refreshButton.Click += (_, _) => RefreshRequested?.Invoke();
+
+        var sidebarActions = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 6,
+            Children = { newButton, importButton },
+        };
+        var sidebarHeading = new TextBlock { Text = "Profiles", Classes = { "heading" } };
+        var sidebar = new Grid
+        {
+            RowDefinitions = new RowDefinitions("Auto,Auto,*,Auto"),
+            RowSpacing = 8,
+        };
+        Grid.SetRow(sidebarActions, 0);
+        Grid.SetRow(sidebarHeading, 1);
+        Grid.SetRow(_tunnelList, 2);
+        Grid.SetRow(refreshButton, 3);
+        sidebar.Children.Add(sidebarActions);
+        sidebar.Children.Add(sidebarHeading);
+        sidebar.Children.Add(_tunnelList);
+        sidebar.Children.Add(refreshButton);
+
+        var separator = new Border { Width = 1 };
+        ThemeResources.Bind(separator, Border.BackgroundProperty, "BorderBrush");
+
+        var paneHost = new Panel();
+        paneHost.Children.Add(_pane);
+        paneHost.Children.Add(_emptyState);
+
+        var root = new Grid { ColumnDefinitions = new ColumnDefinitions("264,1,*") };
+        Grid.SetColumn(sidebar, 0);
+        Grid.SetColumn(separator, 1);
+        Grid.SetColumn(paneHost, 2);
+        root.Children.Add(sidebar);
+        root.Children.Add(separator);
+        root.Children.Add(paneHost);
+
+        Content = root;
     }
 
     /// <inheritdoc />
@@ -92,28 +232,13 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     public event Action? CreateRequested;
 
     /// <inheritdoc />
-    public event Action<string>? EditRequested;
-
-    /// <inheritdoc />
     public event Action<string>? DeleteRequested;
-
-    /// <inheritdoc />
-    public event Action<string>? RenameRequested;
 
     /// <inheritdoc />
     public event Action<TunnelRenameInput>? RenameSubmitted;
 
     /// <inheritdoc />
-    public event Action? RenameCancelRequested;
-
-    /// <inheritdoc />
-    public event Action<string>? PolicyEditRequested;
-
-    /// <inheritdoc />
     public event Action<TunnelPolicyInput>? PolicySubmitted;
-
-    /// <inheritdoc />
-    public event Action? PolicyCancelRequested;
 
     /// <inheritdoc />
     public event Action<string>? StartRequested;
@@ -160,14 +285,17 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     /// <summary>Gets the editor currently open on the shell stack, or <see langword="null"/>.</summary>
     internal TunnelEditorView? OpenEditor => _editor;
 
-    /// <summary>Gets the detail page currently open on the shell stack, or <see langword="null"/>.</summary>
-    internal TunnelDetailView? OpenDetailPage => _detail;
+    /// <summary>Gets the embedded policy card, for tests.</summary>
+    internal TunnelPolicyView PolicyView => _policyView;
 
-    /// <summary>Gets the rename page currently open on the shell stack, or <see langword="null"/>.</summary>
-    internal TunnelRenameView? OpenRenamePage => _rename;
+    /// <summary>Gets the inline display-name box, for tests.</summary>
+    internal TextBox DisplayNameBox => _displayName;
 
-    /// <summary>Gets the policy page currently open on the shell stack, or <see langword="null"/>.</summary>
-    internal TunnelPolicyView? OpenPolicyPage => _policy;
+    /// <summary>Gets the inline connect button, for tests.</summary>
+    internal Button ConnectButton => _connect;
+
+    /// <summary>Gets the pane heading, for tests.</summary>
+    internal TextBlock PaneNameText => _paneName;
 
     /// <summary>Gets the status line published as the shell subtitle.</summary>
     internal string Status => _status;
@@ -210,7 +338,7 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         ArgumentNullException.ThrowIfNull(id);
 
         if (_readOnly &&
-            id is "toggle" or "new" or "edit" or "rename" or "policy" or "delete" or "paste" or "import" or "restore")
+            id is "toggle" or "new" or "delete" or "paste" or "import" or "restore")
         {
             SetError(ReadOnlyMessage);
             return;
@@ -220,18 +348,6 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         if (id.StartsWith("editor.", StringComparison.Ordinal))
         {
             _editor?.HandleCommand(id);
-            return;
-        }
-
-        if (id.StartsWith("rename.", StringComparison.Ordinal))
-        {
-            _rename?.HandleCommand(id);
-            return;
-        }
-
-        if (id.StartsWith("policy.", StringComparison.Ordinal))
-        {
-            _policy?.HandleCommand(id);
             return;
         }
 
@@ -245,15 +361,6 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
                 break;
             case "refresh":
                 RefreshRequested?.Invoke();
-                break;
-            case "edit":
-                WithSelection(name => EditRequested?.Invoke(name));
-                break;
-            case "rename":
-                WithSelection(name => RenameRequested?.Invoke(name));
-                break;
-            case "policy":
-                WithSelection(name => PolicyEditRequested?.Invoke(name));
                 break;
             case "delete":
                 _ = ConfirmDeleteAsync();
@@ -302,16 +409,16 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
             _host.Notifications.DismissBanner();
         }
 
+        _editor.IsEnabled = !readOnly;
+        _policyView.IsEnabled = !readOnly;
+        _displayName.IsEnabled = !readOnly;
+        _save.IsEnabled = !readOnly;
+        _cancel.IsEnabled = !readOnly;
+        _addPeer.IsEnabled = !readOnly;
+        _generate.IsEnabled = !readOnly;
+        _delete.IsEnabled = !readOnly;
+        UpdatePaneHeader();
         Publish();
-
-        if (_detail is not null)
-        {
-            _detail.SetReadOnly(readOnly);
-            if (_host is not null)
-            {
-                _detail.PublishSnapshot(_host);
-            }
-        }
     }
 
     /// <summary>Republishes the chrome from the current state.</summary>
@@ -330,18 +437,14 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
             _host.Notifications.Banner(ReadOnlyMessage, MessageSeverity.Warning);
         }
 
-        // A pushed page owns the header and the toolbar. Republishing the list
-        // chrome while a detail or an editor is active would replace them on the
-        // next refresh and show the old page title.
-        var active = _host.Navigation.Active;
-        if (active is null || ReferenceEquals(active, this))
+        // There is no toolbar: the actions live in the sidebar and the pane. The
+        // header keeps the product title and the status; the dot carries the
+        // unsaved-changes state of the configuration form.
+        var subtitle = _readOnly ? ReadOnlyMessage : _status;
+        _host.SetSnapshot(new ShellSnapshot(ProductTitle, subtitle, CommandSet.Empty, _busy)
         {
-            // The list is the root page: it carries no identity in the chrome, only
-            // the read-only notice when the session is read-only, so the bar shows the
-            // window controls, the menu and the toolbar and nothing else.
-            var subtitle = _readOnly ? ReadOnlyMessage : string.Empty;
-            _host.SetSnapshot(new ShellSnapshot(ProductTitle, subtitle, BuildCommands(), _busy));
-        }
+            IsDirty = _dirty,
+        });
     }
 
     /// <inheritdoc />
@@ -372,9 +475,19 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
             _suspendSelection = false;
         }
 
-        _emptyState.IsVisible = tunnels.Count == 0;
         _lastTunnels = tunnels;
-        RefreshDetail();
+        _selectedName = selectedName;
+        if (selectedName is null && !_editorIsNew)
+        {
+            _editor.IsVisible = false;
+            _displayCard.IsVisible = false;
+            _policyView.IsVisible = false;
+            _editActions.IsVisible = false;
+            _pane.IsVisible = false;
+            _emptyState.IsVisible = true;
+        }
+
+        UpdatePaneHeader();
         Publish();
     }
 
@@ -383,7 +496,16 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     {
         ArgumentNullException.ThrowIfNull(transfer);
 
-        _detail?.UpdateTransfer(transfer);
+        if (_selectedName is not null)
+        {
+            var updated = new Dictionary<string, TransferView>(_transfers, StringComparer.Ordinal)
+            {
+                [_selectedName] = transfer,
+            };
+            _transfers = updated;
+        }
+
+        UpdatePaneHeader();
     }
 
     /// <inheritdoc />
@@ -402,10 +524,7 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
             }
         }
 
-        if (_detail is not null && transfers.TryGetValue(_detail.TunnelName, out var detailTransfer))
-        {
-            _detail.UpdateTransfer(detailTransfer);
-        }
+        UpdatePaneHeader();
     }
 
     /// <inheritdoc />
@@ -413,39 +532,45 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     {
         ArgumentNullException.ThrowIfNull(editor);
 
-        var view = new TunnelEditorView();
-        view.SaveRequested += input => SaveRequested?.Invoke(input);
-        view.CancelRequested += () => EditorCancelRequested?.Invoke();
-        view.PeerAddRequested += () => EditorPeerAddRequested?.Invoke();
-        view.PeerRemoveRequested += index => EditorPeerRemoveRequested?.Invoke(index);
-        view.KeyPairRequested += () => EditorKeyPairRequested?.Invoke();
-
-        _editor = view;
-        view.Load(editor);
-        _host?.Navigation.Push(editor.Title, "Review the fields; the private key is never shown.", view);
-        view.PublishSnapshot(_host!);
+        _editorIsNew = editor.IsNew;
+        _editor.Load(editor);
+        _editor.IsVisible = true;
+        _pane.IsVisible = true;
+        _emptyState.IsVisible = false;
+        _displayCard.IsVisible = !editor.IsNew;
+        _policyView.IsVisible = !editor.IsNew;
+        _editActions.IsVisible = true;
+        MarkDirty(false);
+        UpdatePaneHeader();
     }
 
     /// <inheritdoc />
     public void UpdateEditorKeys(bool hasPrivateKey, string? publicKey) =>
-        _editor?.UpdateKeys(hasPrivateKey, publicKey);
+        _editor.UpdateKeys(hasPrivateKey, publicKey);
 
     /// <inheritdoc />
-    public void AppendEditorPeerRow(EditorPeerInput peer) => _editor?.AppendPeer(peer);
+    public void AppendEditorPeerRow(EditorPeerInput peer) => _editor.AppendPeer(peer);
 
     /// <inheritdoc />
-    public void RemoveEditorPeerRow(int index) => _editor?.RemovePeer(index);
+    public void RemoveEditorPeerRow(int index) => _editor.RemovePeer(index);
 
     /// <inheritdoc />
     public void HideEditor()
     {
-        if (_editor is null)
+        _editor.IsVisible = false;
+        _editorIsNew = false;
+        _displayCard.IsVisible = false;
+        _policyView.IsVisible = false;
+        _editActions.IsVisible = false;
+        MarkDirty(false);
+
+        if (_selectedName is null)
         {
-            return;
+            _pane.IsVisible = false;
+            _emptyState.IsVisible = true;
         }
 
-        _editor = null;
-        _host?.Navigation.Pop();
+        UpdatePaneHeader();
     }
 
     /// <inheritdoc />
@@ -453,29 +578,14 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     {
         ArgumentNullException.ThrowIfNull(snapshot);
 
-        var view = new TunnelRenameView();
-        view.SaveRequested += input => RenameSubmitted?.Invoke(input);
-        view.CancelRequested += () => RenameCancelRequested?.Invoke();
-
-        _rename = view;
-        view.Load(snapshot);
-        _host?.Navigation.Push(ProductTitle, "Change the display name; the real tunnel name never changes.", view);
-        if (_host is not null)
-        {
-            view.PublishSnapshot(_host);
-        }
+        _displayName.Text = snapshot.CurrentDisplayName;
+        _displayCard.IsVisible = !_editorIsNew;
     }
 
     /// <inheritdoc />
     public void HideRename()
     {
-        if (_rename is null)
-        {
-            return;
-        }
-
-        _rename = null;
-        _host?.Navigation.Pop();
+        // The display name is an inline field; there is no page to close.
     }
 
     /// <inheritdoc />
@@ -483,36 +593,14 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     {
         ArgumentNullException.ThrowIfNull(snapshot);
 
-        var view = new TunnelPolicyView();
-        view.SaveRequested += input => PolicySubmitted?.Invoke(input);
-        view.CancelRequested += () => PolicyCancelRequested?.Invoke();
-        view.DetachedFromVisualTree += (_, _) =>
-        {
-            if (ReferenceEquals(_policy, view))
-            {
-                _policy = null;
-            }
-        };
-
-        _policy = view;
-        view.Load(snapshot);
-        _host?.Navigation.Push(ProductTitle, "Reconnection and DNS policy", view);
-        if (_host is not null)
-        {
-            view.PublishSnapshot(_host);
-        }
+        _policyView.Load(snapshot);
+        _policyView.IsVisible = !_editorIsNew;
     }
 
     /// <inheritdoc />
     public void HidePolicy()
     {
-        if (_policy is null)
-        {
-            return;
-        }
-
-        _policy = null;
-        _host?.Navigation.Pop();
+        _policyView.IsVisible = false;
     }
 
     /// <inheritdoc />
@@ -598,21 +686,28 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     /// <inheritdoc />
     public void ShowWindow() => _host?.ShowWindow();
 
-    private CommandSet BuildCommands()
+    private static Border Card(string heading, Control content)
     {
-        var canMutate = !_busy && !_readOnly;
-        var selected = CurrentSelection();
-        var up = string.Equals(SelectedState(), "Up", StringComparison.Ordinal);
+        var stack = new StackPanel
+        {
+            Spacing = 8,
+            Children =
+            {
+                new TextBlock { Text = heading, Classes = { "heading" } },
+                content,
+            },
+        };
 
-        return new CommandSet(
-        [
-            new AppCommand("new", "New", IconKey: "WgmNew", ToolTip: "Create a new tunnel", Shortcut: "Ctrl+N", IsEnabled: canMutate, Group: "view"),
-            new AppCommand("edit", "Edit", IconKey: "WgmEdit", ToolTip: "Edit the selected tunnel", Shortcut: "Ctrl+E", IsEnabled: canMutate && selected is not null, Group: "selected"),
-            new AppCommand("refresh", "Refresh", IconKey: "WgmRefresh", ToolTip: "Re-read the tunnel list", Shortcut: "Ctrl+R", IsEnabled: !_busy, Group: "view"),
-            new AppCommand("toggle", up ? "Disconnect" : "Connect", IconKey: up ? "WgmDisconnect" : "WgmConnect", ToolTip: up ? "Disconnect the selected tunnel" : "Connect the selected tunnel", IsEnabled: canMutate && selected is not null, IsChecked: up, Group: "selected"),
-            new AppCommand("rename", "Rename", IconKey: "WgmRename", ToolTip: "Change the tunnel's display name", IsEnabled: canMutate && selected is not null, Group: "selected"),
-            new AppCommand("policy", "Policy", IconKey: "WgmPolicy", ToolTip: "Reconnection and DNS policy", IsEnabled: canMutate && selected is not null, Group: "selected"),
-        ]);
+        var border = new Border
+        {
+            BorderThickness = new Thickness(1),
+            CornerRadius = ThemeResources.Corner("SurfaceCornerRadius"),
+            Padding = new Thickness(16),
+            Child = stack,
+        };
+        ThemeResources.Bind(border, Border.BackgroundProperty, "SurfaceBrush");
+        ThemeResources.Bind(border, Border.BorderBrushProperty, "BorderBrush");
+        return border;
     }
 
     private Grid BuildTunnelRow(TunnelListItem tunnel)
@@ -675,40 +770,50 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
         return row;
     }
 
-    private void OnTunnelSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private async void OnTunnelSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (_suspendSelection)
         {
             return;
         }
 
-        // Selecting a row never navigates: it only publishes the selection, so the
-        // toolbar and the menu act on it. The detail page opens on a double-click or
-        // on Enter.
-        Publish();
-
-        if (CurrentSelection() is not { } name)
+        var newName = CurrentSelection();
+        if (string.Equals(newName, _selectedName, StringComparison.Ordinal))
         {
+            UpdatePaneHeader();
             return;
         }
 
-        TunnelSelected?.Invoke(name);
-    }
-
-    private void OnTunnelDoubleTapped(object? sender, TappedEventArgs e)
-    {
-        if (CurrentSelection() is { } name)
+        if (_dirty && newName is not null && _selectedName is not null && _host is not null)
         {
-            OpenDetail(name);
-        }
-    }
+            var previous = _selectedName;
+            var previousIndex = _rowNames.IndexOf(previous);
+            var choice = await _host.Dialogs.ConfirmSaveAsync(previous).ConfigureAwait(true);
+            if (choice == SavePromptChoice.Save)
+            {
+                _editor.HandleCommand("editor.save");
+                RestoreSelection(previousIndex);
+                return;
+            }
 
-    private void OnTunnelKeyDown(object? sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Enter && CurrentSelection() is { } name)
-        {
-            OpenDetail(name);
+            if (choice == SavePromptChoice.Cancel)
+            {
+                RestoreSelection(previousIndex);
+                return;
+            }
+
+            MarkDirty(false);
         }
+
+        _selectedName = newName;
+        if (newName is null)
+        {
+            HideEditor();
+            return;
+        }
+
+        TunnelSelected?.Invoke(newName);
+        UpdatePaneHeader();
     }
 
     private void OnDragOver(object? sender, DragEventArgs e)
@@ -746,78 +851,59 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
 
     /// <summary>Opens the detail page for a tunnel, or updates the open one.</summary>
     /// <param name="name">The tunnel name.</param>
-    internal void OpenDetail(string name)
+    private void UpdatePaneHeader()
     {
-        if (_host is null)
-        {
-            return;
-        }
+        var item = _selectedName is null
+            ? null
+            : _lastTunnels.FirstOrDefault(tunnel => string.Equals(tunnel.Name, _selectedName, StringComparison.Ordinal));
+        var hasSelection = item is not null;
+        var up = string.Equals(item?.State, "Up", StringComparison.Ordinal);
 
-        if (_detail is not null)
-        {
-            if (string.Equals(_detail.TunnelName, name, StringComparison.Ordinal))
-            {
-                return;
-            }
+        _paneName.Text = item?.ShownName ?? (_editorIsNew ? "New tunnel" : string.Empty);
+        _paneState.Text = item?.State ?? string.Empty;
+        _paneSource.Text = item is null
+            ? string.Empty
+            : item.Source == TunnelSource.NetworkManager ? "NetworkManager" : "wg-quick configuration";
+        _connect.Content = up ? "Disconnect" : "Connect";
+        _connect.IsEnabled = hasSelection && !_readOnly && !_busy;
 
-            _host.Navigation.Pop();
-        }
+        var transfer = _selectedName is not null && _transfers.TryGetValue(_selectedName, out var current)
+            ? current
+            : ZeroTransfer;
+        _paneDown.Text = string.Concat("\u2193 ", transfer.DownloadRate);
+        _paneUp.Text = string.Concat("\u2191 ", transfer.UploadRate);
 
-        var item = _lastTunnels.FirstOrDefault(tunnel => string.Equals(tunnel.Name, name, StringComparison.Ordinal));
-        if (item is null)
-        {
-            return;
-        }
-
-        var view = new TunnelDetailView(item, TransferFor(name), _readOnly);
-        view.DetachedFromVisualTree += (_, _) => OnDetailDetached(view);
-        _detail = view;
-        _host.Navigation.Push(item.ShownName, string.Concat(item.Configuration, "  \u00b7  ", item.Peers), view);
-        view.PublishSnapshot(_host);
+        var visible = hasSelection || _editorIsNew;
+        _pane.IsVisible = visible;
+        _emptyState.IsVisible = !visible;
     }
 
-    /// <summary>Handles a detail page leaving the visual tree: a pop clears it.</summary>
-    /// <param name="view">The detail page that detached.</param>
-    internal void OnDetailDetached(TunnelDetailView view)
+    private void MarkDirty(bool dirty)
     {
-        // The editor is pushed on top of the detail, which detaches it without
-        // closing it; only a real pop clears the page and the selection.
-        if (!ReferenceEquals(_detail, view) || _editor is not null)
+        if (_dirty == dirty)
         {
             return;
         }
 
-        _detail = null;
+        _dirty = dirty;
+        Publish();
+    }
+
+    private void CommitDisplayName()
+    {
+        if (_selectedName is null || _editorIsNew)
+        {
+            return;
+        }
+
+        RenameSubmitted?.Invoke(new TunnelRenameInput(_selectedName, _displayName.Text ?? string.Empty));
+    }
+
+    private void RestoreSelection(int index)
+    {
         _suspendSelection = true;
-        _tunnelList.SelectedIndex = -1;
+        _tunnelList.SelectedIndex = index;
         _suspendSelection = false;
-    }
-
-    private void RefreshDetail()
-    {
-        if (_detail is null || _editor is not null)
-        {
-            return;
-        }
-
-        var item = _lastTunnels.FirstOrDefault(tunnel => string.Equals(tunnel.Name, _detail.TunnelName, StringComparison.Ordinal));
-        if (item is not null)
-        {
-            _detail.UpdateItem(item);
-
-            // The page title is part of the shell snapshot, not of the page body:
-            // a rename must republish it while the page is active, or the header
-            // keeps the old display name until the page is reopened.
-            if (_host is not null && ReferenceEquals(_host.Navigation.Active, _detail))
-            {
-                _detail.PublishSnapshot(_host);
-            }
-        }
-        else
-        {
-            // The tunnel disappeared from the list (deleted, renamed): close its page.
-            _host?.Navigation.Pop();
-        }
     }
 
     private TransferView TransferFor(string name) =>

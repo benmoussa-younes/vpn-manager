@@ -40,6 +40,7 @@ public sealed class TunnelEditorView : UserControl, IView
     private readonly StackPanel _column;
     private TextBox? _invalid;
     private string _title = string.Empty;
+    private bool _loading;
 
     /// <summary>Initializes the editor page and wires its controls to semantic events.</summary>
     public TunnelEditorView()
@@ -111,13 +112,20 @@ public sealed class TunnelEditorView : UserControl, IView
             Children = { _error, identity, routing, peers },
         };
 
-        // A fixed centre column flanked by two stars keeps the max width without
-        // collapsing to the content width the way a centred auto column does.
-        var centering = new Grid { ColumnDefinitions = new ColumnDefinitions("*,720,*") };
-        Grid.SetColumn(_column, 1);
-        centering.Children.Add(_column);
+        // Embedded in the master-detail pane: the pane owns the scroll view, and
+        // the form keeps the same maximum width.
+        _column.MaxWidth = 720;
+        _column.HorizontalAlignment = HorizontalAlignment.Center;
+        Content = _column;
 
-        Content = new ScrollViewer { Content = centering };
+        _name.TextChanged += (_, _) => OnChanged();
+        _privateKey.TextChanged += (_, _) => OnChanged();
+        _addresses.TextChanged += (_, _) => OnChanged();
+        _dns.TextChanged += (_, _) => OnChanged();
+        _listenPort.TextChanged += (_, _) => OnChanged();
+        _mtu.TextChanged += (_, _) => OnChanged();
+        _table.TextChanged += (_, _) => OnChanged();
+        _routingMode.SelectionChanged += (_, _) => OnChanged();
     }
 
     /// <summary>Raised when the operator asked to save the editor.</summary>
@@ -131,6 +139,9 @@ public sealed class TunnelEditorView : UserControl, IView
 
     /// <summary>Raised when the operator asked to remove the peer row at the index.</summary>
     public event Action<int>? PeerRemoveRequested;
+
+    /// <summary>Raised when a field changed, so the pane can mark the form dirty.</summary>
+    public event Action? Changed;
 
     /// <summary>Raised when the operator asked to generate a key pair.</summary>
     public event Action? KeyPairRequested;
@@ -177,29 +188,46 @@ public sealed class TunnelEditorView : UserControl, IView
     {
         ArgumentNullException.ThrowIfNull(editor);
 
-        _title = editor.Title;
-        _name.Text = editor.Name;
-        _name.IsEnabled = editor.NameEditable;
-        _privateKey.Text = string.Empty;
-        _addresses.Text = editor.Addresses;
-        _dns.Text = editor.Dns;
-        _listenPort.Text = editor.ListenPort;
-        _mtu.Text = editor.Mtu;
-        _table.Text = editor.Table;
-        _routingMode.SelectedIndex = editor.RoutingMode == TunnelRoutingMode.Full ? 1 : 0;
-        _errorText.Text = string.Empty;
-        _error.IsVisible = false;
-        ClearInvalid();
-
-        _peers.Children.Clear();
-        _peerRows.Clear();
-        foreach (var peer in editor.Peers)
+        _loading = true;
+        try
         {
-            AppendPeer(peer);
+            _title = editor.Title;
+            _name.Text = editor.Name;
+            _name.IsEnabled = editor.NameEditable;
+            _privateKey.Text = string.Empty;
+            _addresses.Text = editor.Addresses;
+            _dns.Text = editor.Dns;
+            _listenPort.Text = editor.ListenPort;
+            _mtu.Text = editor.Mtu;
+            _table.Text = editor.Table;
+            _routingMode.SelectedIndex = editor.RoutingMode == TunnelRoutingMode.Full ? 1 : 0;
+            _errorText.Text = string.Empty;
+            _error.IsVisible = false;
+            ClearInvalid();
+
+            _peers.Children.Clear();
+            _peerRows.Clear();
+            foreach (var peer in editor.Peers)
+            {
+                AppendPeer(peer);
+            }
+
+            UpdateKeys(editor.HasPrivateKey, editor.PublicKey);
+        }
+        finally
+        {
+            _loading = false;
         }
 
-        UpdateKeys(editor.HasPrivateKey, editor.PublicKey);
         _name.Focus();
+    }
+
+    private void OnChanged()
+    {
+        if (!_loading)
+        {
+            Changed?.Invoke();
+        }
     }
 
     /// <summary>Updates only the key identity line, so a generation keeps the rest.</summary>
@@ -230,6 +258,7 @@ public sealed class TunnelEditorView : UserControl, IView
             }
         };
 
+        row.Changed += OnChanged;
         _peerRows.Add(row);
         _peers.Children.Add(row);
     }
