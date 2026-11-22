@@ -9,7 +9,16 @@ permissions:
   contents: read
 
 jobs:
-  build-test-licence:
+  licence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Licence
+        run: pipx run reuse==5.0.2 lint
+
+  build-test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -24,9 +33,6 @@ jobs:
           pin="$(cat CORE_VERSION)"
           git clone --branch "$pin" --depth 1 https://github.com/benmoussa-younes/core.git ../core
           test "$(git -C ../core describe --tags --exact-match)" = "$pin"
-
-      - name: Licence
-        run: pipx run reuse==5.0.2 lint
 
       - name: Build
         run: dotnet build VpnManager.slnx -c Release
