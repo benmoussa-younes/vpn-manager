@@ -98,6 +98,46 @@ public sealed class MasterDetailIntegrationTests
     }
 
     [Fact]
+    public async Task SavingTheDirtyPromptKeepsTheEditedProfile()
+    {
+        await HeadlessTestSession.RunAsync(async () =>
+        {
+            var (view, presenter, store, _, host) = Build();
+            host.DialogsService.SavePromptAnswer = SavePromptChoice.Save;
+            await presenter.RefreshAsync();
+            Select(view, 0);
+            await presenter.PendingOperation!;
+            view.OpenEditor!.AddressesBox.Text = "10.10.0.20/32";
+            Dispatcher.UIThread.RunJobs();
+            view.ShowTunnels([Row("wg0", "Up"), Row("wg1", "Down")], "wg0");
+
+            view.TunnelList.SelectedIndex = 1;
+            Dispatcher.UIThread.RunJobs();
+            await (presenter.PendingOperation ?? Task.CompletedTask);
+
+            Assert.Contains(store.Writes, write => write.Content.Contains("10.10.0.20/32", StringComparison.Ordinal));
+            Assert.Equal(0, view.TunnelList.SelectedIndex);
+        });
+    }
+
+    [Fact]
+    public async Task TheDnsModeSelectorAppliesOnChange()
+    {
+        await HeadlessTestSession.RunAsync(async () =>
+        {
+            var (view, presenter, _, service, _) = Build();
+            await presenter.RefreshAsync();
+            Select(view, 0);
+            await presenter.PendingOperation!;
+
+            view.PolicyView.ModeBox.SelectedIndex = (int)NetworkManagerDnsMode.Split;
+            await (presenter.PendingOperation ?? Task.CompletedTask);
+
+            Assert.Equal(NetworkManagerDnsMode.Split, service.GetPolicy("wg0").DnsMode);
+        });
+    }
+
+    [Fact]
     public async Task AForeignConnectionShowsTheHeaderButNoEditor()
     {
         await HeadlessTestSession.RunAsync(async () =>
