@@ -75,7 +75,6 @@ jobs:
           prefix="vpn-manager-${TAG}"
           git archive --format=tar.gz --prefix="${prefix}/" \
             -o "artifacts/${prefix}-src.tar.gz" HEAD
-          (cd artifacts && sha256sum "${prefix}-src.tar.gz" > "${prefix}-src.tar.gz.sha256")
 
       - name: SBOM
         run: pipx run reuse==5.0.2 spdx > artifacts/vpn-manager.spdx
@@ -83,7 +82,7 @@ jobs:
       - name: Checksums
         run: |
           cd artifacts
-          sha256sum ./*.deb > SHA256SUMS
+          sha256sum ./*.deb ./*-src.tar.gz > SHA256SUMS
 
       - name: Upload release assets
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6

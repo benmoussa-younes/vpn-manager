@@ -1,8 +1,7 @@
 vpn-manager (0.1.0-1) unstable; urgency=medium
 
-  * Initial release of VPN Manager: the per-user WireGuard client migrated from
-    a per-user WireGuard client for Debian GNOME, written as VpnManager.* on
-    Core v0.2.2.
+  * Initial release of VPN Manager, the per-user WireGuard client for Debian
+    GNOME written as VpnManager.* on Core v0.2.3.
   * NetworkManager is the connection engine; the application never elevates and
     never reads or writes /etc/wireguard.
   * Profiles are read no-follow and bounded, validated before they reach

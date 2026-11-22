@@ -43,6 +43,9 @@ dotnet publish "$repo/src/VpnManager.Helper/VpnManager.Helper.csproj" \
     -c Release -r linux-x64 -o "$pkg/usr/lib/vpn-manager"
 
 find "$pkg/usr/lib/vpn-manager" -type f \( -name '*.dbg' -o -name '*.pdb' -o -name '*.xml' \) -delete
+if command -v strip >/dev/null 2>&1; then
+    strip --strip-unneeded "$pkg/usr/lib/vpn-manager/libSkiaSharp.so" "$pkg/usr/lib/vpn-manager/libHarfBuzzSharp.so" 2>/dev/null || true
+fi
 
 ln -s ../lib/vpn-manager/vpn-manager "$pkg/usr/bin/vpn-manager"
 
@@ -66,8 +69,7 @@ Version: $version-1
 Architecture: amd64
 Maintainer: Younes Benmoussa <younes.benmoussa@pm.me>
 Installed-Size: $installed_size
-Depends: network-manager, wireguard-tools, procps, pkexec
-Recommends: libnotify-bin
+Depends: libc6, network-manager, wireguard-tools, procps, pkexec, libfontconfig1, libx11-6
 Suggests: wireguard
 Section: net
 Priority: optional
@@ -80,12 +82,16 @@ Description: per-user WireGuard client for Debian GNOME
  the transfer counters, the IPv6 classification and the DNS containment.
  .
  Everything happens in the operator's own configuration directory. The
- application never asks for a password, never elevates, never runs a privileged
- helper, and never reads or writes /etc/wireguard.
+ application never asks for a password and never reads or writes
+ /etc/wireguard. Its one privileged action, --fix-sysctl, goes through a fixed
+ polkit helper.
 EOF
 
-cp "$repo/packaging/debian/vpn-manager.postinst" "$pkg/DEBIAN/postinst"
+# dh expands the token when it builds the source package; this manual package
+# has no debhelper, so the staged script must not carry it.
+sed '/^#DEBHELPER#$/d' "$repo/packaging/debian/vpn-manager.postinst" > "$pkg/DEBIAN/postinst"
 chmod 0755 "$pkg/DEBIAN/postinst"
+gzip -9 -n -c "$repo/packaging/debian/changelog" > "$pkg/usr/share/doc/vpn-manager/changelog.Debian.gz"
 
 # Debian files are world-readable: the source tree may carry the operator's
 # group umask, so the staged modes are fixed here instead of trusted.

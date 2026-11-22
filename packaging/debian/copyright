@@ -20,3 +20,10 @@ License: GPL-3+
  .
  On Debian systems the complete text of the GNU General Public License version 3
  is installed as /usr/share/common-licenses/GPL-3.
+
+Files: README.md AGENTS.md CHANGELOG.md SECURITY.md CONTRIBUTING.md packaging/README.md
+Copyright: 2026 Younes Benmoussa <younes.benmoussa@pm.me>
+License: CC-BY-SA-4.0
+ This work is licensed under the Creative Commons
+ Attribution-ShareAlike 4.0 International License. To view a copy of this
+ license, visit <https://creativecommons.org/licenses/by-sa/4.0/>.

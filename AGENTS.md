@@ -16,8 +16,8 @@ scripts check tools/scripts/binaries/gate.scs
 scripts run tools/scripts/binaries/gate.scs        # one VERDICT line, exit 0/1
 ```
 
-The gate checks the tree, the licence metadata, the pinned core tag, the version,
-the build and the tests. It needs Git, `reuse` and the Scripts interpreter on
+The gate checks the tracked tree, the licence metadata, the pinned core tag, the
+version, the format, the build and the tests. It needs Git, `reuse` and the Scripts interpreter on
 `PATH`; it writes nothing tracked.
 
 ## Core
@@ -48,8 +48,9 @@ in the same commit as the API adaptation.
 ## Security
 
 - No secret in a tracked file, a command line, a log or a process argument.
-- `nmcli`, `wg` and `notify-send` are started with an argument vector through
-  `IProcessRunner`; never a shell string, never `PATH`.
+- `nmcli`, `wg`, `resolvectl` and the fixed helper are started with an argument
+  vector through `IProcessRunner`; never a shell string, never `PATH`. Desktop
+  notifications go through the session bus, not an external command.
 - The profile store is owner-only (`0600`/`0700`), read no-follow and bounded,
   written atomically. A stored profile is validated before NetworkManager sees it.
 - The GUI never invokes `sudo` or an arbitrary root command and never reads or
@@ -84,5 +85,7 @@ in the same commit as the API adaptation.
 
 ## Limits
 
+- External contributions are not accepted; a fork is the supported way (see
+  `README.md` and `CONTRIBUTING.md`). No warranty or support beyond the licence.
 - WireGuard only; no server, no multi-protocol, no kill switch.
 - NetworkManager is the engine; X11 is reached through XWayland, native Wayland when offered.

@@ -1,11 +1,11 @@
 # Security policy
 
-## Supported versions
+## Status
 
-| Version | Supported |
-|---|---|
-| 0.1.x | yes |
-| older | no |
+No version is supported: the software is provided as is, with no warranty,
+service level or promised response time. A private report is read on a
+best-effort basis; a fix, if any, lands on `main` and may be released when the
+owner decides.
 
 ## Report a vulnerability privately
 
@@ -19,9 +19,9 @@ vulnerability. Send a private report to
 - the impact you observed and the impact you suspect;
 - the fix you would accept, if you have one.
 
-You get an acknowledgement within seven days. A fix lands on `main` through the
-gate and a release follows when the owner orders it. Credit is given unless you
-ask otherwise.
+There is no guaranteed acknowledgement, timeline or fix. If a fix is made it
+lands on `main` through the gate, and a release follows only when the owner
+orders it.
 
 ## Scope
 
@@ -36,8 +36,9 @@ Core, which have their own security policies.
   command, and never reads or writes `/etc/wireguard`. The one privileged path is
   `--fix-sysctl`, which launches the fixed helper through `pkexec`/polkit.
 - A private key is never displayed, logged or passed as a command-line argument.
-- `nmcli`, `wg` and `notify-send` receive an argument vector; no shell is
-  involved and a bare tool name never resolves through `PATH`.
+- `nmcli`, `wg`, `resolvectl` and the fixed helper receive an argument vector; no
+  shell is involved and a bare tool name never resolves through `PATH`. Desktop
+  notifications go through the session bus (`org.freedesktop.Notifications`).
 - A profile is read with a bounded, no-follow read and validated before it is
   handed to NetworkManager. Hook keys are refused because NetworkManager does
   not execute them.
@@ -48,9 +49,9 @@ Core, which have their own security policies.
   collide with another tunnel or another NetworkManager connection; the id is
   passed to `nmcli` as one argument. Renaming a foreign connection is refused.
 - The policy page writes through the same validated service as the CLI: the DNS
-  mode is one of the four known values, and a routing domain is validated before
-  it reaches `nmcli`. The `Full tunnel` mode sets the root routing domain `~.`
-  explicitly.
+  mode is one of the three known values, and a routing domain is validated
+  before it reaches `nmcli`. `Split` sends each listed domain to the VPN as a
+  routing domain (`~domain`).
 - There is no tray icon and no GNOME extension. Closing the window quits, asking
   before disconnecting a connected profile. A session end (the GNOME session
   manager's `QueryEndSession`/`EndSession` signals, or `SIGTERM`/`SIGINT`) takes

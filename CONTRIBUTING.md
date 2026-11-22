@@ -1,27 +1,14 @@
-# Contributing
+# Fork it
 
-The project is maintained by its owner. Issues that state a reproduction, the
-Debian release and the observed behaviour are welcome. A pull request is
-accepted when it was agreed in an issue first, keeps the gate green and adds the
-test that failed before the change.
+This repository is a personal project and does **not** accept external
+contributions: unsolicited pull requests or patches may be closed without
+review, and no support contract, service level or warranty, express or implied,
+is provided beyond the licence.
 
-## Workflow
+A fork is the supported way to build on this work. The licence is
+`GPL-3.0-or-later`: you may use, study, change and redistribute your fork, keep
+the notices, and publish the source of what you distribute.
 
-1. Branch from `main`: `git switch -c work/<slug>`.
-2. Write the smallest case that fails for the expected reason.
-3. Keep the change small; run `dotnet build VpnManager.slnx -c Release`,
-   `dotnet test VpnManager.slnx -c Release --no-build` and
-   `scripts run tools/scripts/binaries/gate.scs`.
-4. Open a pull request; the owner reviews and merges. A release is the owner's
-   decision.
-
-## Code
-
-- C# only, `.NET 10`, Native AOT, warnings as errors.
-- `Result<T>`/`CoreError` for an expected failure; an exception is a bug.
-- No secret in a file, a log, a command line or a test fixture.
-- English in code, comments, commit messages and repository files.
-
-## Security
-
-Do not open a public issue for a vulnerability; follow [`SECURITY.md`](SECURITY.md).
+`AGENTS.md`, the gate and the packaging notes describe how the project is built,
+tested and released, so a fork starts from the same evidence. A security
+problem follows [`SECURITY.md`](SECURITY.md).

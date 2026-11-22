@@ -5,7 +5,7 @@ disconnects through NetworkManager, shows the live state of the tunnel, and neve
 prints a private key. The GUI never elevates; the one explicit `--fix-sysctl`
 action goes through the fixed polkit helper.
 
-- **Website**: <https://github.com/benmoussa-younes/vpn-manager>
+- **Repository**: <https://github.com/benmoussa-younes/vpn-manager>
 - **Licence**: `GPL-3.0-or-later` (see [`LICENSES/GPL-3.0-or-later.txt`](LICENSES/GPL-3.0-or-later.txt))
 
 ## What it does
@@ -17,10 +17,12 @@ action goes through the fixed polkit helper.
 - Imports a `.conf` file, a pasted profile, or a full configuration text; exports
   a profile. A profile is written owner-only and parsed before it is stored.
 - Connects and disconnects through `nmcli`, as the operator, one tunnel at a time.
-- Shows the kernel transfer counters, the tunnel state, the IPv6 classification
-  and the DNS containment of the selected tunnel.
-- Offers the same connect/disconnect actions from the application menu and a
-  notification on every state change.
+- Shows each tunnel's state and live rate in the sidebar; the selected tunnel's
+  pane holds its editable form. `--status` and `--diagnostics` report the policy,
+  the IPv6 classification and the DNS containment.
+- Connects and disconnects from the sidebar and the pane. Network loss and the
+  automatic reconnection are desktop notifications; a manual action shows a
+  toast in the window.
 - Keeps one instance per user and surfaces the running window on a second launch.
 - Supports a `--read-only` session that browses and exports without changing
   anything.
@@ -63,8 +65,9 @@ vpn-manager --status [--json]    print the profiles and their policy
 vpn-manager --connect <profile>  bring a profile up through NetworkManager
 vpn-manager --disconnect <profile>  take a profile down
 vpn-manager --policy <profile> [--auto-reconnect on|off] \
-  [--dns-mode profile|system|split|full] [--dns-search a,b|'']
+  [--dns-mode profile|system|split] [--dns-search a,b|'']
 vpn-manager --fix-sysctl       set the full-tunnel sysctl through polkit
+vpn-manager --dbus             run the session D-Bus service
 vpn-manager --self-test          run the display-free self-test
 vpn-manager --version            print the version
 vpn-manager --help               print the usage text
@@ -82,7 +85,7 @@ Each profile carries three settings beside its `.conf`, edited from the pane's
 | Setting | Effect |
 |---|---|
 | Reconnect automatically | `connection.autoconnect` in NetworkManager. A manual disconnect sets it to `no` until the next connect. |
-| DNS mode | `Profile` uses the `DNS =` servers of the configuration; `System` leaves the resolver alone; `Split` sends only the listed routing domains to the VPN; `Full tunnel` sends every name to the VPN while it is up. Applied through `ipv4.dns`, `ipv4.dns-search`, `ipv4.dns-priority` and `ipv4.ignore-auto-dns`, never by editing `/etc/resolv.conf`. |
+| DNS mode | `Profile` sends every name to the `DNS =` servers of the configuration; `System` leaves the resolver alone; `Split` sends only the listed routing domains to the VPN (a leading `~` on each domain). Applied through `ipv4.dns`, `ipv4.dns-search`, `ipv4.dns-priority` and `ipv4.ignore-auto-dns`, never by editing `/etc/resolv.conf`. |
 | Search domains | The routing domains for split DNS (`corp.example, lab.example`). An empty value clears them. |
 
 The policy lives in `state.json` under the XDG state directory, not in the
@@ -95,7 +98,10 @@ name stay the same.
 - Debian 13 (trixie) amd64 with GNOME, on Wayland or X11.
 - **NetworkManager** (`nmcli`) to connect and disconnect.
 - **wireguard-tools** (`wg`) for key generation and runtime inspection.
-- **libnotify-bin** (`notify-send`) for desktop notifications (recommended).
+- The GNOME notification daemon (`org.freedesktop.Notifications`) for the network
+  notifications; it is part of a GNOME session.
+- **systemd-resolved** (`resolvectl`) for the DNS containment report; the client
+  still works without it.
 
 ## Install
 
@@ -169,17 +175,18 @@ The gate needs the Scripts interpreter on `PATH` (`scripts --version`), Git and
 scripts check tools/scripts/binaries/gate.scs
 ```
 
-Publish the only shipping form, Native AOT:
+Publish the only shipping form, Native AOT. It needs a C toolchain and the
+zlib/fontconfig headers (`sudo apt-get install clang zlib1g-dev libfontconfig1`):
 
 ```bash
 dotnet publish src/VpnManager.App/VpnManager.App.csproj \
   -c Release -r linux-x64 -o publish
-./publish/VpnManager.App --self-test
+./publish/vpn-manager --self-test
 ```
 
 Count the `ILC: ` lines of the publish: zero is the proof. `--self-test` runs
 the display-free claims on the published native binary; `dotnet test` runs the
-Junit-free Xunit suite in JIT.
+Xunit v3 suite in JIT.
 
 ## Coverage
 
@@ -188,9 +195,9 @@ dotnet test VpnManager.slnx -c Release \
   --collect:"XPlat Code Coverage" --results-directory artifacts/coverage
 ```
 
-The report covers the hand-written `VpnManager.Core`, `vpn-manager` and
-`vpn-manager-helper` assemblies. Core is above 95 % line coverage; the Avalonia
-shell is the residual and is tracked in the workstream.
+The report covers the hand-written `VpnManager.Core`, `VpnManager.App` and
+`VpnManager.Helper` assemblies. Core is above 95 % line coverage; the Avalonia
+shell is the residual.
 
 ## Package the Debian package
 
@@ -229,6 +236,16 @@ and the sysctl drop-in, then builds `artifacts/vpn-manager_<version>-1_amd64.deb
   so instead of failing silently.
 
 See [`SECURITY.md`](SECURITY.md) for the private vulnerability report.
+
+## Contributing and warranty
+
+External contributions are **not accepted**: unsolicited pull requests or
+patches may be closed without review. A fork is the supported way to build on
+this work; the licence below lets you use, study, change and redistribute your
+fork. The project is maintained by one author: no support contract, service
+level or warranty, express or implied, is provided beyond the licence. The
+vulnerability channel in [`SECURITY.md`](SECURITY.md) is read on a best-effort
+basis, with no promised delay or fix.
 
 ## Licence
 
