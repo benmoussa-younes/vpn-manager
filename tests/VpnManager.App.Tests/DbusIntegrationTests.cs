@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Tmds.DBus.Protocol;
 using VpnManager.App.DBus;
 using VpnManager.App.Tests.Fakes;
 using VpnManager.Core.Model;
@@ -158,23 +159,160 @@ public sealed class DbusIntegrationTests
     }
 
     [Fact]
-    public async Task TheEndSessionSignalIsNoticed()
+    public async Task TheQueryEndSessionIsAnsweredWithoutClosingTheWindow()
     {
         Assert.SkipUnless(
             Environment.GetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS") is { Length: > 0 },
             "No session D-Bus address; run under dbus-run-session.");
 
-        using var watcher = new SessionEndWatcher();
+        using var manager = await FakeSessionManager.StartAsync();
+        using var watcher = new SessionEndWatcher(FakeSessionManager.ServiceName);
+        var endings = 0;
+        watcher.Ending += () => Interlocked.Increment(ref endings);
         await watcher.StartAsync();
+
         Assert.False(watcher.IsEnding);
 
+        await EmitAsync("QueryEndSession", "0");
+
+        // gnome-session waits for this answer: without it a logout or a shutdown
+        // hangs until the timeout.
+        await Task.Delay(300);
+        Assert.True(watcher.IsEnding, string.Join(",", manager.Received));
+        Assert.True(await manager.Answer.WaitAsync(TimeSpan.FromSeconds(5)), string.Join(",", manager.Received));
+        Assert.True(manager.AnswerAccepted);
+        Assert.Equal(0, Volatile.Read(ref endings));
+    }
+
+    [Fact]
+    public async Task TheEndSessionClosesTheClientOnceAndACancelKeepsIt()
+    {
+        Assert.SkipUnless(
+            Environment.GetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS") is { Length: > 0 },
+            "No session D-Bus address; run under dbus-run-session.");
+
+        using var manager = await FakeSessionManager.StartAsync();
+        using var watcher = new SessionEndWatcher(FakeSessionManager.ServiceName);
+        var endings = 0;
+        var closed = new TaskCompletionSource();
+        watcher.Ending += () =>
+        {
+            Interlocked.Increment(ref endings);
+            closed.TrySetResult();
+        };
+        await watcher.StartAsync();
+
+        await EmitAsync("QueryEndSession", "0");
+        Assert.True(await manager.Answer.WaitAsync(TimeSpan.FromSeconds(5)));
+        await EmitAsync("CancelEndSession");
+
+        var cancelled = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+        while (watcher.IsEnding && DateTime.UtcNow < cancelled)
+        {
+            await Task.Delay(25);
+        }
+
+        Assert.False(watcher.IsEnding);
+
+        await EmitAsync("QueryEndSession", "0");
+        await EmitAsync("EndSession", "0");
+        await closed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        await EmitAsync("EndSession", "0");
+        await Task.Delay(150);
+        Assert.Equal(1, Volatile.Read(ref endings));
+    }
+
+    /// <summary>
+    /// A minimal session manager on the session bus: it owns the well-known name,
+    /// answers <c>RegisterClient</c> with a client object path, records the
+    /// <c>EndSessionResponse</c>, and emits the signals gnome-session would send.
+    /// </summary>
+    private sealed class FakeSessionManager : IPathMethodHandler, IDisposable
+    {
+        internal const string ServiceName = "org.example.VpnManagerSessionTest";
+        private const string ManagerPath = "/org/gnome/SessionManager";
+        private const string ClientPath = "/org/gnome/SessionManager/ClientTest";
+
+        private readonly DBusConnection _connection;
+        private readonly TaskCompletionSource<bool> _answer = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        private FakeSessionManager(DBusConnection connection) => _connection = connection;
+
+        internal Task<bool> Answer => _answer.Task;
+
+        internal bool IsDisconnected { get; private set; }
+
+        internal List<string> Received { get; } = [];
+
+        internal bool AnswerAccepted { get; private set; }
+
+        internal static async Task<FakeSessionManager> StartAsync()
+        {
+            var address = DBusAddress.Session ?? throw new InvalidOperationException("No session bus is configured.");
+            var connection = new DBusConnection(address);
+            await connection.ConnectAsync().ConfigureAwait(false);
+            Assert.True(await connection.TryRequestNameAsync(ServiceName, RequestNameOptions.None).ConfigureAwait(false));
+            var manager = new FakeSessionManager(connection);
+            connection.AddMethodHandler(manager);
+            _ = Task.Run(async () =>
+            {
+                var reason = await connection.DisconnectedAsync().ConfigureAwait(false);
+                manager.IsDisconnected = true;
+                Console.Error.WriteLine($"fake session manager disconnected: {reason}");
+            });
+            return manager;
+        }
+
+        /// <inheritdoc />
+        public string Path => ManagerPath;
+
+        /// <inheritdoc />
+        public bool HandlesChildPaths => true;
+
+        /// <inheritdoc />
+        public ValueTask HandleMethodAsync(MethodContext context)
+        {
+            Received.Add(context.Request.MemberAsString ?? "?");
+            switch (context.Request.MemberAsString)
+            {
+                case "RegisterClient":
+                    {
+                        using var writer = context.CreateReplyWriter("o");
+                        writer.WriteObjectPath(ClientPath);
+                        context.Reply(writer.CreateMessage());
+                        return ValueTask.CompletedTask;
+                    }
+
+                case "EndSessionResponse":
+                    {
+                        var reader = context.Request.GetBodyReader();
+                        AnswerAccepted = reader.ReadBool();
+                        _ = reader.ReadString();
+                        _answer.TrySetResult(true);
+                        using var writer = context.CreateReplyWriter(null);
+                        context.Reply(writer.CreateMessage());
+                        return ValueTask.CompletedTask;
+                    }
+
+                default:
+                    context.ReplyUnknownMethodError();
+                    return ValueTask.CompletedTask;
+            }
+        }
+
+        /// <inheritdoc />
+        public void Dispose() => _connection.Dispose();
+    }
+
+    private static async Task EmitAsync(string member, params string[] arguments)
+    {
         using var process = new Process
         {
             StartInfo = new ProcessStartInfo
             {
                 FileName = "gdbus",
                 UseShellExecute = false,
-                RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true,
             },
@@ -182,20 +320,18 @@ public sealed class DbusIntegrationTests
         process.StartInfo.ArgumentList.Add("emit");
         process.StartInfo.ArgumentList.Add("--session");
         process.StartInfo.ArgumentList.Add("--object-path");
-        process.StartInfo.ArgumentList.Add("/org/gnome/SessionManager");
+        process.StartInfo.ArgumentList.Add("/org/gnome/SessionManager/ClientTest");
         process.StartInfo.ArgumentList.Add("--signal");
-        process.StartInfo.ArgumentList.Add("org.gnome.SessionManager.QueryEndSession");
-        process.StartInfo.ArgumentList.Add("0");
-        process.Start();
-        await process.WaitForExitAsync();
-
-        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
-        while (!watcher.IsEnding && DateTime.UtcNow < deadline)
+        process.StartInfo.ArgumentList.Add($"org.gnome.SessionManager.ClientPrivate.{member}");
+        foreach (var argument in arguments)
         {
-            await Task.Delay(25);
+            process.StartInfo.ArgumentList.Add(argument);
         }
 
-        Assert.True(watcher.IsEnding, "The QueryEndSession signal was not observed.");
+        process.Start();
+        var error = await process.StandardError.ReadToEndAsync();
+        await process.WaitForExitAsync();
+        Assert.True(process.ExitCode == 0, error);
     }
 
     private static async Task<(int ExitCode, string Output, string Error)> RunRawAsync(string typedArgument)

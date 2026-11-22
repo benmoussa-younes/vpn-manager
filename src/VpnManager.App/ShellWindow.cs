@@ -111,6 +111,22 @@ internal sealed class ShellWindow : IAsyncDisposable
         Window.Navigation.Push(TunnelListView.ProductTitle, string.Empty, _content);
         _content.Publish();
 
+        _sessionEnd.Ending += () =>
+        {
+            _root.Logger.Log(LogLevel.Information, "the session is ending; closing the window.");
+            Dispatcher.UIThread.Post(() =>
+            {
+                try
+                {
+                    Window.Close();
+                }
+                catch (Exception)
+                {
+                    // The window is already closing; nothing left to do.
+                }
+            });
+        };
+
         Window.Opened += OnOpened;
         _ = StartSessionWatcherAsync();
     }

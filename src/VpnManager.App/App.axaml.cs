@@ -41,7 +41,29 @@ public partial class App : CoreApplication
         }
 
         context.Cancel = true;
-        Dispatcher.UIThread.Post(() => _ = shutdown.RunAsync().AsTask());
+        Dispatcher.UIThread.Post(() => _ = ExitWithinDeadlineAsync(shutdown));
+    }
+
+    private static async Task ExitWithinDeadlineAsync(ShutdownCoordinator shutdown)
+    {
+        var run = shutdown.RunAsync().AsTask();
+        if (await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(4))).ConfigureAwait(true) == run)
+        {
+            try
+            {
+                await run.ConfigureAwait(true);
+            }
+            catch (Exception)
+            {
+                // The process is exiting; a disposal failure must not keep it alive.
+            }
+
+            return;
+        }
+
+        // A logout or a shutdown must not wait on a wedged disposal: the session
+        // manager would time out and the operator would have to force the machine.
+        Environment.Exit(0);
     }
 
     /// <inheritdoc />
@@ -95,22 +117,29 @@ public partial class App : CoreApplication
             // With the quit close behaviour, closing the window must end the
             // process: nothing else keeps it alive, and a window that cannot be
             // re-shown must not leave an unreachable instance behind.
-            window.Closed += (_, _) => _ = shutdown.RunAsync().AsTask();
+            var windowClosed = false;
+            window.Closed += (_, _) =>
+            {
+                windowClosed = true;
+                _ = shutdown.RunAsync().AsTask();
+            };
 
-            host.ActivationRequested += () =>
+            void ShowIfOpen()
             {
-                if (!shutdown.IsStarted)
+                if (!windowClosed && !shutdown.IsStarted)
                 {
-                    Dispatcher.UIThread.Post(window.ShowWindow);
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        if (!windowClosed)
+                        {
+                            window.ShowWindow();
+                        }
+                    });
                 }
-            };
-            host.Activated += _ =>
-            {
-                if (!shutdown.IsStarted)
-                {
-                    Dispatcher.UIThread.Post(window.ShowWindow);
-                }
-            };
+            }
+
+            host.ActivationRequested += ShowIfOpen;
+            host.Activated += _ => ShowIfOpen();
         }
 
         base.OnFrameworkInitializationCompleted();
