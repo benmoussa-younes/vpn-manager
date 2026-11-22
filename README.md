@@ -41,7 +41,8 @@ action goes through the fixed polkit helper.
   `--policy` and `--fix-sysctl`.
 - Exposes the same operations on the user session bus as
   `com.bit-crafts.VpnManager` (interface `com.bit_crafts.VpnManager1`) for
-  enterprise orchestration.
+  enterprise orchestration. The name is the reverse-DNS of the project's
+  `bit-crafts.com` domain; the per-user paths stay under `benmoussa`.
 
 ## What it is not
 

@@ -63,7 +63,9 @@ in the same commit as the API adaptation.
 - Product version `0.1.0`; licence `GPL-3.0-or-later`; documentation
   `CC-BY-SA-4.0`.
 - Core pin `v0.2.3`; the desktop id is `vpn-manager`; the XDG namespace is
-  `benmoussa/vpn-manager`.
+  `benmoussa/vpn-manager`. The session D-Bus service and polkit actions use
+  `com.bit-crafts` (the reverse-DNS of the owned `bit-crafts.com` domain); the
+  two namespaces are intentional and must not be unified.
 - There is no tray icon. Closing the window quits, asking before disconnecting a
   connected profile; a logout or shutdown closes without the dialog.
 - The display name is the NetworkManager connection id; the file stem, the
