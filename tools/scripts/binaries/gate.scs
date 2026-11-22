@@ -89,10 +89,19 @@ if not report("required files", absent.length() == 0, absent.join(", ")) {
     success = false
 }
 
+# The rule is about what the repository ships: the agent runtime creates an
+# ignored .opencode/ in every checkout, which is not a tracked tree.
 let mutable forbidden_dirs: list<string> = []
 for relative in ["docs", ".agents", ".opencode", ".vscode", "vendor"] {
-    if exists(root / relative) {
-        forbidden_dirs.append(relative)
+    match process.run(process.request("git", ["ls-files", "--", relative]).with_working_directory(root)) {
+        ok(completed) => {
+            if completed.standard_output.trim_whitespace() != "" {
+                forbidden_dirs.append(relative)
+            }
+        }
+        error(_) => {
+            forbidden_dirs.append(relative)
+        }
     }
 }
 if not report("no local or vendored tree", forbidden_dirs.length() == 0, forbidden_dirs.join(", ")) {
@@ -193,7 +202,7 @@ if not report("one root AGENTS.md", agent_files == 1, "{agent_files} found") {
     success = false
 }
 
-match process.run(process.request("grep", ["-rInE", "--exclude-dir=.git", "--exclude-dir=bin", "--exclude-dir=obj", "--exclude-dir=artifacts", "--exclude=gate.scs", "bit-crafts\\.com|/srv/github|/home/younes-benmoussa|old-archive-do-not-read", "."]).with_working_directory(root)) {
+match process.run(process.request("git", ["grep", "-InE", "-e", "bit-crafts\\.com|/srv/github|/home/younes-benmoussa|old-archive-do-not-read", "--", ".", ":(exclude)tools/scripts/binaries/gate.scs"]).with_working_directory(root)) {
     ok(completed) => {
         if completed.exit_code == 1 {
             io.write_standard_output_line("PASS no internal host or personal path")
@@ -201,7 +210,7 @@ match process.run(process.request("grep", ["-rInE", "--exclude-dir=.git", "--exc
             io.write_standard_error_line("FAIL no internal host or personal path: {completed.standard_output.trim_whitespace()}")
             success = false
         } else {
-            io.write_standard_error_line("FAIL no internal host or personal path: grep exit {completed.exit_code}")
+            io.write_standard_error_line("FAIL no internal host or personal path: git grep exit {completed.exit_code}")
             success = false
         }
     }
@@ -211,7 +220,7 @@ match process.run(process.request("grep", ["-rInE", "--exclude-dir=.git", "--exc
     }
 }
 
-match process.run(process.request("grep", ["-rInE", "--exclude-dir=.git", "--exclude-dir=bin", "--exclude-dir=obj", "--exclude-dir=artifacts", "--exclude-dir=publish", "--exclude=gate.scs", "bitcrafts|BitCrafts", "."]).with_working_directory(root)) {
+match process.run(process.request("git", ["grep", "-InE", "-e", "bitcrafts|BitCrafts", "--", ".", ":(exclude)tools/scripts/binaries/gate.scs"]).with_working_directory(root)) {
     ok(completed) => {
         if completed.exit_code == 1 {
             io.write_standard_output_line("PASS no old product name")
@@ -219,7 +228,7 @@ match process.run(process.request("grep", ["-rInE", "--exclude-dir=.git", "--exc
             io.write_standard_error_line("FAIL no old product name: {completed.standard_output.trim_whitespace()}")
             success = false
         } else {
-            io.write_standard_error_line("FAIL no old product name: grep exit {completed.exit_code}")
+            io.write_standard_error_line("FAIL no old product name: git grep exit {completed.exit_code}")
             success = false
         }
     }
