@@ -81,14 +81,14 @@ public sealed class CoreAuditTests
     {
         var store = new FakeWireGuardConfigStore();
         store.Files["wg0"] = TestData.SampleConfigText;
-        store.External["/home/operator/Downloads/wg9.conf"] = TestData.SampleConfigText;
+        store.External["/tmp/operator-downloads/wg9.conf"] = TestData.SampleConfigText;
         var service = new TunnelService(store, new FakeWireGuardRuntimeInspector());
         var view = new FakeTunnelView();
         var presenter = new TunnelListPresenter(view, service);
 
         await presenter.RefreshAsync();
-        await presenter.ImportAsync("/home/operator/Downloads/wg9.conf");
-        await presenter.ExportAsync("/home/operator/Downloads/exported.conf");
+        await presenter.ImportAsync("/tmp/operator-downloads/wg9.conf");
+        await presenter.ExportAsync("/tmp/operator-downloads/exported.conf");
 
         Assert.NotEmpty(view.Toasts);
         Assert.All(view.Toasts, toast => Assert.DoesNotContain("/", toast, StringComparison.Ordinal));

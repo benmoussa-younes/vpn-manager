@@ -49,8 +49,10 @@ in the same commit as the API adaptation.
 
 - No secret in a tracked file, a command line, a log or a process argument.
 - `nmcli`, `wg`, `resolvectl` and the fixed helper are started with an argument
-  vector through `IProcessRunner`; never a shell string, never `PATH`. Desktop
-  notifications go through the session bus, not an external command.
+  vector through `IProcessRunner`; never a shell string, never `PATH`. The
+  long-lived `nmcli monitor` is the one exception: an absolute path, no shell,
+  and its lines only trigger a poll. Desktop notifications go through the
+  session bus, not an external command.
 - The profile store is owner-only (`0600`/`0700`), read no-follow and bounded,
   written atomically. A stored profile is validated before NetworkManager sees it.
 - The GUI never invokes `sudo` or an arbitrary root command and never reads or
@@ -76,8 +78,8 @@ in the same commit as the API adaptation.
   no pushed detail page and no toolbar. The configuration form saves explicitly
   (dirty dot from `ShellSnapshot.IsDirty`), the display name commits inline and
   the policy applies on change.
-- A release is a signed tag `v<version>` and the `.deb`, the source archive and
-  `SHA256SUMS`.
+- A release is a signed tag `v<version>` and the `.deb`, the source archive, an
+  SPDX document and a `SHA256SUMS` that covers all three.
 
 ## Commits and releases
 

@@ -513,8 +513,7 @@ public sealed class NmcliNetworkManagerConnectionsTests
         var command = string.Join(' ', Assert.Single(runner.Requests).Arguments);
         Assert.Contains("ipv4.dns 10.0.0.1", command, StringComparison.Ordinal);
         Assert.Contains("ipv6.dns 2001:db8::1", command, StringComparison.Ordinal);
-        Assert.Contains("~corp.example", command, StringComparison.Ordinal);
-        Assert.Contains("search.example", command, StringComparison.Ordinal);
+        Assert.Contains("ipv4.dns-search ~corp.example,~search.example", command, StringComparison.Ordinal);
         Assert.Contains("ipv4.ignore-auto-dns yes", command, StringComparison.Ordinal);
         Assert.Contains("ipv4.dns-priority -50", command, StringComparison.Ordinal);
     }

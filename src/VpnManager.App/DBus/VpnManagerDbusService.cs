@@ -1,7 +1,7 @@
 using System.Text;
+using Core.Results;
 using Tmds.DBus.Protocol;
 using VpnManager.App.Cli;
-using VpnManager.App.Privileges;
 using VpnManager.Core.NetworkManager;
 using VpnManager.Core.Services;
 using VpnManager.Core.State;
@@ -39,16 +39,13 @@ internal sealed class VpnManagerDbusService : IPathMethodHandler, IAsyncDisposab
     private DBusConnection? _connection;
     private Task<Exception?>? _disconnected;
 
-    internal VpnManagerDbusService(
-        TunnelService service,
-        string configDirectory,
-        IRootActionService? rootActions = null)
+    internal VpnManagerDbusService(TunnelService service, string configDirectory)
     {
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrWhiteSpace(configDirectory);
 
         _service = service;
-        _cli = new CliRunner(service, configDirectory, rootActions);
+        _cli = new CliRunner(service, configDirectory);
     }
 
     /// <inheritdoc />
@@ -127,19 +124,19 @@ internal sealed class VpnManagerDbusService : IPathMethodHandler, IAsyncDisposab
         switch (member)
         {
             case "GetStatus":
-                Reply(context, await StatusJsonAsync(context.RequestAborted).ConfigureAwait(false));
+                ReplyResult(context, await StatusJsonAsync(context.RequestAborted).ConfigureAwait(false));
                 return;
             case "Version":
                 Reply(context, Program.Version);
                 return;
             case "Connect":
-                Reply(context, await ConnectAsync(reader.ReadString(), context.RequestAborted).ConfigureAwait(false));
+                ReplyResult(context, await _service.StartAsync(reader.ReadString(), context.RequestAborted).ConfigureAwait(false));
                 return;
             case "Disconnect":
-                Reply(context, await DisconnectAsync(reader.ReadString(), context.RequestAborted).ConfigureAwait(false));
+                ReplyResult(context, await _service.StopAsync(reader.ReadString(), context.RequestAborted).ConfigureAwait(false));
                 return;
             case "SetPolicy":
-                Reply(context, await SetPolicyAsync(
+                ReplyResult(context, await SetPolicyAsync(
                     reader.ReadString(),
                     reader.ReadBool(),
                     reader.ReadString(),
@@ -152,28 +149,18 @@ internal sealed class VpnManagerDbusService : IPathMethodHandler, IAsyncDisposab
         }
     }
 
-    private async Task<string> StatusJsonAsync(CancellationToken cancellationToken)
+    private async Task<Result<string>> StatusJsonAsync(CancellationToken cancellationToken)
     {
         using var output = new StringWriter();
         var code = await _cli
             .RunAsync(new CliOptions(CliCommand.Status, Json: true), output, TextWriter.Null, cancellationToken)
             .ConfigureAwait(false);
-        return code == 0 ? output.ToString() : string.Empty;
+        return code == 0
+            ? Result<string>.Success(output.ToString())
+            : Result<string>.Failure(new CoreError("dbus.status", "The status could not be read."));
     }
 
-    private async Task<string> ConnectAsync(string name, CancellationToken cancellationToken)
-    {
-        var result = await _service.StartAsync(name, cancellationToken).ConfigureAwait(false);
-        return result.TryGetValue(out var value) ? value : result.Error.Message;
-    }
-
-    private async Task<string> DisconnectAsync(string name, CancellationToken cancellationToken)
-    {
-        var result = await _service.StopAsync(name, cancellationToken).ConfigureAwait(false);
-        return result.TryGetValue(out var value) ? value : result.Error.Message;
-    }
-
-    private async Task<string> SetPolicyAsync(
+    private async Task<Result<string>> SetPolicyAsync(
         string name,
         bool autoReconnect,
         string modeText,
@@ -190,13 +177,26 @@ internal sealed class VpnManagerDbusService : IPathMethodHandler, IAsyncDisposab
 
         if (mode is null)
         {
-            return $"Unknown DNS mode '{modeText}'.";
+            return Result<string>.Failure(new CoreError("dbus.dns_mode", $"Unknown DNS mode '{modeText}'."));
         }
 
         var search = searchText.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var policy = new TunnelPolicy(autoReconnect, mode.Value, search);
         var result = await _service.SetPolicyAsync(name, policy, cancellationToken).ConfigureAwait(false);
-        return result.IsSuccess ? "ok" : result.Error.Message;
+        return result.IsSuccess
+            ? Result<string>.Success("ok")
+            : Result<string>.Failure(result.Error);
+    }
+
+    private static void ReplyResult(MethodContext context, Result<string> result)
+    {
+        if (result.TryGetValue(out var value))
+        {
+            Reply(context, value);
+            return;
+        }
+
+        context.ReplyError(ErrorName, result.Error.Message);
     }
 
     private static void TryReplyError(MethodContext context, Exception exception)

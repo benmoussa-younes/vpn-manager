@@ -64,9 +64,37 @@ public sealed class DbusIntegrationTests
         using var lifetime = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         Assert.True(await dbus.TryStartAsync(lifetime.Token));
 
-        var output = await CallAsync("SetPolicy", "wg0", "true", "nonsense", "");
+        var refused = await RunAsync("SetPolicy", "wg0", "true", "nonsense", "");
 
-        Assert.Contains("Unknown DNS mode", output, StringComparison.Ordinal);
+        Assert.NotEqual(0, refused.ExitCode);
+        Assert.Contains(VpnManagerDbusService.ErrorName, refused.Error, StringComparison.Ordinal);
+        Assert.Contains("Unknown DNS mode", refused.Error, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ConnectingAnUnusableProfileIsAnErrorReply()
+    {
+        Assert.SkipUnless(
+            Environment.GetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS") is { Length: > 0 },
+            "No session D-Bus address; run under dbus-run-session.");
+
+        var store = new FakeConfigStore();
+        store.Files["bad0"] = "[Interface]\nBogusKey = 1\n";
+        var service = new TunnelService(
+            store,
+            new FakeRuntimeInspector(),
+            TunnelScope.User,
+            new FakeStateStore(),
+            new FakeNetworkManager(),
+            "alice");
+        await using var dbus = new VpnManagerDbusService(service, "/tmp/vpn-manager-dbus-tests");
+        using var lifetime = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        Assert.True(await dbus.TryStartAsync(lifetime.Token));
+
+        var refused = await RunAsync("Connect", "bad0");
+
+        Assert.NotEqual(0, refused.ExitCode);
+        Assert.Contains(VpnManagerDbusService.ErrorName, refused.Error, StringComparison.Ordinal);
     }
 
     [Fact]

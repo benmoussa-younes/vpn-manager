@@ -887,7 +887,10 @@ public sealed class TunnelListPresenter : PresenterBase<ITunnelListView>
     {
         var tunnels = await _service.ListTunnelsAsync().ConfigureAwait(true);
         var connected = tunnels.TryGetValue(out var rows)
-            ? rows.Where(row => row.State == TunnelState.Up).Select(row => row.Name).ToArray()
+            ? rows
+                .Where(row => row.State == TunnelState.Up && row.Source == TunnelSource.Configuration)
+                .Select(row => row.Name)
+                .ToArray()
             : [];
 
         if (connected.Length == 0)

@@ -320,13 +320,6 @@ VpnManager.Core.Presentation.ITunnelListView.StartRequested -> System.Action<str
 VpnManager.Core.Presentation.ITunnelListView.StopRequested -> System.Action<string!>!
 VpnManager.Core.Presentation.ITunnelListView.TunnelSelected -> System.Action<string!>!
 VpnManager.Core.Presentation.ITunnelListView.UpdateEditorKeys(bool hasPrivateKey, string? publicKey) -> void
-VpnManager.Core.Presentation.PresenterSession
-VpnManager.Core.Presentation.PresenterSession.<Clone>$() -> VpnManager.Core.Presentation.PresenterSession!
-VpnManager.Core.Presentation.PresenterSession.Deconstruct(out VpnManager.Core.Services.TunnelService! Service) -> void
-VpnManager.Core.Presentation.PresenterSession.Equals(VpnManager.Core.Presentation.PresenterSession? other) -> bool
-VpnManager.Core.Presentation.PresenterSession.PresenterSession(VpnManager.Core.Services.TunnelService! Service) -> void
-VpnManager.Core.Presentation.PresenterSession.Service.get -> VpnManager.Core.Services.TunnelService!
-VpnManager.Core.Presentation.PresenterSession.Service.init -> void
 VpnManager.Core.Presentation.ReconnectPolicy
 VpnManager.Core.Presentation.TransferView
 VpnManager.Core.Presentation.TransferView.<Clone>$() -> VpnManager.Core.Presentation.TransferView!
@@ -824,9 +817,6 @@ override VpnManager.Core.Presentation.EditorPeerInput.ToString() -> string!
 override VpnManager.Core.Presentation.EditorSnapshot.Equals(object? obj) -> bool
 override VpnManager.Core.Presentation.EditorSnapshot.GetHashCode() -> int
 override VpnManager.Core.Presentation.EditorSnapshot.ToString() -> string!
-override VpnManager.Core.Presentation.PresenterSession.Equals(object? obj) -> bool
-override VpnManager.Core.Presentation.PresenterSession.GetHashCode() -> int
-override VpnManager.Core.Presentation.PresenterSession.ToString() -> string!
 override VpnManager.Core.Presentation.TransferView.Equals(object? obj) -> bool
 override VpnManager.Core.Presentation.TransferView.GetHashCode() -> int
 override VpnManager.Core.Presentation.TransferView.ToString() -> string!
@@ -941,8 +931,6 @@ static VpnManager.Core.Presentation.EditorPeerInput.operator !=(VpnManager.Core.
 static VpnManager.Core.Presentation.EditorPeerInput.operator ==(VpnManager.Core.Presentation.EditorPeerInput? left, VpnManager.Core.Presentation.EditorPeerInput? right) -> bool
 static VpnManager.Core.Presentation.EditorSnapshot.operator !=(VpnManager.Core.Presentation.EditorSnapshot? left, VpnManager.Core.Presentation.EditorSnapshot? right) -> bool
 static VpnManager.Core.Presentation.EditorSnapshot.operator ==(VpnManager.Core.Presentation.EditorSnapshot? left, VpnManager.Core.Presentation.EditorSnapshot? right) -> bool
-static VpnManager.Core.Presentation.PresenterSession.operator !=(VpnManager.Core.Presentation.PresenterSession? left, VpnManager.Core.Presentation.PresenterSession? right) -> bool
-static VpnManager.Core.Presentation.PresenterSession.operator ==(VpnManager.Core.Presentation.PresenterSession? left, VpnManager.Core.Presentation.PresenterSession? right) -> bool
 static VpnManager.Core.Presentation.ReconnectPolicy.ShouldReconnect(string? previousKey, string? currentKey, bool ownedTunnelUp) -> bool
 static VpnManager.Core.Presentation.TransferView.operator !=(VpnManager.Core.Presentation.TransferView? left, VpnManager.Core.Presentation.TransferView? right) -> bool
 static VpnManager.Core.Presentation.TransferView.operator ==(VpnManager.Core.Presentation.TransferView? left, VpnManager.Core.Presentation.TransferView? right) -> bool

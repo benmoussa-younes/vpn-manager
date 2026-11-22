@@ -9,7 +9,7 @@ Rules-Requires-Root: no
 
 Package: vpn-manager
 Architecture: amd64
-Depends: ${shlibs:Depends}, ${misc:Depends}, network-manager, wireguard-tools, procps, pkexec, libfontconfig1, libx11-6
+Depends: ${shlibs:Depends}, ${misc:Depends}, network-manager, wireguard-tools, procps, pkexec, libfontconfig1, libx11-6, libice6, libsm6, libxext6, libxrandr2, libxi6, libxcursor1
 Suggests: wireguard
 Description: per-user WireGuard client for Debian GNOME
  VPN Manager is a desktop client for WireGuard on a Debian GNOME host. It

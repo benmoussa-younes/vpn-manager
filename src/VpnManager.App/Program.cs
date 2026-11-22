@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Avalonia;
 using Core.Platform.Linux;
 using Core.UI.Hosting;
@@ -214,6 +215,11 @@ internal static class Program
             stopping.Cancel();
         };
         Console.CancelKeyPress += cancel;
+        using var sigterm = PosixSignalRegistration.Create(PosixSignal.SIGTERM, context =>
+        {
+            context.Cancel = true;
+            stopping.Cancel();
+        });
 
         VpnManagerDbusService? service = null;
         try
@@ -224,8 +230,7 @@ internal static class Program
                 LaunchOptions.IsReadOnly(arguments));
             service = new VpnManagerDbusService(
                 root.Service,
-                root.Store.ConfigDirectory,
-                new PkexecRootActionService(root.ProcessRunner));
+                root.Store.ConfigDirectory);
             if (!await service.TryStartAsync(stopping.Token).ConfigureAwait(false))
             {
                 Console.Error.WriteLine($"vpn-manager: {VpnManagerDbusService.ServiceName} is already owned by another process.");
@@ -286,7 +291,8 @@ internal static class Program
             var runner = new CliRunner(
                 root.Service,
                 root.Store.ConfigDirectory,
-                new PkexecRootActionService(root.ProcessRunner));
+                new PkexecRootActionService(root.ProcessRunner),
+                readOnly: LaunchOptions.IsReadOnly(arguments));
             return runner.RunAsync(options, Console.Out, Console.Error).GetAwaiter().GetResult();
         }
         finally

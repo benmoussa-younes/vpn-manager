@@ -812,6 +812,14 @@ public sealed class TunnelService
         var connection = found.Value;
         var connectionId = connection?.Name ?? name;
 
+        var hasFileResult = _store.Exists(name);
+        var hasFile = hasFileResult.TryGetValue(out var fileExists) && fileExists;
+        if (connection is null && !hasFile)
+        {
+            // A name that never existed is a failure, not an already-down tunnel.
+            return Result<string>.Failure(WireGuardErrors.ConfigNotFound(name));
+        }
+
         // A disconnect on a tunnel that is already down is a no-op, not an
         // nmcli error: the operator asked for a state, not for a transition.
         var down = connection is null || !connection.IsActive
@@ -820,7 +828,6 @@ public sealed class TunnelService
 
         if (down.IsSuccess &&
             connection is not null &&
-            _store.Exists(name).TryGetValue(out var hasFile) &&
             hasFile)
         {
             // A manual disconnect is authoritative: NetworkManager must not bring
@@ -889,6 +896,16 @@ public sealed class TunnelService
                     WireGuardErrorCodes.DnsInvalid,
                     $"Search domain '{domain}' is not a usable host name or routing domain."));
             }
+        }
+
+        if (policy.DnsMode == NetworkManagerDnsMode.Split && policy.SearchDomains.Count == 0)
+        {
+            // With no routing domain, the link still carries ignore-auto-dns and a
+            // preferred priority: NetworkManager would send every name to the
+            // profile DNS, which is the opposite of Split.
+            return Result<TunnelPolicy>.Failure(WireGuardErrors.Validation(
+                WireGuardErrorCodes.DnsInvalid,
+                "Split DNS needs at least one routing domain; list the domains first."));
         }
 
         var hasFile = _store.Exists(name);

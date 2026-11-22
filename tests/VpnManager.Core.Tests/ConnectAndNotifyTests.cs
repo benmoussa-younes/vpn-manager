@@ -178,10 +178,27 @@ public sealed class ConnectAndNotifyTests
 
         var saved = await service.SetPolicyAsync(
             "wg0",
-            new TunnelPolicy(AutoReconnect: true, DnsMode: NetworkManagerDnsMode.Split, DnsSearchDomains: []));
+            new TunnelPolicy(AutoReconnect: true, DnsMode: NetworkManagerDnsMode.Split, DnsSearchDomains: ["corp.example"]));
 
         Assert.True(saved.IsSuccess);
         Assert.Equal("wg0-if", Assert.Single(networkManager.Reapplied));
+    }
+
+    [Fact]
+    public async Task Split_without_a_routing_domain_is_refused()
+    {
+        var store = new FakeWireGuardConfigStore();
+        store.Files["wg0"] = TestData.SampleConfigText;
+        var networkManager = new FakeNetworkManagerConnections();
+        var service = Build(store, networkManager, owner: "alice");
+
+        var saved = await service.SetPolicyAsync(
+            "wg0",
+            new TunnelPolicy(DnsMode: NetworkManagerDnsMode.Split, DnsSearchDomains: []));
+
+        Assert.True(saved.IsFailure);
+        Assert.Contains("Split DNS", saved.Error.Message, StringComparison.Ordinal);
+        Assert.Empty(networkManager.DnsChanges);
     }
 
     [Fact]
@@ -193,7 +210,7 @@ public sealed class ConnectAndNotifyTests
         networkManager.Connections.Add(new NetworkManagerConnection("wg0", "wg0-if", false, ["user:alice"]));
         var service = Build(store, networkManager, owner: "alice");
 
-        var saved = await service.SetPolicyAsync("wg0", new TunnelPolicy(DnsMode: NetworkManagerDnsMode.Split));
+        var saved = await service.SetPolicyAsync("wg0", new TunnelPolicy(DnsMode: NetworkManagerDnsMode.Split, DnsSearchDomains: ["corp.example"]));
 
         Assert.True(saved.IsSuccess);
         Assert.Empty(networkManager.Reapplied);

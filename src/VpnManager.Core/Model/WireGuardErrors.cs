@@ -76,7 +76,7 @@ public static class WireGuardErrors
     /// <returns>The error.</returns>
     public static CoreError ToolsUnavailable(string executable) => new(
         WireGuardErrorCodes.ToolsUnavailable,
-        $"The '{executable}' executable could not be started. Install wireguard-tools and make sure it is on PATH.");
+        $"The '{executable}' executable could not be started. Install the package that provides it.");
 
     /// <summary>Creates the failure returned when an interface does not exist.</summary>
     /// <param name="name">The interface name.</param>

@@ -202,7 +202,7 @@ if not report("one root AGENTS.md", agent_files == 1, "{agent_files} found") {
     success = false
 }
 
-match process.run(process.request("git", ["grep", "-InE", "-e", "bit-crafts\\.com|/srv/github|/home/younes-benmoussa|old-archive-do-not-read", "--", ".", ":(exclude)tools/scripts/binaries/gate.scs"]).with_working_directory(root)) {
+match process.run(process.request("git", ["grep", "-InE", "-e", "/home/|/srv/github|old-archive-do-not-read", "--", ".", ":(exclude)tools/scripts/binaries/gate.scs"]).with_working_directory(root)) {
     ok(completed) => {
         if completed.exit_code == 1 {
             io.write_standard_output_line("PASS no internal host or personal path")

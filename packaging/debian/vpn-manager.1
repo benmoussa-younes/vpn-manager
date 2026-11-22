@@ -52,6 +52,10 @@ and
 An empty value clears the stored search domains. A change to an active
 connection is reapplied immediately.
 .TP
+.B \-\-dbus
+Run the session D\-Bus service for enterprise orchestration; it stops when the
+session bus closes or the process is terminated.
+.TP
 .B \-\-self\-test
 Run the display-free self-test and exit.
 .TP
@@ -67,6 +71,12 @@ The per-user profile directory.
 .TP
 .I ~/.local/state/benmoussa/vpn-manager
 The application state, its log, its operation journal and its crash log.
+.TP
+.I $XDG_RUNTIME_DIR/benmoussa-vpn-manager.socket
+The single-instance claim. When
+.I XDG_RUNTIME_DIR
+is not set, the run directory falls back to
+.IR ~/.local/state/vpn-manager/run .
 .SH SEE ALSO
 .BR nmcli (1),
 .BR wg (8),

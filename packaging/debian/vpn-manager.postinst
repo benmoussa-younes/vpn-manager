@@ -4,8 +4,13 @@
 # not a package failure.
 set -e
 
+# dpkg does not guarantee the caller's PATH; make the system directories explicit.
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+
 if [ "$1" = "configure" ] && command -v sysctl >/dev/null 2>&1; then
-    sysctl -q -p /usr/lib/sysctl.d/60-vpn-manager.conf || true
+    sysctl -q -p /usr/lib/sysctl.d/60-vpn-manager.conf || \
+        echo "vpn-manager: the sysctl could not be applied now; systemd-sysctl applies it at the next boot." >&2
 fi
 
 #DEBHELPER#

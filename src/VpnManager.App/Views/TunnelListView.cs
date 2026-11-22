@@ -425,15 +425,6 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
                 _ = PickRestorePathAsync();
                 break;
             default:
-                if (id.StartsWith("connect:", StringComparison.Ordinal))
-                {
-                    StartRequested?.Invoke(id["connect:".Length..]);
-                }
-                else if (id.StartsWith("disconnect:", StringComparison.Ordinal))
-                {
-                    StopRequested?.Invoke(id["disconnect:".Length..]);
-                }
-
                 break;
         }
     }
@@ -846,6 +837,18 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     }
 
     private async void OnTunnelSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        try
+        {
+            await HandleSelectionChangeAsync().ConfigureAwait(true);
+        }
+        catch (Exception exception)
+        {
+            SetError(exception.Message);
+        }
+    }
+
+    private async Task HandleSelectionChangeAsync()
     {
         if (_suspendSelection)
         {

@@ -50,16 +50,25 @@ jobs:
           test "$(git -C ../core describe --tags --exact-match)" = "$pin"
 
       - name: Native AOT toolchain
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang zlib1g-dev libfontconfig1
+        run: >
+          sudo apt-get update &&
+          sudo apt-get install -y --no-install-recommends
+          clang zlib1g-dev libfontconfig1 lintian
 
-      - name: Licence
-        run: pipx run reuse==5.0.2 lint
+      - name: Scripts interpreter
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/scripts.tar.gz" \
+            https://github.com/benmoussa-younes/scripts/releases/download/v0.2.1/scripts_0.2.1_linux-x64.tar.gz
+          tar -xzf "$RUNNER_TEMP/scripts.tar.gz" -C "$RUNNER_TEMP"
+          sudo install -m 0755 "$RUNNER_TEMP/scripts-0.2.1/scripts" /usr/local/bin/scripts
 
-      - name: Build
-        run: dotnet build VpnManager.slnx -c Release
+      - name: Gate dependencies
+        run: |
+          pipx install reuse==5.0.2
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Test
-        run: dotnet test VpnManager.slnx -c Release --no-build
+      - name: Gate, including the Native AOT proof
+        run: scripts run tools/scripts/binaries/gate.scs --aot
 
       - name: Verify tag matches VersionPrefix
         run: |
@@ -68,6 +77,17 @@ jobs:
 
       - name: Debian package
         run: packaging/build-deb.sh
+
+      - name: Verify the Debian package
+        run: |
+          deb="$(ls artifacts/*.deb)"
+          root="$(mktemp -d)"
+          dpkg-deb -x "$deb" "$root"
+          "$root/usr/lib/vpn-manager/vpn-manager" --self-test
+          test "$(stat -c %a "$root/usr/lib/vpn-manager/vpn-manager")" = 755
+          test "$(stat -c %a "$root/usr/lib/vpn-manager/vpn-manager-helper")" = 755
+          test ! -u "$root/usr/lib/vpn-manager/vpn-manager-helper"
+          lintian --fail-on error "$deb"
 
       - name: Source archive
         run: |
@@ -82,7 +102,7 @@ jobs:
       - name: Checksums
         run: |
           cd artifacts
-          sha256sum ./*.deb ./*-src.tar.gz > SHA256SUMS
+          sha256sum ./*.deb ./*-src.tar.gz ./*.spdx > SHA256SUMS
 
       - name: Upload release assets
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
@@ -109,7 +129,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" artifacts/* --clobber
+            gh release upload "$TAG" artifacts/*
           else
             gh release create "$TAG" \
               --verify-tag \

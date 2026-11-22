@@ -8,4 +8,4 @@ vpn-manager (0.1.0-1) unstable; urgency=medium
     NetworkManager, and written atomically owner-only.
   * The package applies only its own sysctl drop-in on install.
 
- -- Younes Benmoussa <younes.benmoussa@pm.me>  Sat, 21 Nov 2026 15:30:00 +0000
+ -- Younes Benmoussa <younes.benmoussa@pm.me>  Sun, 22 Nov 2026 16:30:00 +0000

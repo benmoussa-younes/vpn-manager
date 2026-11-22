@@ -41,8 +41,13 @@ internal sealed class CliRunner
     private readonly TunnelService _service;
     private readonly string _configDirectory;
     private readonly IRootActionService? _rootActions;
+    private readonly bool _readOnly;
 
-    internal CliRunner(TunnelService service, string configDirectory, IRootActionService? rootActions = null)
+    internal CliRunner(
+        TunnelService service,
+        string configDirectory,
+        IRootActionService? rootActions = null,
+        bool readOnly = false)
     {
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrWhiteSpace(configDirectory);
@@ -50,6 +55,7 @@ internal sealed class CliRunner
         _service = service;
         _configDirectory = configDirectory;
         _rootActions = rootActions;
+        _readOnly = readOnly;
     }
 
     internal async Task<int> RunAsync(CliOptions options, TextWriter output, TextWriter error, CancellationToken cancellationToken = default)
@@ -152,6 +158,12 @@ internal sealed class CliRunner
 
     private async Task<int> FixSysctlAsync(TextWriter output, CancellationToken cancellationToken)
     {
+        if (_readOnly)
+        {
+            output.WriteLine("The session is read-only; --fix-sysctl is disabled.");
+            return 1;
+        }
+
         if (_rootActions is null || !_rootActions.IsAvailable)
         {
             output.WriteLine("The privileged helper is not installed.");

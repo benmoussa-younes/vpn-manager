@@ -51,6 +51,21 @@ jobs:
           git clone --branch "$pin" --depth 1 https://github.com/benmoussa-younes/core.git ../core
           test "$(git -C ../core describe --tags --exact-match)" = "$pin"
 
+      - name: Scripts interpreter
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/scripts.tar.gz" \
+            https://github.com/benmoussa-younes/scripts/releases/download/v0.2.1/scripts_0.2.1_linux-x64.tar.gz
+          tar -xzf "$RUNNER_TEMP/scripts.tar.gz" -C "$RUNNER_TEMP"
+          sudo install -m 0755 "$RUNNER_TEMP/scripts-0.2.1/scripts" /usr/local/bin/scripts
+
+      - name: Gate dependencies
+        run: |
+          pipx install reuse==5.0.2
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Gate
+        run: scripts run tools/scripts/binaries/gate.scs
+
       - name: Restore
         run: dotnet restore VpnManager.slnx
 

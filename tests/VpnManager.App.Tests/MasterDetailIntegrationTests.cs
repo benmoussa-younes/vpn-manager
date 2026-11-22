@@ -132,10 +132,13 @@ public sealed class MasterDetailIntegrationTests
             Select(view, 0);
             await presenter.PendingOperation!;
 
+            view.PolicyView.SearchBox.Text = "corp.example";
             view.PolicyView.ModeBox.SelectedIndex = (int)NetworkManagerDnsMode.Split;
             await (presenter.PendingOperation ?? Task.CompletedTask);
 
-            Assert.Equal(NetworkManagerDnsMode.Split, service.GetPolicy("wg0").DnsMode);
+            var policy = service.GetPolicy("wg0");
+            Assert.Equal(NetworkManagerDnsMode.Split, policy.DnsMode);
+            Assert.Contains("corp.example", policy.SearchDomains);
         });
     }
 

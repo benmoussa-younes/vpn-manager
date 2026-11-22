@@ -20,8 +20,8 @@ action goes through the fixed polkit helper.
 - Shows each tunnel's state and live rate in the sidebar; the selected tunnel's
   pane holds its editable form. `--status` and `--diagnostics` report the policy,
   the IPv6 classification and the DNS containment.
-- Connects and disconnects from the sidebar and the pane. Network loss and the
-  automatic reconnection are desktop notifications; a manual action shows a
+- Connects and disconnects from the selected profile's pane. Network loss and
+  the automatic reconnection are desktop notifications; a manual action shows a
   toast in the window.
 - Keeps one instance per user and surfaces the running window on a second launch.
 - Supports a `--read-only` session that browses and exports without changing
@@ -106,8 +106,8 @@ name stay the same.
 
 ## Install
 
-The release publishes a Debian package, the matching source archive and their
-checksums. Install the package as the operator:
+The release publishes a Debian package, the matching source archive, an SPDX
+document and the checksums of all three. Install the package as the operator:
 
 ```bash
 sudo apt-get install -y ./vpn-manager_<version>-1_amd64.deb
@@ -128,6 +128,7 @@ GUI never elevates; `--fix-sysctl` is the one explicit helper action.
 | `~/.config/benmoussa/vpn-manager/` | The profiles the operator owns (owner-only, `0600`). |
 | `~/.local/state/benmoussa/vpn-manager/` | State, appearance preferences, application log, operation journal and crash log. |
 | `$XDG_RUNTIME_DIR/benmoussa-vpn-manager.socket` | The single-instance claim; the runtime directory is already per-user. |
+| `$XDG_STATE_HOME/vpn-manager/run` | The run directory when `XDG_RUNTIME_DIR` is not set; it holds the same socket. |
 
 A private key lives in the profile file (owner-only) and in memory while an
 import or an export runs. It is never displayed, logged or passed as a

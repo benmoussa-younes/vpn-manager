@@ -35,7 +35,8 @@ pkg="$stage/pkg"
 mkdir -p "$pkg/DEBIAN" "$pkg/usr/lib/vpn-manager" "$pkg/usr/bin" \
     "$pkg/usr/share/applications" "$pkg/usr/share/icons/hicolor/scalable/apps" \
     "$pkg/usr/share/doc/vpn-manager" "$pkg/usr/share/man/man1" "$pkg/usr/lib/sysctl.d" \
-    "$pkg/usr/share/polkit-1/actions" "$pkg/usr/share/dbus-1/services"
+    "$pkg/usr/share/polkit-1/actions" "$pkg/usr/share/dbus-1/services" \
+    "$pkg/usr/share/lintian/overrides"
 
 dotnet publish "$repo/src/VpnManager.App/VpnManager.App.csproj" \
     -c Release -r linux-x64 -o "$pkg/usr/lib/vpn-manager"
@@ -69,7 +70,7 @@ Version: $version-1
 Architecture: amd64
 Maintainer: Younes Benmoussa <younes.benmoussa@pm.me>
 Installed-Size: $installed_size
-Depends: libc6, network-manager, wireguard-tools, procps, pkexec, libfontconfig1, libx11-6
+Depends: libc6, network-manager, wireguard-tools, procps, pkexec, libfontconfig1, libx11-6, libice6, libsm6, libxext6, libxrandr2, libxi6, libxcursor1
 Suggests: wireguard
 Section: net
 Priority: optional
@@ -91,6 +92,7 @@ EOF
 # has no debhelper, so the staged script must not carry it.
 sed '/^#DEBHELPER#$/d' "$repo/packaging/debian/vpn-manager.postinst" > "$pkg/DEBIAN/postinst"
 chmod 0755 "$pkg/DEBIAN/postinst"
+cp "$repo/packaging/debian/vpn-manager.lintian-overrides" "$pkg/usr/share/lintian/overrides/vpn-manager"
 gzip -9 -n -c "$repo/packaging/debian/changelog" > "$pkg/usr/share/doc/vpn-manager/changelog.Debian.gz"
 
 # Debian files are world-readable: the source tree may carry the operator's

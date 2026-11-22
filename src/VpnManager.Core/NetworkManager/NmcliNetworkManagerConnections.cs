@@ -158,6 +158,14 @@ public sealed class NmcliNetworkManagerConnections : INetworkManagerConnections
             return Result<string>.Failure(WireGuardErrors.NetworkManagerInvalidConnection(connectionName));
         }
 
+        if (existing is { IsActive: true })
+        {
+            // Deleting a live connection would drop the tunnel; the caller applies
+            // the policy and activates it again, which NetworkManager treats as a
+            // no-op.
+            return Result<string>.Success(existing.Name);
+        }
+
         if (existing is not null)
         {
             var deleted = await DeleteAsync(existing.Name, cancellationToken).ConfigureAwait(false);

@@ -40,10 +40,13 @@ Core, which have their own security policies.
   shell is involved and a bare tool name never resolves through `PATH`. Desktop
   notifications go through the session bus (`org.freedesktop.Notifications`).
 - A profile is read with a bounded, no-follow read and validated before it is
-  handed to NetworkManager. Hook keys are refused because NetworkManager does
-  not execute them.
+  handed to NetworkManager. Hook keys are stripped from the copy handed to
+  NetworkManager and never executed; the stored profile keeps them.
 - The profile and state directories are owner-only; the state directory refuses
   group- or world-write access.
+- The session D-Bus service runs as the operator on the user session bus; any
+  process of the same account can call its methods. It is not a privilege
+  boundary and never runs on the system bus.
 - The display name is also the NetworkManager connection id. It is at most 64
   characters, may not contain control characters or start with `-`, and may not
   collide with another tunnel or another NetworkManager connection; the id is

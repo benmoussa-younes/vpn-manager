@@ -65,7 +65,7 @@ public sealed class CliRunnerTests
         using var output = new StringWriter();
 
         var code = await runner.RunAsync(
-            CliOptions.Parse(["--policy", "wg0", "--dns-search", string.Empty]),
+            CliOptions.Parse(["--policy", "wg0", "--dns-mode", "profile", "--dns-search", string.Empty]),
             output,
             TextWriter.Null);
 
@@ -128,9 +128,22 @@ public sealed class CliRunnerTests
         Assert.NotEqual(string.Empty, error.ToString());
     }
 
+    [Fact]
+    public async Task A_read_only_cli_refuses_the_privileged_action()
+    {
+        var (runner, _, _, _) = CreateRunner(withConnection: false, readOnly: true);
+        using var output = new StringWriter();
+
+        var code = await runner.RunAsync(new CliOptions(CliCommand.FixSysctl), output, TextWriter.Null);
+
+        Assert.Equal(1, code);
+        Assert.Contains("read-only", output.ToString(), StringComparison.Ordinal);
+    }
+
     private static (CliRunner Runner, FakeRootActions RootActions, FakeNetworkManager NetworkManager, FakeStateStore State) CreateRunner(
         bool withConnection,
-        bool rootAvailable = false)
+        bool rootAvailable = false,
+        bool readOnly = false)
     {
         var store = new FakeConfigStore();
         store.Files["wg0"] = AppTestData.SampleConfig;
@@ -150,6 +163,6 @@ public sealed class CliRunnerTests
             "alice",
             importDirectory: Path.Combine(Path.GetTempPath(), "vpn-manager-cli-tests"));
         var rootActions = new FakeRootActions { Available = rootAvailable };
-        return (new CliRunner(service, store.ConfigDirectory, rootActions), rootActions, networkManager, state);
+        return (new CliRunner(service, store.ConfigDirectory, rootActions, readOnly), rootActions, networkManager, state);
     }
 }
