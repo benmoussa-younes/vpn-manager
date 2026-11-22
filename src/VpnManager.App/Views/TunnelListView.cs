@@ -288,6 +288,9 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
     /// <summary>Gets the embedded policy card, for tests.</summary>
     internal TunnelPolicyView PolicyView => _policyView;
 
+    /// <summary>Gets whether the inline display-name card is shown, for tests.</summary>
+    internal bool DisplayCardVisible => _displayCard.IsVisible;
+
     /// <summary>Gets the inline display-name box, for tests.</summary>
     internal TextBox DisplayNameBox => _displayName;
 
@@ -688,14 +691,12 @@ public sealed class TunnelListView : UserControl, ITunnelListView, IBusyView
 
     private static Border Card(string heading, Control content)
     {
+        var headingBlock = new TextBlock { Text = heading, Classes = { "heading" } };
+        AutomationProperties.SetLabeledBy(content, headingBlock);
         var stack = new StackPanel
         {
             Spacing = 8,
-            Children =
-            {
-                new TextBlock { Text = heading, Classes = { "heading" } },
-                content,
-            },
+            Children = { headingBlock, content },
         };
 
         var border = new Border

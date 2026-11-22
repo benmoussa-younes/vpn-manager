@@ -264,10 +264,12 @@ internal sealed class FakeDialogs : IDialogService
 
     internal int SavePrompts { get; private set; }
 
+    internal SavePromptChoice SavePromptAnswer { get; set; } = SavePromptChoice.Discard;
+
     public ValueTask<SavePromptChoice> ConfirmSaveAsync(string documentName, CancellationToken cancellationToken = default)
     {
         SavePrompts++;
-        return ValueTask.FromResult(SavePromptChoice.Discard);
+        return ValueTask.FromResult(SavePromptAnswer);
     }
 
     public ValueTask<QuitChoice> ConfirmQuitAsync(CancellationToken cancellationToken = default) =>
