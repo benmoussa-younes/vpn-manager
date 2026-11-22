@@ -43,6 +43,14 @@ let root: path = process.script_path().parent().parent().parent().parent()
 let base: string = root.to_string()
 let mutable success = true
 let mutable aot_mode = false
+# The test summary is localized and Debian ships no ICU: the overlay makes every
+# dotnet call below report the same result whatever the operator's locale.
+let tool_environment: map<string, string> = {
+    "DOTNET_CLI_UI_LANGUAGE": "en",
+    "DOTNET_SYSTEM_GLOBALIZATION_INVARIANT": "1",
+    "DOTNET_NOLOGO": "1",
+    "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
+}
 for argument in process.arguments() {
     if argument == "--aot" {
         aot_mode = true
@@ -221,7 +229,7 @@ match process.run(process.request("grep", ["-rInE", "--exclude-dir=.git", "--exc
     }
 }
 
-match process.run(process.request("dotnet", ["build", "VpnManager.slnx", "-c", "Release"]).with_working_directory(root)) {
+match process.run(process.request("dotnet", ["build", "VpnManager.slnx", "-c", "Release"]).with_working_directory(root).with_environment(tool_environment)) {
     ok(completed) => {
         if completed.exit_code == 0 {
             io.write_standard_output_line("PASS build")
@@ -236,7 +244,7 @@ match process.run(process.request("dotnet", ["build", "VpnManager.slnx", "-c", "
     }
 }
 
-match process.run(process.request("dotnet", ["format", "VpnManager.slnx", "--verify-no-changes", "--no-restore"]).with_working_directory(root)) {
+match process.run(process.request("dotnet", ["format", "VpnManager.slnx", "--verify-no-changes", "--no-restore"]).with_working_directory(root).with_environment(tool_environment)) {
     ok(completed) => {
         if completed.exit_code == 0 {
             io.write_standard_output_line("PASS format")
@@ -251,7 +259,7 @@ match process.run(process.request("dotnet", ["format", "VpnManager.slnx", "--ver
     }
 }
 
-match process.run(process.request("dotnet", ["test", "VpnManager.slnx", "-c", "Release", "--no-build"]).with_working_directory(root)) {
+match process.run(process.request("dotnet", ["test", "VpnManager.slnx", "-c", "Release", "--no-build"]).with_working_directory(root).with_environment(tool_environment)) {
     ok(completed) => {
         let output = completed.standard_output
         if completed.exit_code == 0 and output.contains("Passed!") and not output.contains("Failed!") {
@@ -292,7 +300,7 @@ if aot_mode {
         }
     }
 
-    match process.run(process.request("dotnet", ["publish", "src/VpnManager.App/VpnManager.App.csproj", "-c", "Release", "-r", "linux-x64", "-o", publish_directory]).with_working_directory(root)) {
+    match process.run(process.request("dotnet", ["publish", "src/VpnManager.App/VpnManager.App.csproj", "-c", "Release", "-r", "linux-x64", "-o", publish_directory]).with_working_directory(root).with_environment(tool_environment)) {
         ok(completed) => {
             let mutable ilc = 0
             for line in completed.standard_output.split("\n") {
@@ -322,7 +330,7 @@ if aot_mode {
         }
     }
 
-    match process.run(process.request("dotnet", ["publish", "src/VpnManager.Helper/VpnManager.Helper.csproj", "-c", "Release", "-r", "linux-x64", "-o", helper_directory]).with_working_directory(root)) {
+    match process.run(process.request("dotnet", ["publish", "src/VpnManager.Helper/VpnManager.Helper.csproj", "-c", "Release", "-r", "linux-x64", "-o", helper_directory]).with_working_directory(root).with_environment(tool_environment)) {
         ok(completed) => {
             let mutable helper_ilc = 0
             for line in completed.standard_output.split("\n") {
