@@ -10,6 +10,7 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <PathMap>$(MSBuildThisFileDirectory)=/_/</PathMap>
   </PropertyGroup>
 
   <PropertyGroup>
