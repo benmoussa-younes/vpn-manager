@@ -69,7 +69,7 @@ machine name are blurred.
   through the polkit-authorized helper; it never reads or writes
   `/etc/wireguard`.
 
-## Command line
+## Usage
 
 ```
 vpn-manager                      start the GUI
@@ -257,13 +257,14 @@ and the sysctl drop-in, then builds `artifacts/vpn-manager_<version>-1_amd64.deb
 
 See [`SECURITY.md`](SECURITY.md) for the private vulnerability report.
 
-## Contributing and warranty
+## Forking and warranty
 
 External contributions are **not accepted**: unsolicited pull requests or
-patches may be closed without review. A fork is the supported way to build on
-this work; the licence below lets you use, study, change and redistribute your
-fork. The project is maintained by one author: no support contract, service
-level or warranty, express or implied, is provided beyond the licence. The
+patches may be closed without review. A fork is welcome; you maintain it, and
+the licence below lets you use, study, change and redistribute it. The project
+is maintained by one author: no support contract, service
+level or warranty, express or implied, is provided beyond the licence, and the
+software is delivered **as is**. The
 vulnerability channel in [`SECURITY.md`](SECURITY.md) is read on a best-effort
 basis, with no promised delay or fix.
 
