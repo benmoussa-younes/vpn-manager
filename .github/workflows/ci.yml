@@ -103,3 +103,38 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
           path: TestResults/*.trx
+
+  aot-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: build-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            Directory.Packages.props
+            global.json
+            **/*.csproj
+
+      - name: Core at the pin
+        run: |
+          pin="$(cat CORE_VERSION)"
+          git clone --branch "$pin" --depth 1 https://github.com/benmoussa-younes/core.git ../core
+          test "$(git -C ../core describe --tags --exact-match)" = "$pin"
+
+      - name: Native AOT prerequisites
+        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
+
+      - name: Publish the AOT binary
+        run: dotnet publish src/VpnManager.App/VpnManager.App.csproj -c Release -r linux-x64 -o out
+
+      - name: Prove the published binary
+        run: ./out/vpn-manager --self-test
