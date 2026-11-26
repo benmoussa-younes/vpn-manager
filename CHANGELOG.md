@@ -15,6 +15,8 @@ and this project adheres to
 
 ### Changed
 
+- Core moves to the published `v0.4.0` release and Avalonia to 12.2.0, the
+  version Core.UI requires; no product source changes.
 - The gate refuses a tracked build artifact (`artifacts/`, `*.deb`), a root
   `LICENSE` that diverges from `LICENSES/GPL-3.0-or-later.txt`, and a `LICENSE`
   that is not a regular file.
