@@ -17,6 +17,11 @@ and this project adheres to
 
 - Core moves to the published `v0.4.0` release and Avalonia to 12.2.0, the
   version Core.UI requires; no product source changes.
+- The six outdated top-level packages are current: `Microsoft.NET.Test.Sdk`
+  18.12.0 (fixes CVE-2026-105544), `coverlet.collector` 10.1.1,
+  `xunit.v3.mtp-off` 4.0.3, `xunit.runner.visualstudio` 4.0.1,
+  `Microsoft.CodeAnalysis.PublicApiAnalyzers` 5.6.0 and
+  `Tmds.DBus.Protocol` 0.95.2.
 - The gate refuses a tracked build artifact (`artifacts/`, `*.deb`), a root
   `LICENSE` that diverges from `LICENSES/GPL-3.0-or-later.txt`, and a `LICENSE`
   that is not a regular file.
