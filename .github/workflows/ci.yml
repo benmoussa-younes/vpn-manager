@@ -54,9 +54,10 @@ jobs:
       - name: Scripts interpreter
         run: |
           curl -fsSL -o "$RUNNER_TEMP/scripts.tar.gz" \
-            https://github.com/benmoussa-younes/scripts/releases/download/v0.2.1/scripts_0.2.1_linux-x64.tar.gz
+            https://github.com/benmoussa-younes/scripts/releases/download/v0.3.0/scripts_0.3.0_linux-x64.tar.gz
+          echo "ceb83ff59e226644d0b12dbebbfe751145e36118175e055c5e1eead9adb0c7a8  $RUNNER_TEMP/scripts.tar.gz" | sha256sum -c -
           tar -xzf "$RUNNER_TEMP/scripts.tar.gz" -C "$RUNNER_TEMP"
-          sudo install -m 0755 "$RUNNER_TEMP/scripts-0.2.1/scripts" /usr/local/bin/scripts
+          sudo install -m 0755 "$RUNNER_TEMP/scripts-0.3.0/scripts" /usr/local/bin/scripts
 
       - name: Gate dependencies
         run: |
