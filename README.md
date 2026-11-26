@@ -163,13 +163,13 @@ in the previous state directory and are rebuilt as the client runs.
 
 ## Build from source
 
-The product consumes **Core v0.2.3** as source: core is not a NuGet package, and
+The product consumes **Core v0.4.0** as source: core is not a NuGet package, and
 the tag is pinned in [`CORE_VERSION`](CORE_VERSION). Clone it beside this
 repository:
 
 ```bash
-git clone --branch v0.2.3 --depth 1 https://github.com/benmoussa-younes/core.git ../core
-git -C ../core describe --tags --exact-match   # prints v0.2.3 for this clone
+git clone --branch v0.4.0 --depth 1 https://github.com/benmoussa-younes/core.git ../core
+git -C ../core describe --tags --exact-match   # prints v0.4.0 for this clone
 ```
 
 A sibling checkout that follows `core`'s `main` is accepted when the pin is in
